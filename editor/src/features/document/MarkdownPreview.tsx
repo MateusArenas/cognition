@@ -1,5 +1,6 @@
 import { Fragment } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Icon } from '@/design/Icon';
 import { useTheme } from '@/design/useTheme';
 import type { Inline, MdItem, MdNode } from '@/domain/markdown/render';
 import { MermaidBlock } from './MermaidBlock';
@@ -83,7 +84,7 @@ function ListItem({ item, ordenada, indice, onToggleTask, onEditBlock }: { item:
     return (
       <Pressable style={styles.taskRow} onPress={() => onToggleTask(item.tarefa!.ini, item.tarefa!.fim, feita)}>
         <View style={[styles.box, { borderColor: colors.separatorBold }, feita && { backgroundColor: colors.blue, borderColor: colors.blue }]}>
-          {feita ? <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>✓</Text> : null}
+          {feita ? <Icon name="check" size={13} color="#fff" /> : null}
         </View>
         <Text style={{ color: feita ? colors.labelSecondary : colors.label, flex: 1 }}>
           <InlineText filhos={item.filhos} />
