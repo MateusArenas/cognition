@@ -11,6 +11,7 @@ import { useRuntimeHtml } from './useRuntimeHtml';
 export interface DiagramCanvasHandle {
   fit: () => void;
   reveal: (fracaoTopo?: number) => void;
+  zoomBy: (factor: number) => void;
   exportPng: (scale?: number) => Promise<string>;
   validate: (code: string) => Promise<{ ok: boolean; message?: string }>;
 }
@@ -25,6 +26,8 @@ interface Props {
   onError?: (message: string) => void;
   /** Só chega pra documentos tipo 'raw' — flow/er derivam a lista do próprio Doc. */
   onElements?: (items: { id: string; texto: string }[]) => void;
+  /** Reportado a cada frame em que o zoom muda — gesto de pinça, botões +/-, fit(), duplo-toque. */
+  onZoomChange?: (k: number) => void;
 }
 
 const TIMEOUT_PRONTO_MS = 8000;
@@ -32,7 +35,7 @@ const TIMEOUT_PRONTO_MS = 8000;
 // O WebView é um componente burro: desenha e reporta toques. Toda a UI (barra de ações,
 // sheets, formulários) é React Native de verdade (docs/06-canvas.md).
 export const DiagramCanvas = forwardRef<DiagramCanvasHandle, Props>(function DiagramCanvas(
-  { code, theme, tokens, sel, onTap, onError, onElements },
+  { code, theme, tokens, sel, onTap, onError, onElements, onZoomChange },
   ref
 ) {
   const { html, error: htmlError } = useRuntimeHtml();
@@ -47,6 +50,7 @@ export const DiagramCanvas = forwardRef<DiagramCanvasHandle, Props>(function Dia
   useImperativeHandle(ref, () => ({
     fit: () => sendToWeb(webRef, { t: 'fit' }),
     reveal: (fracaoTopo = 0.3) => sendToWeb(webRef, { t: 'reveal', fracaoTopo }),
+    zoomBy: (factor) => sendToWeb(webRef, { t: 'zoomBy', factor }),
     exportPng: (scale = 2) =>
       new Promise<string>((resolve) => {
         pngResolvers.current.push(resolve);
@@ -100,6 +104,8 @@ export const DiagramCanvas = forwardRef<DiagramCanvasHandle, Props>(function Dia
       resolver?.({ ok: msg.ok, message: msg.message });
     } else if (msg.t === 'elements') {
       onElements?.(msg.items);
+    } else if (msg.t === 'zoom') {
+      onZoomChange?.(msg.k);
     }
   };
 

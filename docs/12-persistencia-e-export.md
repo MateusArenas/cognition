@@ -28,6 +28,13 @@ Texto (`.mmd`/`.md`) via `expo-file-system` + `expo-sharing`. PNG gerado no lado
 existe o SVG e um `<canvas>`), base64 pela ponte — atenção: um diagrama de 40 nós em 3× dá uns
 2 MB e trava a UI por meio segundo; mostrar progresso e limitar `scale` a 3.
 
+No `DiagramScreen`, as duas saídas moram atrás de um botão só — "Compartilhar" na `NavBar`
+abre `ShareSheet` (`features/diagram/ShareSheet.tsx`), que escolhe entre PNG e código-fonte
+antes de chamar `exportarPng`/`exportarTexto`. Não tem mais chip "PNG" solto no HUD do
+canvas — o HUD (topo esquerdo) ficou só para enquadrar/zoom (ícone "Ajustar" + porcentagem +
+botões +/-, ver [06-canvas.md](06-canvas.md)); desfazer/refazer viraram ícones num HUD
+espelhado no topo direito, saindo da `NavBar`.
+
 ## Importar
 
 `expo-document-picker`. iOS não tem UTI para `.mmd` — filtrar pela extensão depois de ler o

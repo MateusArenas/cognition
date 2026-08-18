@@ -31,6 +31,9 @@ import {
   ListChecks,
   Quote,
   Workflow,
+  Scan,
+  Share2,
+  Image,
 } from 'lucide-react-native';
 import { useTheme } from './useTheme';
 
@@ -74,6 +77,9 @@ const ICONS = {
   listChecks: ListChecks,
   quote: Quote,
   flow: Workflow,
+  scan: Scan,
+  share: Share2,
+  image: Image,
 } as const;
 
 export type IconName = keyof typeof ICONS;

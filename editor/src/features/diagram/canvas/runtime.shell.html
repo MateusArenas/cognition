@@ -64,6 +64,20 @@
 
   function applyView() {
     stage.style.transform = 'translate(' + view.x + 'px,' + view.y + 'px) scale(' + view.k + ')';
+    reportZoom();
+  }
+
+  // O RN mostra a porcentagem de zoom (botões +/- e o gesto de pinça alimentam o mesmo
+  // número) — um postMessage por frame no máximo, mesmo com pointermove disparando várias
+  // vezes durante um gesto de pinça.
+  var zoomReportPending = false;
+  function reportZoom() {
+    if (zoomReportPending) return;
+    zoomReportPending = true;
+    requestAnimationFrame(function () {
+      zoomReportPending = false;
+      postToRN({ t: 'zoom', k: view.k });
+    });
   }
 
   // Duas rodadas de bug aqui, mesma família — WebKit e o Mermaid discordando sobre o que
@@ -152,6 +166,14 @@
     view.y = y - (y - view.y) * (k / view.k);
     view.k = k;
     applyView();
+  }
+
+  // Botões +/- do HUD (RN) — mesmo clamp do gesto de pinça (0.12–4), centrado no meio do
+  // viewport (não há ponto de toque pra centralizar, diferente do pinça/duplo-toque).
+  function zoomBy(factor) {
+    var r = viewport.getBoundingClientRect();
+    var k = Math.max(0.12, Math.min(4, view.k * factor));
+    zoomTo(k, r.left + r.width / 2, r.top + r.height / 2);
   }
 
   // -----------------------------------------------------------------------
@@ -577,6 +599,8 @@
       revealSelection(msg.fracaoTopo);
     } else if (msg.t === 'fit') {
       fit();
+    } else if (msg.t === 'zoomBy') {
+      zoomBy(msg.factor);
     } else if (msg.t === 'exportPng') {
       exportPng(msg.scale || 2);
     } else if (msg.t === 'validate') {

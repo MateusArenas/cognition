@@ -50,14 +50,24 @@ export type ToWeb =
   | { t:'select'; sel:Selection | null }
   | { t:'reveal'; fracaoTopo:number }
   | { t:'fit' }
+  | { t:'zoomBy'; factor:number }
   | { t:'exportPng'; scale:number };
 
 export type FromWeb =
   | { t:'ready' }
   | { t:'tap'; sel:Selection | null; duplo:boolean }
   | { t:'error'; message:string }
-  | { t:'png'; base64:string };
+  | { t:'png'; base64:string }
+  | { t:'zoom'; k:number };
 ```
+
+`zoomBy`/`zoom` são o par dos botões +/- do HUD (`DiagramScreen`): RN manda o fator
+(`0.8`/`1.25`, mesmo clamp 0.12–4 do gesto de pinça), o runtime aplica centrado no meio do
+`viewport` (não há ponto de toque pra centralizar, diferente do pinça) e devolve `view.k` — a
+porcentagem que o HUD mostra (`Math.round(k*100)+'%'`) vem só desse relatório, tanto do gesto
+quanto dos botões quanto do `fit()`, nunca calculada duas vezes no lado RN. `applyView()`
+agenda o `postToRN({t:'zoom',...})` num `requestAnimationFrame` — sem isso, `pointermove` do
+gesto de pinça dispararia um `postMessage` por evento, não por frame.
 
 **RN → WebView usa `injectJavaScript`, não `postMessage`** (evita a diferença histórica
 Android/iOS). O `true;` no fim do script injetado não é decoração — sem ele o iOS reclama de
@@ -144,7 +154,8 @@ carregamento (`onError`/`onHttpError`, agora tratados). Ver `useRuntimeHtml.ts` 
 a implementação real tem `{t:'validate', code, reqId}` / `{t:'validated', reqId, ok, message?}`
 — usados pela validação da IA antes de aplicar (§14.3, ver
 [11-assistente-ia.md](11-assistente-ia.md)), porque o único `mermaid.parse` de verdade
-disponível no app é o que já está carregado aqui dentro.
+disponível no app é o que já está carregado aqui dentro — e `{t:'zoomBy', factor}` /
+`{t:'zoom', k}`, os botões de zoom do HUD (ver acima).
 
 Props do WebView que economizam depuração: `scrollEnabled={false}`, `bounces={false}` (senão
 disputa o gesto com o pan/zoom interno), fundo transparente **no style e no `<body>`** (Android

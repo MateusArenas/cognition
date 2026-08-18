@@ -16,6 +16,7 @@ import { resolveTapSelection } from '@/domain/selection';
 import { setCode } from '@/domain/mutations/raw';
 import { hapticSelect } from '@/services/haptics';
 import { exportarPng, exportarTexto } from '@/services/export';
+import { exportExtension } from '@/domain/exportMeta';
 import { addEdge } from '@/domain/mutations/flow';
 import { addRelation } from '@/domain/mutations/er';
 import type { Doc, ErDoc, FlowDoc, RawDoc, Selection } from '@/domain/types';
@@ -26,6 +27,7 @@ import { NodeComposer } from './composers/NodeComposer';
 import { TableComposer } from './composers/TableComposer';
 import { CodeEditor } from '@/features/code/CodeEditor';
 import { AiSheet } from '@/features/ai/AiSheet';
+import { ShareSheet } from './ShareSheet';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 
 type Tab = 'canvas' | 'elements' | 'code';
@@ -53,10 +55,12 @@ export function DiagramScreen() {
   const canvasRef = useRef<DiagramCanvasHandle>(null);
   const actionBarRef = useRef<ActionBarControllerHandle>(null);
   const aiRef = useRef<BottomSheetModal>(null);
+  const shareRef = useRef<BottomSheetModal>(null);
   const [tab, setTab] = useState<Tab>('canvas');
   const [composerOpen, setComposerOpen] = useState(false);
   const [codeDraft, setCodeDraft] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [zoom, setZoom] = useState(1);
   // Só usado pra doc tipo 'raw' (sem modelo estruturado) — o runtime que informa quais trechos
   // a Camada 3 conseguiu mapear. Fica no DiagramScreen (não no DiagramCanvas) porque a aba
   // "Elementos" desmonta o canvas — o estado precisa sobreviver à troca de aba.
@@ -116,8 +120,14 @@ export function DiagramScreen() {
   }
 
   async function exportarComoPng() {
+    shareRef.current?.dismiss();
     const base64 = await canvasRef.current?.exportPng(2);
     if (base64) await exportarPng(base64, doc.nome);
+  }
+
+  function exportarComoTexto() {
+    shareRef.current?.dismiss();
+    exportarTexto(doc);
   }
 
   // Ida e volta documento↔diagrama (§13.4): recorta o serialize() atualizado de volta no
@@ -170,7 +180,7 @@ export function DiagramScreen() {
         title={doc.nome}
         subtitle={doc.tipo === 'flow' ? 'Fluxograma' : doc.tipo === 'er' ? 'Modelo relacional' : doc.tipo === 'raw' ? doc.kind : 'Documento'}
         left={{ label: retornoMd ? '‹ Documento' : '‹ Biblioteca', onPress: voltar }}
-        right={[{ label: 'Exportar', onPress: () => exportarTexto(doc) }]}
+        right={[{ label: 'Compartilhar', onPress: () => shareRef.current?.present() }]}
       />
 
       <Segmented
@@ -194,6 +204,7 @@ export function DiagramScreen() {
             onTap={handleTap}
             onError={setErrorMsg}
             onElements={setRawElements}
+            onZoomChange={setZoom}
           />
 
           {!nEls ? (
@@ -204,8 +215,10 @@ export function DiagramScreen() {
           ) : null}
 
           <View style={styles.hud}>
-            <Chip label="Ajustar" onPress={() => canvasRef.current?.fit()} />
-            <Chip label="PNG" onPress={exportarComoPng} />
+            <Chip icon="scan" accessibilityLabel="Ajustar à tela" onPress={() => canvasRef.current?.fit()} />
+            <Chip icon="minus" accessibilityLabel="Diminuir zoom" onPress={() => canvasRef.current?.zoomBy(0.8)} />
+            <Chip label={`${Math.round(zoom * 100)}%`} mono />
+            <Chip icon="plus" accessibilityLabel="Aumentar zoom" onPress={() => canvasRef.current?.zoomBy(1.25)} />
             {retornoMd ? <Chip label="Voltar ao documento" onPress={voltar} /> : null}
           </View>
 
@@ -256,6 +269,7 @@ export function DiagramScreen() {
         onOpenAi={() => aiRef.current?.present()}
       />
       <AiSheet ref={aiRef} doc={doc} sel={sel} onValidate={validarParaIA} onApply={aplicarResultadoIA} />
+      <ShareSheet ref={shareRef} textoLabel={`Arquivo ${exportExtension(doc)}`} onPng={exportarComoPng} onTexto={exportarComoTexto} />
     </View>
   );
 }

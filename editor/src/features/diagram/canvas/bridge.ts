@@ -9,6 +9,7 @@ export type ToWeb =
   | { t: 'select'; sel: Selection | null }
   | { t: 'reveal'; fracaoTopo: number }
   | { t: 'fit' }
+  | { t: 'zoomBy'; factor: number }
   | { t: 'exportPng'; scale: number }
   | { t: 'validate'; code: string; reqId: string };
 
@@ -28,7 +29,8 @@ export type FromWeb =
   | { t: 'error'; message: string }
   | { t: 'png'; base64: string }
   | { t: 'validated'; reqId: string; ok: boolean; message?: string }
-  | { t: 'elements'; items: { id: string; texto: string }[] };
+  | { t: 'elements'; items: { id: string; texto: string }[] }
+  | { t: 'zoom'; k: number };
 
 export function sendToWeb(ref: RefObject<WebView | null>, msg: ToWeb) {
   ref.current?.injectJavaScript(`window.__handle(${JSON.stringify(msg)}); true;`);
