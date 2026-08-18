@@ -26,6 +26,8 @@ interface Props {
   onOpenCode?: () => void;
   onStartLink: (from: string) => void;
   onOpenAi: () => void;
+  /** Altura real da barra, pra quem mais flutua sobre o canvas (FABs) desviar dela. */
+  onBarLayout?: (height: number) => void;
 }
 
 export interface ActionBarControllerHandle {
@@ -39,7 +41,7 @@ const KIND_FOR_SEL: Record<string, InspectorKind> = { node: 'node', edge: 'edge'
 // alerta (valor único), sheet (formulário — Forma/Cor/Colunas/Cardinalidade), ou direto no
 // modelo (Duplicar, Inverter). "Editar" sempre abre a sheet, já no inspetor certo.
 export const ActionBarController = forwardRef<ActionBarControllerHandle, Props>(function ActionBarController(
-  { onOpenCode, onStartLink, onOpenAi },
+  { onOpenCode, onStartLink, onOpenAi, onBarLayout },
   ref
 ) {
   const { colors } = useTheme();
@@ -212,7 +214,7 @@ export const ActionBarController = forwardRef<ActionBarControllerHandle, Props>(
 
   return (
     <>
-      <ActionBar title={describeSelection(doc, sel)} items={items} onClose={() => select(null)} />
+      <ActionBar title={describeSelection(doc, sel)} items={items} onClose={() => select(null)} onLayout={onBarLayout} />
 
       <AlertDialog
         visible={!!prompt}

@@ -89,14 +89,22 @@ diferentes, achados em sequência — o primeiro foi consertado mas não era a c
 segundo era.
 
 1. **Resize do WebView sem reencaixe** (correção real, mas insuficiente sozinha). Selecionar
-   algo faz a `ActionBar` aparecer embaixo da tela, encolhendo a área do canvas — o WebView é
-   redimensionado pelo RN. `fit()` só rodava uma vez, na carga inicial, e nada reagia a esse
+   algo fazia a `ActionBar` aparecer embaixo da tela, encolhendo a área do canvas — o WebView
+   era redimensionado pelo RN. `fit()` só rodava uma vez, na carga inicial, e nada reagia a esse
    redimensionamento depois. Corrigido com um `ResizeObserver` no `#viewport` que, sempre que o
    WebView muda de tamanho de verdade (debounce de 60ms), reencaixa a transform **e** reconstrói
    os hits e a seleção (`fit()` + `tagTargets()` + `drawSelection()`, não só a transform
    sozinha — mesma sequência que uma remontagem completa faria). Isso corrige um problema real
    (hits/seleção ficarem presos ao tamanho antigo do viewport), mas **não era o bug que o
    usuário via** — só reduzia a chance dele aparecer.
+
+   **Atualização posterior**: o próprio gatilho "selecionar encolhe o WebView" foi eliminado —
+   reportado pelo usuário como "seleciona e dá um zoom out" (o `fit()` do `ResizeObserver`
+   recalculava `view.k` pro viewport menor toda vez que a `ActionBar` aparecia). `ActionBar`
+   virou um overlay `position:'absolute'` (`design/components/ActionBar.tsx`) em vez de um
+   irmão de flex normal — o WebView nunca muda de tamanho por causa dela, então esse `fit()`
+   automático não dispara mais nessa situação. O `ResizeObserver` continua existindo e
+   necessário pra resizes de verdade (rotação, mudança de `useWindowDimensions`).
 
 2. **A causa raiz de verdade, achada só com números de device real** (headless Chromium nunca
    reproduziu isso — só WebKit/WKWebView tem esse comportamento): `currentSVG.getScreenCTM()`

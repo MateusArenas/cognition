@@ -14,6 +14,17 @@ Em RN: uma `View` com entrada animada + `ScrollView horizontal`
 (`showsHorizontalScrollIndicator={false}`). **Não usar BottomSheet aqui** — a barra é
 persistente e não-modal; virar sheet reintroduz o custo que ela existe para eliminar.
 
+**Bug real: selecionar algo dava um zoom out no diagrama.** A barra nascia como um irmão de
+flex normal, embaixo do `canvasArea` — aparecer/sumir encolhia/crescia o WebView de verdade, e
+cada mudança de tamanho disparava o `ResizeObserver` do runtime, que reencaixa (`fit()`) o
+diagrama pro novo tamanho — mudando o zoom sozinho toda vez que algo era selecionado (docs/06-
+canvas.md tem o detalhe do lado do runtime). Corrigido tornando `ActionBar`
+(`design/components/ActionBar.tsx`) um overlay `position:'absolute'` — flutua sobre o canvas
+em vez de empurrá-lo, então o WebView nunca muda de tamanho por causa dela. Os FABs do canvas
+(IA/Adicionar) somam a altura real da barra (reportada via `onLayout`, guardada em
+`DiagramScreen`) ao próprio deslocamento de baixo só enquanto há seleção — senão ficariam
+escondidos atrás dela.
+
 ## Ações por tipo de seleção
 
 | Seleção | Ações |

@@ -62,6 +62,7 @@ export function DiagramScreen() {
   const [codeDraft, setCodeDraft] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
+  const [barHeight, setBarHeight] = useState(0);
   // Só usado pra doc tipo 'raw' (sem modelo estruturado) — o runtime que informa quais trechos
   // a Camada 3 conseguiu mapear. Fica no DiagramScreen (não no DiagramCanvas) porque a aba
   // "Elementos" desmonta o canvas — o estado precisa sobreviver à troca de aba.
@@ -249,7 +250,7 @@ export function DiagramScreen() {
             </View>
           ) : null}
 
-          <View style={styles.fabs}>
+          <View style={[styles.fabs, { bottom: 16 + (sel ? barHeight : 0) }]}>
             <Fab icon="spark" accessibilityLabel="Pedir para a IA" onPress={() => aiRef.current?.present()} />
             {(doc.tipo === 'flow' || doc.tipo === 'er') && (
               <Fab icon="plus" primary accessibilityLabel="Adicionar elemento" onPress={openComposer} />
@@ -274,6 +275,7 @@ export function DiagramScreen() {
         onOpenCode={() => setTab('code')}
         onStartLink={(from) => setLinkMode(true, from)}
         onOpenAi={() => aiRef.current?.present()}
+        onBarLayout={setBarHeight}
       />
       <AiSheet ref={aiRef} doc={doc} sel={sel} onValidate={validarParaIA} onApply={aplicarResultadoIA} />
       <ShareSheet
@@ -329,5 +331,5 @@ const styles = StyleSheet.create({
   linkBanner: { position: 'absolute', left: 14, right: 14, top: 20, borderRadius: 14, padding: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   linkText: { color: '#fff', fontWeight: '600' },
   linkCancel: { color: '#fff', textDecorationLine: 'underline' },
-  fabs: { position: 'absolute', right: 16, bottom: 16, gap: 12, alignItems: 'center' },
+  fabs: { position: 'absolute', right: 16, gap: 12, alignItems: 'center' },
 });
