@@ -10,13 +10,19 @@ interface Props {
   textoLabel: string;
   onPng: () => void;
   onTexto: () => void;
+  onCopiar: () => void;
 }
 
 // Substitui o antigo botão "Exportar" (chamava exportarTexto direto, sem escolha) e o chip
-// "PNG" solto no HUD do canvas — as duas saídas moram junto aqui, como no editor-mermaid.html.
-export const ShareSheet = forwardRef<BottomSheetModal, Props>(function ShareSheet({ textoLabel, onPng, onTexto }, ref) {
+// "PNG" solto no HUD do canvas — as saídas moram juntas aqui, como no editor-mermaid.html.
+// "Copiar texto" não passa pelo share sheet nativo — copia direto pro clipboard (mesmo padrão
+// já usado no bloco mermaid embutido do markdown, ver MermaidBlock.tsx).
+export const ShareSheet = forwardRef<BottomSheetModal, Props>(function ShareSheet(
+  { textoLabel, onPng, onTexto, onCopiar },
+  ref
+) {
   return (
-    <Sheet ref={ref} title="Compartilhar" snapPoints={['30%']}>
+    <Sheet ref={ref} title="Compartilhar" snapPoints={['36%']}>
       <GroupedList>
         <Row
           title="Imagem PNG"
@@ -26,6 +32,7 @@ export const ShareSheet = forwardRef<BottomSheetModal, Props>(function ShareShee
           onPress={onPng}
         />
         <Row title="Código-fonte" subtitle={textoLabel} left={<Icon name="code" size={20} />} navigable onPress={onTexto} />
+        <Row title="Copiar texto" subtitle="Cola direto na área de transferência" left={<Icon name="copy" size={20} />} onPress={onCopiar} />
       </GroupedList>
     </Sheet>
   );

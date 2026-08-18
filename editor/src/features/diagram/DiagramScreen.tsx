@@ -1,3 +1,4 @@
+import * as Clipboard from 'expo-clipboard';
 import { router } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
@@ -128,6 +129,12 @@ export function DiagramScreen() {
   function exportarComoTexto() {
     shareRef.current?.dismiss();
     exportarTexto(doc);
+  }
+
+  async function copiarTexto() {
+    shareRef.current?.dismiss();
+    await Clipboard.setStringAsync(code);
+    show('Copiado');
   }
 
   // Ida e volta documento↔diagrama (§13.4): recorta o serialize() atualizado de volta no
@@ -269,7 +276,13 @@ export function DiagramScreen() {
         onOpenAi={() => aiRef.current?.present()}
       />
       <AiSheet ref={aiRef} doc={doc} sel={sel} onValidate={validarParaIA} onApply={aplicarResultadoIA} />
-      <ShareSheet ref={shareRef} textoLabel={`Arquivo ${exportExtension(doc)}`} onPng={exportarComoPng} onTexto={exportarComoTexto} />
+      <ShareSheet
+        ref={shareRef}
+        textoLabel={`Arquivo ${exportExtension(doc)}`}
+        onPng={exportarComoPng}
+        onTexto={exportarComoTexto}
+        onCopiar={copiarTexto}
+      />
     </View>
   );
 }
