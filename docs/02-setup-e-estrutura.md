@@ -54,10 +54,11 @@ puro, testável sem renderizar nada — ver o diagrama de camadas em
 
 ```
 editor/src/
-  app/          rotas (expo-router): _layout.tsx, index.tsx (biblioteca), doc/[id].tsx (editor)
+  app/          rotas (expo-router): _layout.tsx, (tabs)/ (biblioteca + ajustes, tab bar),
+                gallery.tsx, doc/[id].tsx — os dois últimos empilham por cima da tab bar
   design/       sistema de design iOS — ver 03-design-system.md
   domain/       TypeScript puro, zero dependência de UI — ver 04-dominio.md
-  features/     diagram/ code/ document/ gallery/ ai/ library/
+  features/     diagram/ code/ document/ gallery/ ai/ library/ settings/
   store/        useDoc.ts useLibrary.ts useSettings.ts history.ts — ver 05-estado.md
   services/     storage.ts export.ts share.ts haptics.ts ai.ts
   i18n/         pt-BR.ts en.ts index.ts

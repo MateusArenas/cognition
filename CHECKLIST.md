@@ -70,6 +70,16 @@ testes jest continuam todos passando. Ver a nota de versões em
 [docs/13-qualidade-e-testes.md](docs/13-qualidade-e-testes.md) e o estado atualizado em
 [docs/02-setup-e-estrutura.md](docs/02-setup-e-estrutura.md).
 
+**Navegação por tab bar + tela de Ajustes** (fora do roteiro original — pedido direto do
+usuário). `app/(tabs)/` com Biblioteca e Ajustes, tab bar translúcida (`BlurView`, mesma
+linguagem do `Chip`), Galeria/editor continuam empilhados por cima cobrindo a barra. Ajustes
+(`features/settings/`) estreia com um seletor de tema (Automático/Claro/Escuro,
+`ThemeProvider.setMode`) — funciona ao vivo, mas ainda não sobrevive a fechar o app (persistir
+a escolha continua pendente, ver abaixo). Corrigido de quebra: o FAB da Biblioteca (fixo desde
+antes da tab bar existir) ficava atrás da barra nova, e o `Toast` global (calibrado só pro FAB
+antigo) passou a cair atrás do FAB depois que ele subiu — ver
+[docs/03-design-system.md](docs/03-design-system.md).
+
 ---
 
 - [x] **Etapa 0 — Scaffold do projeto** (pré-requisito, fora da lista original do spec)
@@ -230,9 +240,10 @@ redescobertas do zero:
   passa, não sobre conversão de coordenadas (nada a ver com os bugs de escala corrigidos em
   docs/06-canvas.md/docs/07-selecao.md), e não foi mexido de propósito pra não arriscar o que
   já está 100% no ER. Documentado como limitação conhecida no próprio script de verificação.
-- **Persistir a escolha de tema do usuário.** `store/useSettings.ts` não existe — o app segue
-  o tema do sistema, mas não guarda uma escolha manual. Não estava em nenhuma etapa do
-  roteiro original; é um buraco real no spec, não só neste build.
+- **Persistir a escolha de tema do usuário.** `store/useSettings.ts` não existe —
+  `features/settings/SettingsScreen.tsx` já deixa trocar o tema (Automático/Claro/Escuro) na
+  aba Ajustes, mas só pra sessão atual: fechar e reabrir o app volta pro automático. Não estava
+  em nenhuma etapa do roteiro original; é um buraco real no spec, não só neste build.
 - **Miniatura visual da biblioteca.** `LibraryScreen`/`DocCard` mostram tipo + data, não uma
   imagem do diagrama. Renderizar o SVG ao salvar e guardar como arquivo (§15) ainda não foi
   feito.

@@ -17,8 +17,11 @@ export function useToast(): ToastContextValue {
 
 const DURATION = 1900;
 
-// Cápsula escura translúcida acima da tab bar, some em 1,9s (§5.2). Ex.: "Excluído — desfazer"
-// depois de uma ação destrutiva (§11).
+// Cápsula escura translúcida, some em 1,9s (§5.2). Ex.: "Excluído — desfazer" depois de uma
+// ação destrutiva (§11). ToastProvider é global (root, fora de qualquer navegador de tabs) —
+// não dá pra usar useBottomTabBarHeight() aqui (lança fora de uma tela de tab), então o
+// deslocamento fixo já soma espaço pra tab bar + FAB da Biblioteca (a maior obstrução de baixo
+// que existe hoje — ver LibraryScreen), com folga de sobra nas telas empilhadas sem tab bar.
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [message, setMessage] = useState<string | null>(null);
   const opacity = useRef(new Animated.Value(0)).current;
@@ -49,7 +52,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       {message ? (
         <Animated.View
           pointerEvents="none"
-          style={[styles.wrap, { bottom: 96 + insets.bottom, opacity }]}
+          style={[styles.wrap, { bottom: 136 + insets.bottom, opacity }]}
         >
           <Text style={styles.text}>{message}</Text>
         </Animated.View>

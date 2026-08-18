@@ -1,3 +1,4 @@
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
@@ -26,6 +27,7 @@ export default function LibraryScreen() {
   const load = useLibrary((s) => s.load);
   const remove = useLibrary((s) => s.remove);
   const [paraExcluir, setParaExcluir] = useState<DocRow | null>(null);
+  const tabBarHeight = useBottomTabBarHeight();
 
   useFocusEffect(
     useCallback(() => {
@@ -54,7 +56,7 @@ export default function LibraryScreen() {
       <View style={{ paddingHorizontal: space.lg, paddingTop: space.sm }}>
         <Field value={query} onChangeText={setQuery} placeholder="Buscar por nome ou conteúdo" />
       </View>
-      <ScrollView contentContainerStyle={{ padding: space.lg }}>
+      <ScrollView contentContainerStyle={{ padding: space.lg, paddingBottom: space.lg + tabBarHeight }}>
         <GroupedList>
           {docs.length ? (
             docs.map((d) => (
@@ -66,7 +68,7 @@ export default function LibraryScreen() {
         </GroupedList>
       </ScrollView>
 
-      <View style={styles.fab}>
+      <View style={[styles.fab, { bottom: 16 + tabBarHeight }]}>
         <Fab icon="plus" primary accessibilityLabel="Novo documento" onPress={() => router.push('/gallery')} />
       </View>
 
@@ -86,5 +88,5 @@ export default function LibraryScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  fab: { position: 'absolute', right: 16, bottom: 16 },
+  fab: { position: 'absolute', right: 16 },
 });

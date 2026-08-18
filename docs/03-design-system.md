@@ -46,6 +46,13 @@ Cobrem o app inteiro — construir antes de qualquer tela.
   nas duas (mais `NavBar`/`Toast`, que já faziam isso certo). Testar um componente assim
   isolado precisa envolver o `render()` num `<SafeAreaProvider initialMetrics={...}>` — ver
   `ActionBar.test.tsx`.
+- **Regra irmã, só nas duas telas dentro da tab bar** (`Biblioteca`/`Ajustes`, ver
+  "Navegação" abaixo): o padding de baixo é `useBottomTabBarHeight()`
+  (`@react-navigation/bottom-tabs`), não `useSafeAreaInsets().bottom` sozinho — a tab bar é
+  `position:'absolute'`, flutuando por cima do conteúdo, então esse hook já devolve a altura
+  real (barra + safe area) certa pra somar ao `ScrollView`/FAB da tela. Nas telas empilhadas
+  por cima (`gallery`, `doc/[id]`) a tab bar nem existe, então elas continuam com
+  `useSafeAreaInsets().bottom` puro, sem mudança nenhuma.
 
 Ver também [13-qualidade-e-testes.md](13-qualidade-e-testes.md) para acessibilidade e Dynamic Type.
 
@@ -92,13 +99,39 @@ mapeando `lucide-react-native` pro próprio build CJS do pacote via `moduleNameM
 `jest.config.js`, em vez de mexer em `transform`/`transformIgnorePatterns` (mais simples e não
 arrisca destransformar outra coisa).
 
+## Navegação (tab bar)
+
+`app/(tabs)/_layout.tsx` — duas abas, **Biblioteca** e **Ajustes** (`features/settings/`, nova:
+por enquanto só o seletor de tema, ver abaixo). Grupo `(tabs)` do expo-router: não aparece na
+URL, então a rota da Biblioteca continua sendo `/`. `Galeria` e o editor (`doc/[id]`) ficam
+*fora* do grupo, empilhados pelo `Stack` raiz por cima — cobrem a tab bar inteira ao navegar
+pra lá, sem configuração extra (é o comportamento padrão de um `Stack` por cima de um
+navegador de tabs).
+
+Visual: `tabBarStyle` com `position:'absolute'` + fundo transparente, `tabBarBackground` uma
+`BlurView` — mesma cápsula translúcida do `Chip`/`ActionBar` (§5.2), não a barra opaca padrão
+do React Navigation. Como consequência direta de ser `absolute`, ela flutua *por cima* do
+conteúdo em vez de empurrá-lo — todo o conteúdo das duas telas precisa somar
+`useBottomTabBarHeight()` ao próprio padding de baixo (ver a regra irmã, acima) ou fica
+escondido atrás da barra. Achado testando a `LibraryScreen`: o FAB "+" (que já era
+`position:'absolute', bottom:16`, de antes da tab bar existir) ficava embaixo da barra nova —
+corrigido somando `useBottomTabBarHeight()` ao `bottom`.
+
+**Efeito colateral achado no `Toast`** (global, montado no `RootLayout`, fora de qualquer
+navegador de tabs — não dá pra chamar `useBottomTabBarHeight()` lá dentro, ele lança fora de
+uma tela de tab): seu deslocamento fixo de baixo (`96 + insets.bottom`) foi calibrado pra
+limpar só o FAB antigo; com o FAB subindo pra cima da tab bar na Biblioteca, o toast passou a
+cair *atrás* do FAB. Corrigido subindo o deslocamento fixo (`136 + insets.bottom`) — folga extra
+nas telas empilhadas sem tab bar, mas sem colisão em lugar nenhum. Ver `Toast.tsx`.
+
 ## O que existe hoje
 
 ```
 editor/src/design/
   tokens.ts          palette (dark/light), type, space, radius, easing — porta exata do §5.1
   ThemeProvider.tsx   segue o sistema até o usuário escolher (mode: 'auto'|'light'|'dark');
-                      a persistência da escolha chega com store/useSettings.ts (Etapa 16)
+                      a persistência da escolha chega com store/useSettings.ts (Etapa 16) —
+                      a aba Ajustes já troca o tema ao vivo, só não sobrevive a fechar o app
   useTheme.ts         hook — lança se usado fora do provider
   Icon.tsx            ícones do lucide-react-native — registro pequeno, cresce por feature
   SheetChrome.tsx      o efeito "tela encolhe atrás da sheet aberta" — Provider + Container,

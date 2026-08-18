@@ -34,6 +34,8 @@ import {
   Scan,
   Share2,
   Image,
+  Library,
+  Settings,
 } from 'lucide-react-native';
 import { useTheme } from './useTheme';
 
@@ -80,6 +82,8 @@ const ICONS = {
   scan: Scan,
   share: Share2,
   image: Image,
+  library: Library,
+  settings: Settings,
 } as const;
 
 export type IconName = keyof typeof ICONS;
