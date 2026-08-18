@@ -21,3 +21,11 @@ No tipo `raw`, o código aplica sozinho com debounce de 420ms. **Se durante a di
 passar a começar com `flowchart` ou `erDiagram`, o documento se converte para o modo visual
 automaticamente** — um caminho só, nas duas direções, usando `parseMermaid` de
 [04-dominio.md](04-dominio.md).
+
+**Bug real: focar o `TextInput` e o teclado só sobrepunha o editor, sem encolher nada**
+(reportado pelo usuário: "ajuste a tela como avoid keyboard... ta bugando fica sobrepondo").
+`CodeEditor` é um `TextInput` multiline `flex:1` sem nenhum tratamento de teclado próprio — a
+aba "Código" (`DiagramScreen`) só o envolvia numa `View` comum. Corrigido trocando essa `View`
+por `KeyboardAvoidingView` (`react-native-keyboard-controller` — a mesma lib já usada no
+editor de markdown, `behavior="padding"`) — a área disponível encolhe pra caber acima do
+teclado, e o cursor fica visível dentro dela.

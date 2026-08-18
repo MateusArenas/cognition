@@ -2,6 +2,7 @@ import * as Clipboard from 'expo-clipboard';
 import { router } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { NavBar } from '@/design/components/NavBar';
 import { Chip } from '@/design/components/Chip';
 import { Fab } from '@/design/components/Fab';
@@ -121,6 +122,17 @@ export function DiagramScreen() {
     setComposerOpen(true);
   }
 
+  // Trocar de aba (Diagrama/Elementos/Código) com uma sheet aberta deixava ela flutuando por
+  // cima do conteúdo errado — bug real reportado pelo usuário ("ta indo pra tab e ficando
+  // aberto"). select(null) fecha a ActionBar e (ver ActionBarController) o inspetor junto;
+  // Compartilhar e o assistente de IA não dependem de seleção, então fecham à parte aqui.
+  function handleTabChange(v: Tab) {
+    select(null);
+    shareRef.current?.dismiss();
+    aiRef.current?.dismiss();
+    setTab(v);
+  }
+
   async function exportarComoPng() {
     shareRef.current?.dismiss();
     const base64 = await canvasRef.current?.exportPng(2);
@@ -198,7 +210,7 @@ export function DiagramScreen() {
           { value: 'code', label: 'Código' },
         ]}
         value={tab}
-        onChange={(v) => setTab(v as Tab)}
+        onChange={(v) => handleTabChange(v as Tab)}
       />
 
       {tab === 'canvas' ? (
@@ -262,9 +274,13 @@ export function DiagramScreen() {
       {tab === 'elements' ? <ElementsList rawElements={rawElements} /> : null}
 
       {tab === 'code' ? (
-        <View style={styles.canvasArea}>
+        // CodeEditor é um TextInput multiline flex:1 sem tela de trás nenhuma — sem isso, o
+        // teclado só sobrepunha o campo (bug real reportado pelo usuário: "fica sobrepondo").
+        // KeyboardAvoidingView (react-native-keyboard-controller, já usado no editor de
+        // markdown) encolhe a área disponível pra caber acima do teclado.
+        <KeyboardAvoidingView style={styles.canvasArea} behavior="padding">
           <CodeEditor code={codeDraft ?? code} onChangeText={handleCodeChange} onBlur={commitCode} />
-        </View>
+        </KeyboardAvoidingView>
       ) : null}
 
       {doc.tipo === 'flow' ? <NodeComposer visible={composerOpen} onClose={() => setComposerOpen(false)} /> : null}

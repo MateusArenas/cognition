@@ -1,5 +1,5 @@
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
-import { forwardRef, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { Text } from 'react-native';
 import { ActionBar, type ActionBarItem } from '@/design/components/ActionBar';
 import { AlertDialog } from '@/design/components/AlertDialog';
@@ -61,6 +61,12 @@ export const ActionBarController = forwardRef<ActionBarControllerHandle, Props>(
     setInspectorKind(kind);
     inspectorRef.current?.present();
   }
+
+  // sel virando null (trocar de aba, tocar em vazio, cancelar na ActionBar) sem fechar o
+  // inspetor deixava a sheet aberta flutuando sobre conteúdo sem nenhuma seleção por trás dela.
+  useEffect(() => {
+    if (!sel) inspectorRef.current?.dismiss();
+  }, [sel]);
 
   useImperativeHandle(ref, () => ({
     openForCurrentSelection: () => {

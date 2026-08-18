@@ -25,6 +25,15 @@ em vez de empurrá-lo, então o WebView nunca muda de tamanho por causa dela. Os
 `DiagramScreen`) ao próprio deslocamento de baixo só enquanto há seleção — senão ficariam
 escondidos atrás dela.
 
+**Bug real: trocar de aba (Diagrama/Elementos/Código) com um inspetor aberto deixava a sheet
+flutuando por cima do conteúdo errado** (reportado pelo usuário: "ta indo pra tab e ficando
+aberto"). Corrigido em duas partes: `ActionBarController` agora fecha o próprio inspetor
+(`inspectorRef.current?.dismiss()`) sempre que `sel` vira `null` — cobre trocar de aba, tocar
+em vazio e cancelar na `ActionBar`, não só o caso específico de trocar de aba; e o `onChange`
+do `Segmented` de abas, em `DiagramScreen`, virou `handleTabChange()`, que soma `select(null)`
+(fecha `ActionBar` + inspetor) e `dismiss()` explícito no `ShareSheet`/`AiSheet` (que não
+dependem de seleção nenhuma) antes de trocar de aba.
+
 ## Ações por tipo de seleção
 
 | Seleção | Ações |
