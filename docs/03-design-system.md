@@ -49,6 +49,15 @@ Cobrem o app inteiro — construir antes de qualquer tela.
 
 Ver também [13-qualidade-e-testes.md](13-qualidade-e-testes.md) para acessibilidade e Dynamic Type.
 
+**Bug real: fundo branco atrás da sheet no tema escuro.** O efeito "tela encolhe atrás da
+sheet aberta" (`SheetChromeContainer`, acima) tira o `View` animado de baixo da escala 100% —
+o vão revelado nessa borda mostra o que estiver *atrás* dele, não o que está dentro. Sem cor de
+fundo temática no `GestureHandlerRootView` (a base de tudo, em `app/_layout.tsx`), esse vão
+mostrava o branco padrão da janela nativa mesmo no tema escuro. Corrigido dando
+`backgroundColor: colors.bg` pro `GestureHandlerRootView` — precisou de um componente próprio
+(`RootShell`) porque `useTheme()` só funciona dentro do `ThemeProvider`, e `RootLayout` em si
+está fora dele até renderizar os filhos.
+
 ## Ícones
 
 Vêm de `lucide-react-native` (não mais desenhados à mão) — SVG puro sobre `react-native-svg`
