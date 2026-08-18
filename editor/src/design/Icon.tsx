@@ -10,6 +10,27 @@ import {
   CircleEllipsis,
   Info,
   Sparkles,
+  Pencil,
+  Link,
+  Copy,
+  Code,
+  TableColumnsSplit,
+  ArrowRightLeft,
+  Palette,
+  SlidersHorizontal,
+  Shapes,
+  Type,
+  MessageSquare,
+  Table,
+  Diamond,
+  Heading,
+  Bold,
+  Italic,
+  List,
+  ListOrdered,
+  ListChecks,
+  Quote,
+  Workflow,
 } from 'lucide-react-native';
 import { useTheme } from './useTheme';
 
@@ -17,7 +38,9 @@ import { useTheme } from './useTheme';
 // então roda sem plugin nativo extra, inclusive no Expo Go). Registro pequeno de propósito:
 // adicione um ícone por vez, quando uma feature precisar, escolhendo o equivalente mais
 // próximo do desenho do protótipo (editor-mermaid.html, registro `ICO`) em vez de inventar um
-// novo. Ver docs/03-design-system.md.
+// novo. Um ícone por *significado*, não por contexto — reaproveitar o mesmo ícone pra ações
+// diferentes (ex.: "check" pra IA e pra Nome) é o bug que gerou esse registro maior. Ver
+// docs/03-design-system.md.
 const ICONS = {
   close: X,
   check: Check,
@@ -30,6 +53,27 @@ const ICONS = {
   menu: CircleEllipsis,
   info: Info,
   spark: Sparkles,
+  pencil: Pencil,
+  link: Link,
+  copy: Copy,
+  code: Code,
+  columns: TableColumnsSplit,
+  swap: ArrowRightLeft,
+  palette: Palette,
+  sliders: SlidersHorizontal,
+  shapes: Shapes,
+  type: Type,
+  comment: MessageSquare,
+  table: Table,
+  cardinality: Diamond,
+  heading: Heading,
+  bold: Bold,
+  italic: Italic,
+  list: List,
+  listOrdered: ListOrdered,
+  listChecks: ListChecks,
+  quote: Quote,
+  flow: Workflow,
 } as const;
 
 export type IconName = keyof typeof ICONS;

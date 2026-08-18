@@ -71,6 +71,20 @@ pontinhos, usado como indicador de seleção da `ActionBar`) vira `CircleEllipsi
 `minus`), usa o equivalente óbvio do lucide direto. Registro pequeno de propósito, igual antes:
 só entra ícone que uma feature real usa — ver `editor/src/design/Icon.tsx`.
 
+**Bug real: um ícone por significado, não um ícone reaproveitado por preguiça.** A primeira
+integração do lucide só trocou o componente que desenha o ícone — os `icon:` de cada ação de
+`ActionBarController.tsx` continuaram os mesmos de antes, todos genéricos (`check` reaproveitado
+em 13 ações sem relação nenhuma entre si — Texto, todas as IA, Rótulo, Nome, Tipo, Comentário,
+Verbo; `menu` em 5; `plus` em 5). Ficou parecendo um app com 4 ícones. Corrigido dando a cada
+ação da barra contextual (nó/ligação/tabela/coluna/relação/texto) e da `FormatBar` de markdown
+um ícone específico do seu significado (`pencil` pra qualquer prompt de editar texto, `spark`
+só pra IA, `link` pra Conectar/Relacionar, `copy` pra Duplicar, `shapes`/`palette`/`sliders`
+pra Forma/Cor/Traço, `type`/`comment` pra Tipo/Comentário de coluna, `cardinality` pra
+Cardinalidade, `swap` pra Inverter, `columns`/`heading`/`bold`/`italic`/`list`/`listOrdered`/
+`listChecks`/`quote`/`flow` pra `FormatBar`, espelhando o `MD_BOTOES` do protótipo). Repetição
+só sobrevive onde o significado é, de fato, o mesmo em todo lugar — `trash` (Excluir), `spark`
+(IA), `chevronRight` (Editar → abre o inspetor completo).
+
 **Armadilha de teste**: o build "react-native" que o pacote expõe via `package.json#exports` é
 ESM puro (`.mjs`), e o transform do `jest-expo` só cobre `.js/.jsx/.ts/.tsx` — sem ajuste,
 qualquer teste que importe algo com `Icon` quebra com `Unexpected token 'export'`. Corrigido

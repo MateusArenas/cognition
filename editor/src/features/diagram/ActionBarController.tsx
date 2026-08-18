@@ -84,12 +84,12 @@ export const ActionBarController = forwardRef<ActionBarControllerHandle, Props>(
       const n = doc.nodes.find((x) => x.id === sel.id);
       if (!n) return null;
       return [
-        { key: 'texto', icon: 'check', label: 'Texto', onPress: () => openPrompt('Texto do nó', n.label, (v) => apply((d) => flow.setNodeLabel(d as FlowDoc, sel.id, v))) },
-        { key: 'conectar', icon: 'plus', label: 'Conectar', onPress: () => onStartLink(sel.id) },
-        { key: 'forma', icon: 'menu', label: 'Forma', onPress: () => openInspector('node') },
-        { key: 'cor', icon: 'menu', label: 'Cor', onPress: () => openInspector('node') },
-        { key: 'duplicar', icon: 'plus', label: 'Duplicar', onPress: () => apply((d) => flow.duplicateNode(d as FlowDoc, sel.id)) },
-        { key: 'ia', icon: 'check', label: 'IA', onPress: onOpenAi },
+        { key: 'texto', icon: 'pencil', label: 'Texto', onPress: () => openPrompt('Texto do nó', n.label, (v) => apply((d) => flow.setNodeLabel(d as FlowDoc, sel.id, v))) },
+        { key: 'conectar', icon: 'link', label: 'Conectar', onPress: () => onStartLink(sel.id) },
+        { key: 'forma', icon: 'shapes', label: 'Forma', onPress: () => openInspector('node') },
+        { key: 'cor', icon: 'palette', label: 'Cor', onPress: () => openInspector('node') },
+        { key: 'duplicar', icon: 'copy', label: 'Duplicar', onPress: () => apply((d) => flow.duplicateNode(d as FlowDoc, sel.id)) },
+        { key: 'ia', icon: 'spark', label: 'IA', onPress: onOpenAi },
         {
           key: 'excluir', icon: 'trash', label: 'Excluir', destructive: true,
           onPress: () => askDelete('Excluir nó?', `"${n.label}" e as ligações dele.`, () => {
@@ -106,10 +106,10 @@ export const ActionBarController = forwardRef<ActionBarControllerHandle, Props>(
       const e = doc.edges.find((x) => x.id === sel.id);
       if (!e) return null;
       return [
-        { key: 'rotulo', icon: 'check', label: 'Rótulo', onPress: () => openPrompt('Rótulo da ligação', e.label, (v) => apply((d) => flow.setEdgeLabel(d as FlowDoc, sel.id, v))) },
-        { key: 'inverter', icon: 'undo', label: 'Inverter', onPress: () => apply((d) => flow.invertEdge(d as FlowDoc, sel.id)) },
-        { key: 'traco', icon: 'menu', label: 'Traço', onPress: () => openInspector('edge') },
-        { key: 'ia', icon: 'check', label: 'IA', onPress: onOpenAi },
+        { key: 'rotulo', icon: 'pencil', label: 'Rótulo', onPress: () => openPrompt('Rótulo da ligação', e.label, (v) => apply((d) => flow.setEdgeLabel(d as FlowDoc, sel.id, v))) },
+        { key: 'inverter', icon: 'swap', label: 'Inverter', onPress: () => apply((d) => flow.invertEdge(d as FlowDoc, sel.id)) },
+        { key: 'traco', icon: 'sliders', label: 'Traço', onPress: () => openInspector('edge') },
+        { key: 'ia', icon: 'spark', label: 'IA', onPress: onOpenAi },
         {
           key: 'excluir', icon: 'trash', label: 'Excluir', destructive: true,
           onPress: () => askDelete('Excluir ligação?', 'Não dá pra desfazer isso sozinho — mas dá pra desfazer a ação.', () => {
@@ -126,11 +126,11 @@ export const ActionBarController = forwardRef<ActionBarControllerHandle, Props>(
       const t = tableById(doc as ErDoc, sel.id);
       if (!t) return null;
       return [
-        { key: 'colunas', icon: 'menu', label: 'Colunas', onPress: () => openInspector('table') },
-        { key: 'nome', icon: 'check', label: 'Nome', onPress: () => openPrompt('Nome da tabela', t.id, (v) => apply((d) => er.renameTable(d as ErDoc, sel.id, v))) },
-        { key: 'relacionar', icon: 'plus', label: 'Relacionar', onPress: () => onStartLink(sel.id) },
-        { key: 'duplicar', icon: 'plus', label: 'Duplicar', onPress: () => apply((d) => er.duplicateTable(d as ErDoc, sel.id)) },
-        { key: 'ia', icon: 'check', label: 'IA', onPress: onOpenAi },
+        { key: 'colunas', icon: 'columns', label: 'Colunas', onPress: () => openInspector('table') },
+        { key: 'nome', icon: 'pencil', label: 'Nome', onPress: () => openPrompt('Nome da tabela', t.id, (v) => apply((d) => er.renameTable(d as ErDoc, sel.id, v))) },
+        { key: 'relacionar', icon: 'link', label: 'Relacionar', onPress: () => onStartLink(sel.id) },
+        { key: 'duplicar', icon: 'copy', label: 'Duplicar', onPress: () => apply((d) => er.duplicateTable(d as ErDoc, sel.id)) },
+        { key: 'ia', icon: 'spark', label: 'IA', onPress: onOpenAi },
         {
           key: 'excluir', icon: 'trash', label: 'Excluir', destructive: true,
           onPress: () => askDelete('Excluir tabela?', `"${t.id}" e as relações dela.`, () => {
@@ -147,11 +147,11 @@ export const ActionBarController = forwardRef<ActionBarControllerHandle, Props>(
       const c = colunaDe(doc as ErDoc, sel.id);
       if (!c) return null;
       return [
-        { key: 'nome', icon: 'check', label: 'Nome', onPress: () => openPrompt('Nome da coluna', c.col.name, (v) => apply((d) => er.updateColumn(d as ErDoc, c.tab.id, c.idx, { name: v }))) },
-        { key: 'tipo', icon: 'check', label: 'Tipo', onPress: () => openPrompt('Tipo da coluna', c.col.type, (v) => apply((d) => er.updateColumn(d as ErDoc, c.tab.id, c.idx, { type: v }))) },
-        { key: 'comentario', icon: 'check', label: 'Comentário', onPress: () => openPrompt('Comentário', c.col.note, (v) => apply((d) => er.updateColumn(d as ErDoc, c.tab.id, c.idx, { note: v }))) },
-        { key: 'ia', icon: 'check', label: 'IA', onPress: onOpenAi },
-        { key: 'tabela', icon: 'chevronRight', label: 'Tabela', onPress: () => select({ kind: 'table', id: c.tab.id }) },
+        { key: 'nome', icon: 'pencil', label: 'Nome', onPress: () => openPrompt('Nome da coluna', c.col.name, (v) => apply((d) => er.updateColumn(d as ErDoc, c.tab.id, c.idx, { name: v }))) },
+        { key: 'tipo', icon: 'type', label: 'Tipo', onPress: () => openPrompt('Tipo da coluna', c.col.type, (v) => apply((d) => er.updateColumn(d as ErDoc, c.tab.id, c.idx, { type: v }))) },
+        { key: 'comentario', icon: 'comment', label: 'Comentário', onPress: () => openPrompt('Comentário', c.col.note, (v) => apply((d) => er.updateColumn(d as ErDoc, c.tab.id, c.idx, { note: v }))) },
+        { key: 'ia', icon: 'spark', label: 'IA', onPress: onOpenAi },
+        { key: 'tabela', icon: 'table', label: 'Tabela', onPress: () => select({ kind: 'table', id: c.tab.id }) },
         {
           key: 'excluir', icon: 'trash', label: 'Excluir', destructive: true,
           onPress: () => askDelete('Excluir coluna?', `"${c.col.name}" de ${c.tab.id}.`, () => {
@@ -168,10 +168,10 @@ export const ActionBarController = forwardRef<ActionBarControllerHandle, Props>(
       const r = relById(doc as ErDoc, sel.id);
       if (!r) return null;
       return [
-        { key: 'verbo', icon: 'check', label: 'Verbo', onPress: () => openPrompt('Verbo da relação', r.label, (v) => apply((d) => { const dd = structuredClone(d as ErDoc); const rr = dd.relations.find((x) => x.id === sel.id); if (rr) rr.label = v; return dd; })) },
-        { key: 'cardinalidade', icon: 'menu', label: 'Cardinalidade', onPress: () => openInspector('relation') },
-        { key: 'inverter', icon: 'undo', label: 'Inverter', onPress: () => apply((d) => er.invertRelation(d as ErDoc, sel.id)) },
-        { key: 'ia', icon: 'check', label: 'IA', onPress: onOpenAi },
+        { key: 'verbo', icon: 'pencil', label: 'Verbo', onPress: () => openPrompt('Verbo da relação', r.label, (v) => apply((d) => { const dd = structuredClone(d as ErDoc); const rr = dd.relations.find((x) => x.id === sel.id); if (rr) rr.label = v; return dd; })) },
+        { key: 'cardinalidade', icon: 'cardinality', label: 'Cardinalidade', onPress: () => openInspector('relation') },
+        { key: 'inverter', icon: 'swap', label: 'Inverter', onPress: () => apply((d) => er.invertRelation(d as ErDoc, sel.id)) },
+        { key: 'ia', icon: 'spark', label: 'IA', onPress: onOpenAi },
         {
           key: 'excluir', icon: 'trash', label: 'Excluir', destructive: true,
           onPress: () => askDelete('Excluir relação?', '', () => {
@@ -188,10 +188,10 @@ export const ActionBarController = forwardRef<ActionBarControllerHandle, Props>(
       const span = raw.textSpanAt(doc as RawDoc, sel);
       if (!span) return null;
       return [
-        { key: 'texto', icon: 'check', label: 'Texto', onPress: () => openPrompt('Texto', span.texto, (v) => apply((d) => raw.replaceTextSpan(d as RawDoc, span, v))) },
-        { key: 'duplicar', icon: 'plus', label: 'Duplicar linha', onPress: () => apply((d) => raw.duplicateLine(d as RawDoc, span)) },
-        { key: 'ia', icon: 'check', label: 'IA', onPress: onOpenAi },
-        { key: 'codigo', icon: 'chevronRight', label: 'Código', onPress: () => onOpenCode?.() },
+        { key: 'texto', icon: 'pencil', label: 'Texto', onPress: () => openPrompt('Texto', span.texto, (v) => apply((d) => raw.replaceTextSpan(d as RawDoc, span, v))) },
+        { key: 'duplicar', icon: 'copy', label: 'Duplicar linha', onPress: () => apply((d) => raw.duplicateLine(d as RawDoc, span)) },
+        { key: 'ia', icon: 'spark', label: 'IA', onPress: onOpenAi },
+        { key: 'codigo', icon: 'code', label: 'Código', onPress: () => onOpenCode?.() },
         {
           key: 'excluir', icon: 'trash', label: 'Excluir linha', destructive: true,
           onPress: () => askDelete('Excluir linha?', span.linha, () => {
