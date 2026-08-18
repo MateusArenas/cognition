@@ -1,4 +1,5 @@
-import { Keyboard, Pressable, StyleSheet, Text, View } from 'react-native';
+import { BlurView } from 'expo-blur';
+import { Keyboard, Pressable, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
 import { KeyboardStickyView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '@/design/Icon';
@@ -9,60 +10,81 @@ interface Props {
   canRedo: boolean;
   onUndo: () => void;
   onRedo: () => void;
+  /** Altura real (com margens), pra DiagramScreen compensar o scroll do editor por baixo dela. */
+  onLayout?: (height: number) => void;
 }
 
 // Colada ao teclado na aba Código (§12) — desfazer/refazer (mesma ação do HUD do canvas, ver
 // docs/06-canvas.md) e Confirmar. Confirmar só chama Keyboard.dismiss() — isso já tira o foco
 // do TextInput (o cursor some) e dispara o onBlur que existe (commitCode), sem precisar de ref.
-export function CodeKeyboardBar({ canUndo, canRedo, onUndo, onRedo }: Props) {
-  const { colors } = useTheme();
+//
+// Visual: cápsula flutuante com blur (mesma linguagem do Chip/ActionBar — §5.2), não uma barra
+// full-bleed colada nas bordas. Pedido do usuário depois da primeira versão ("tem que ser mais
+// pegada apple... margens pra ver por trás algo sutil e tamanho compacto").
+export function CodeKeyboardBar({ canUndo, canRedo, onUndo, onRedo, onLayout }: Props) {
+  const { colors, radius, scheme } = useTheme();
   const insets = useSafeAreaInsets();
 
   return (
     <KeyboardStickyView>
-      <View style={[styles.bar, { backgroundColor: colors.surface, borderTopColor: colors.separator, paddingBottom: 8 + insets.bottom }]}>
-        <View style={styles.side}>
+      <View
+        // onLayout não inclui a própria margem (marginBottom, embaixo) — soma aqui, senão
+        // DiagramScreen subcompensa exatamente por essa margem e a última linha visível do
+        // editor fica um pouco atrás da barra.
+        onLayout={(e: LayoutChangeEvent) => onLayout?.(e.nativeEvent.layout.height + 2 + insets.bottom)}
+        style={[styles.wrap, { marginBottom: 2 + insets.bottom }]}
+      >
+        <BlurView intensity={50} tint={scheme} style={[styles.bar, { borderRadius: radius.card, borderColor: colors.separator }]}>
+          <View style={styles.side}>
+            <Pressable
+              onPress={onUndo}
+              disabled={!canUndo}
+              accessibilityRole="button"
+              accessibilityLabel="Desfazer"
+              hitSlop={8}
+              style={({ pressed }) => ({ opacity: !canUndo ? 0.3 : pressed ? 0.5 : 1 })}
+            >
+              <Icon name="undo" size={19} />
+            </Pressable>
+            <Pressable
+              onPress={onRedo}
+              disabled={!canRedo}
+              accessibilityRole="button"
+              accessibilityLabel="Refazer"
+              hitSlop={8}
+              style={({ pressed }) => ({ opacity: !canRedo ? 0.3 : pressed ? 0.5 : 1 })}
+            >
+              <Icon name="redo" size={19} />
+            </Pressable>
+          </View>
           <Pressable
-            onPress={onUndo}
-            disabled={!canUndo}
+            onPress={() => Keyboard.dismiss()}
             accessibilityRole="button"
-            accessibilityLabel="Desfazer"
+            accessibilityLabel="Confirmar e fechar o teclado"
             hitSlop={8}
-            style={({ pressed }) => ({ opacity: !canUndo ? 0.3 : pressed ? 0.5 : 1 })}
+            style={({ pressed }) => [styles.confirm, { opacity: pressed ? 0.5 : 1 }]}
           >
-            <Icon name="undo" size={21} />
+            <Text style={{ color: colors.blue, fontSize: 14, fontWeight: '600' }}>Confirmar</Text>
+            <Icon name="check" size={15} />
           </Pressable>
-          <Pressable
-            onPress={onRedo}
-            disabled={!canRedo}
-            accessibilityRole="button"
-            accessibilityLabel="Refazer"
-            hitSlop={8}
-            style={({ pressed }) => ({ opacity: !canRedo ? 0.3 : pressed ? 0.5 : 1 })}
-          >
-            <Icon name="redo" size={21} />
-          </Pressable>
-        </View>
-        <Pressable
-          onPress={() => Keyboard.dismiss()}
-          accessibilityRole="button"
-          accessibilityLabel="Confirmar e fechar o teclado"
-          hitSlop={8}
-          style={({ pressed }) => [styles.confirm, { opacity: pressed ? 0.5 : 1 }]}
-        >
-          <Text style={{ color: colors.blue, fontSize: 15, fontWeight: '600' }}>Confirmar</Text>
-          <Icon name="check" size={16} />
-        </Pressable>
+        </BlurView>
       </View>
     </KeyboardStickyView>
   );
 }
 
 const styles = StyleSheet.create({
+  // Sombra e margens no wrap (sem overflow:hidden — cortaria a própria sombra); raio + blur +
+  // clip no filho, senão o BlurView vaza retângulo por fora dos cantos arredondados.
+  wrap: {
+    marginHorizontal: 2, marginTop: 2,
+    shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 8, shadowOffset: { width: 0, height: 2 },
+  },
   bar: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 18, paddingTop: 10, borderTopWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: 16, paddingVertical: 10, borderWidth: StyleSheet.hairlineWidth,
+    overflow: 'hidden',
   },
-  side: { flexDirection: 'row', gap: 22 },
+  side: { flexDirection: 'row', gap: 20 },
   confirm: { flexDirection: 'row', alignItems: 'center', gap: 5 },
 });

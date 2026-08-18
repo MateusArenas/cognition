@@ -65,6 +65,7 @@ export function DiagramScreen() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
   const [barHeight, setBarHeight] = useState(0);
+  const [codeBarHeight, setCodeBarHeight] = useState(0);
   // Só usado pra doc tipo 'raw' (sem modelo estruturado) — o runtime que informa quais trechos
   // a Camada 3 conseguiu mapear. Fica no DiagramScreen (não no DiagramCanvas) porque a aba
   // "Elementos" desmonta o canvas — o estado precisa sobreviver à troca de aba.
@@ -278,14 +279,24 @@ export function DiagramScreen() {
         // CodeEditor é um TextInput multiline flex:1 sem tela de trás nenhuma — sem isso, o
         // teclado só sobrepunha o campo (bug real reportado pelo usuário: "fica sobrepondo").
         // KeyboardAvoidingView (react-native-keyboard-controller, já usado no editor de
-        // markdown) encolhe a área disponível pra caber acima do teclado.
-        <KeyboardAvoidingView style={styles.canvasArea} behavior="padding">
+        // markdown) encolhe a área disponível pra caber acima do teclado — keyboardVerticalOffset
+        // soma a altura real da CodeKeyboardBar (medida via onLayout, abaixo) por cima da
+        // altura do teclado, senão a barra flutuante cobre a última linha visível do editor
+        // (bug real reportado pelo usuário: "o scroll tem que subir mais... compensar o
+        // tamanho da toolbar").
+        <KeyboardAvoidingView style={styles.canvasArea} behavior="padding" keyboardVerticalOffset={codeBarHeight}>
           <CodeEditor code={codeDraft ?? code} onChangeText={handleCodeChange} onBlur={commitCode} />
         </KeyboardAvoidingView>
       ) : null}
 
       {tab === 'code' ? (
-        <CodeKeyboardBar canUndo={!!history.past.length} canRedo={!!history.future.length} onUndo={undo} onRedo={redo} />
+        <CodeKeyboardBar
+          canUndo={!!history.past.length}
+          canRedo={!!history.future.length}
+          onUndo={undo}
+          onRedo={redo}
+          onLayout={setCodeBarHeight}
+        />
       ) : null}
 
       {doc.tipo === 'flow' ? <NodeComposer visible={composerOpen} onClose={() => setComposerOpen(false)} /> : null}

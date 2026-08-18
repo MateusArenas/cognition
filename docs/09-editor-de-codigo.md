@@ -47,3 +47,21 @@ do canvas, [06-canvas.md](06-canvas.md)) e Confirmar, que só chama `Keyboard.di
 tira o foco do `TextInput` (cursor some) e dispara o `onBlur` existente (`commitCode`), sem
 precisar de ref pro editor. Colada ao teclado com `KeyboardStickyView`, mesmo padrão já usado
 na barra de formatação do editor de markdown ([10-markdown.md](10-markdown.md)).
+
+Visual: cápsula flutuante com `BlurView` (mesma linguagem do `Chip`/`ActionBar`, §5.2) — não
+uma barra full-bleed colada nas bordas. Margens de 2pt (`marginHorizontal`/`marginTop`/
+`marginBottom` no wrap — ajustadas depois de grandes demais na primeira versão), cantos
+arredondados (`radius.card`), sombra sutil no `wrap` (não no `BlurView` — `overflow:'hidden'`
+do blur cortaria a própria sombra, por isso a sombra mora num `View` externo sem clip e o blur
+com raio+clip fica num filho por dentro).
+
+**Bug real: a barra cobria a última linha visível do editor.** `KeyboardAvoidingView`
+(`behavior="padding"`) só sabe compensar a altura do TECLADO — não tem ideia de que
+`CodeKeyboardBar` existe flutuando por cima dele, com altura própria. Corrigido medindo a
+altura real da barra via `onLayout` (guardada em `DiagramScreen`) e passando como
+`keyboardVerticalOffset` no `KeyboardAvoidingView` do editor — matematicamente equivalente a
+somar essa altura à do teclado no cálculo de padding da lib (`relativeKeyboardHeight = keyboard
++ keyboardVerticalOffset` quando a view vai até o fim da tela), mesmo o prop tecnicamente
+significar "distância do topo da tela" na documentação da lib. Detalhe fino: `onLayout` não
+inclui a própria `marginBottom` do elemento — sem somar isso também, a compensação ficava
+subestimada bem por pouco (a última linha aparecia cortada atrás da barra).
