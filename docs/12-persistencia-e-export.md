@@ -26,7 +26,11 @@ arquivo — regenerar a cada abertura da lista trava a rolagem.
 
 Texto (`.mmd`/`.md`) via `expo-file-system` + `expo-sharing`. PNG gerado no lado web (onde já
 existe o SVG e um `<canvas>`), base64 pela ponte — atenção: um diagrama de 40 nós em 3× dá uns
-2 MB e trava a UI por meio segundo; mostrar progresso e limitar `scale` a 3.
+2 MB e trava a UI por meio segundo; mostrar progresso e limitar `scale` a 3. **Bug real:** o PNG
+saía com retângulos pretos sólidos cobrindo tabelas de ER (e a seleção ativa) — as camadas
+internas de toque/seleção só ficam invisíveis por uma regra CSS que não viaja com a `<svg>`
+serializada sozinha. Corrigido em `exportPng()`; detalhe da causa raiz em
+[06-canvas.md](06-canvas.md).
 
 No `DiagramScreen`, as duas saídas moram atrás de um botão só — "Compartilhar" na `NavBar`
 abre `ShareSheet` (`features/diagram/ShareSheet.tsx`), que escolhe entre PNG e código-fonte

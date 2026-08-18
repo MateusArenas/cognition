@@ -150,6 +150,25 @@ JS *dentro* do WebView; olhe o console do Metro/Xcode/Logcat), (3) o WebView deu
 carregamento (`onError`/`onHttpError`, agora tratados). Ver `useRuntimeHtml.ts` e
 `DiagramCanvas.tsx`.
 
+**Bug real encontrado e corrigido: PNG exportado saía com retângulos pretos sólidos cobrindo
+tabelas de ER inteiras (e a seleção ativa, se houvesse uma).** Achado com o usuário reportando
+"buga nas cores" ao compartilhar — mais visível em tema claro (preto sobre fundo claro salta
+aos olhos), quase invisível em tema escuro (preto sobre fundo já escuro), o que parecia à
+primeira vista um bug "de tema". Causa raiz: `.hitbox`/`.hitline` (retângulos de toque
+invisíveis da Camada 2/3 de seleção, [07-selecao.md](07-selecao.md)) e `.selbracket`/
+`.selglow` (destaque da seleção) só ficam transparentes/coloridos por causa de regras CSS no
+`<style>` do **documento HTML** (`#host .hitbox{fill:transparent}` etc.) — e
+`exportPng()` serializa só a `<svg>` sozinha (`XMLSerializer` não carrega o `<style>` de fora
+dela). Sem essa regra, o `<rect>`/`<path>` sem `fill` próprio cai no default do SVG, que é
+**preto sólido opaco**, não transparente. Confirmado reproduzindo headless (Playwright,
+`erDiagram`, decodificando o PNG resultante e amostrando o pixel exato no centro de um
+`.hitbox`: `[0,0,0,255]` antes da correção). Corrigido em `exportPng()` removendo `.hitlayer`
+e `.sellayer` de uma **cópia** do SVG (`cloneNode(true)`) antes de serializar — nunca do SVG ao
+vivo, ou o toque pararia de funcionar até o próximo `render()`. Esses grupos são scaffolding
+interno de interação, nunca deveriam aparecer numa imagem exportada de qualquer forma — a
+correção também tira de quebra o retângulo de seleção que vazava pro PNG quando algo estava
+selecionado na hora de exportar.
+
 **Extensão em relação ao spec original**: além dos 5 tipos de `ToWeb`/4 de `FromWeb` do §8.2,
 a implementação real tem `{t:'validate', code, reqId}` / `{t:'validated', reqId, ok, message?}`
 — usados pela validação da IA antes de aplicar (§14.3, ver
