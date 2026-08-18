@@ -1,0 +1,99 @@
+# Sistema de design iOS
+
+> Fonte completa (tokens exatos, código dos componentes): [ESPECIFICACAO-APP-RN-EXPO.md](../ESPECIFICACAO-APP-RN-EXPO.md) §5.
+> Status: **implementado** (Etapa 2) em `editor/src/design/`.
+
+## Tokens
+
+Paleta de cores do sistema iOS (dark e light), tipografia (`largeTitle` a `caption`),
+espaçamento (`xs` a `xxl`), raios (`row`, `card`, `sheet`, `pill`, `control`) e a curva de
+easing das sheets do iOS (`cubic-bezier(.32,.72,0,1)`, 500ms). Tudo em
+`editor/src/design/tokens.ts` — código exato na spec §5.1.
+
+Fonte: não instale nada. `-apple-system` no iOS já é SF Pro; no Android, Roboto. Monoespaçada:
+`Platform.select({ ios:'Menlo', android:'monospace' })`.
+
+## Os nove componentes base
+
+Cobrem o app inteiro — construir antes de qualquer tela.
+
+| Componente | Papel |
+|---|---|
+| `NavBar` | 44pt + safe area, título centrado, ações em azul |
+| `Sheet` | `@gorhom/bottom-sheet`, snaps `['45%','92%']`, tela de trás encolhe para 92,5% |
+| `GroupedList` + `Row` | lista inset do iOS, raio 12, separadores recuados 16pt |
+| `Segmented` | trilho + pílula selecionada, usado em Escrever/Ler e no escopo da IA |
+| `ActionBar` | barra contextual — ver [08-barra-de-acoes.md](08-barra-de-acoes.md) |
+| `AlertDialog` | alerta do iOS, onde acontece toda edição de valor único |
+| `Toast` | cápsula translúcida, some em 1,9s |
+| `Fab` | 56pt azul (ação primária), 48pt translúcido (secundárias) |
+| `Chip` | cápsula translúcida com blur |
+
+## Regras que separam "parece nativo" de "parece site"
+
+- **Feedback tátil em tudo** (`expo-haptics`): `Light` ao selecionar, `Medium` ao criar,
+  `Warning` ao excluir.
+- **Toque pressionado reduz opacidade** (~0.45), não muda cor de fundo.
+- **Alvos de 44pt.** Nada abaixo disso recebe toque.
+- **Uma cor de acento só** — azul do sistema. Vermelho é exclusivo de destrutivo; laranja, de
+  estado transitório.
+- **Respeite `prefers-reduced-motion`** via `AccessibilityInfo.isReduceMotionEnabled`.
+- **Todo componente ancorado no fundo da tela soma `useSafeAreaInsets().bottom` ao próprio
+  padding** (`react-native-safe-area-context` — funciona porque o `Stack` do expo-router, via
+  react-native-screens, provê o `SafeAreaProvider` sozinho por trás de cada tela; não precisa
+  um explícito no `RootLayout`). Sem isso, no iPhone sem botão físico o conteúdo cola no home
+  indicator — bug real achado testando `ActionBar` e `Sheet` num device de verdade, corrigido
+  nas duas (mais `NavBar`/`Toast`, que já faziam isso certo). Testar um componente assim
+  isolado precisa envolver o `render()` num `<SafeAreaProvider initialMetrics={...}>` — ver
+  `ActionBar.test.tsx`.
+
+Ver também [13-qualidade-e-testes.md](13-qualidade-e-testes.md) para acessibilidade e Dynamic Type.
+
+## Ícones
+
+Vêm de `lucide-react-native` (não mais desenhados à mão) — SVG puro sobre `react-native-svg`
+(a mesma base já usada pelo canvas), sem plugin nativo nenhum, então funciona sem build extra
+no Expo Go/iOS/Android. Verificado com `npx expo export` nas duas plataformas antes de trocar.
+
+`Icon.tsx` mapeia cada `IconName` do app pro ícone lucide mais próximo do desenho do protótipo
+(`editor-mermaid.html`, registro `ICO` por volta da linha 675) — ex.: `menu` (círculo com 3
+pontinhos, usado como indicador de seleção da `ActionBar`) vira `CircleEllipsis`, não
+`Ellipsis` (que não tem o círculo). Pra ícone que o protótipo não tem (`chevronRight`,
+`minus`), usa o equivalente óbvio do lucide direto. Registro pequeno de propósito, igual antes:
+só entra ícone que uma feature real usa — ver `editor/src/design/Icon.tsx`.
+
+**Armadilha de teste**: o build "react-native" que o pacote expõe via `package.json#exports` é
+ESM puro (`.mjs`), e o transform do `jest-expo` só cobre `.js/.jsx/.ts/.tsx` — sem ajuste,
+qualquer teste que importe algo com `Icon` quebra com `Unexpected token 'export'`. Corrigido
+mapeando `lucide-react-native` pro próprio build CJS do pacote via `moduleNameMapper` em
+`jest.config.js`, em vez de mexer em `transform`/`transformIgnorePatterns` (mais simples e não
+arrisca destransformar outra coisa).
+
+## O que existe hoje
+
+```
+editor/src/design/
+  tokens.ts          palette (dark/light), type, space, radius, easing — porta exata do §5.1
+  ThemeProvider.tsx   segue o sistema até o usuário escolher (mode: 'auto'|'light'|'dark');
+                      a persistência da escolha chega com store/useSettings.ts (Etapa 16)
+  useTheme.ts         hook — lança se usado fora do provider
+  Icon.tsx            ícones do lucide-react-native — registro pequeno, cresce por feature
+  SheetChrome.tsx      o efeito "tela encolhe atrás da sheet aberta" — Provider + Container,
+                       plugado no RootLayout; Sheet chama useSheetChrome().setOpen()
+  components/
+    NavBar Row GroupedList Segmented          — puramente visuais, sem teste de componente
+    Chip Fab Field KeyCaps                    — idem, exceto KeyCaps (tem toggle, tem teste)
+    ActionBar AlertDialog Sheet Toast         — têm lógica de decisão real
+```
+
+Testes de componente (Camada 1, `npm run test:rn` dentro de `editor/`) em
+`Segmented.test.tsx`, `KeyCaps.test.tsx`, `ActionBar.test.tsx`, `AlertDialog.test.tsx` — só
+onde há ramificação de comportamento, conforme a regra de
+[13-qualidade-e-testes.md](13-qualidade-e-testes.md). `LibraryScreen` (em
+`features/library/`) foi restilizado com `NavBar`/`GroupedList`/`Row` reais como prova de
+que o sistema funciona ponta a ponta — a tela de verdade (grade, busca, SQLite) é Etapa 13.
+
+**`ActionBar` aqui é só o shell visual** (cabeçalho + fila de ações) — a lógica de qual ação
+aparece por tipo de seleção é da Etapa 6, em
+`features/diagram/ActionBarController.tsx` (ver
+[08-barra-de-acoes.md](08-barra-de-acoes.md)).
