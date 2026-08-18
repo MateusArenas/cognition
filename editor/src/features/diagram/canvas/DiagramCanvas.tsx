@@ -23,6 +23,8 @@ interface Props {
   /** sel.id pode ser um índice, não o id real, para kind 'edge'/'rel' — ver bridge.ts. */
   onTap: (sel: Selection | null, duplo: boolean) => void;
   onError?: (message: string) => void;
+  /** Só chega pra documentos tipo 'raw' — flow/er derivam a lista do próprio Doc. */
+  onElements?: (items: { id: string; texto: string }[]) => void;
 }
 
 const TIMEOUT_PRONTO_MS = 8000;
@@ -30,7 +32,7 @@ const TIMEOUT_PRONTO_MS = 8000;
 // O WebView é um componente burro: desenha e reporta toques. Toda a UI (barra de ações,
 // sheets, formulários) é React Native de verdade (docs/06-canvas.md).
 export const DiagramCanvas = forwardRef<DiagramCanvasHandle, Props>(function DiagramCanvas(
-  { code, theme, tokens, sel, onTap, onError },
+  { code, theme, tokens, sel, onTap, onError, onElements },
   ref
 ) {
   const { html, error: htmlError } = useRuntimeHtml();
@@ -96,6 +98,8 @@ export const DiagramCanvas = forwardRef<DiagramCanvasHandle, Props>(function Dia
       const resolver = validateResolvers.current.get(msg.reqId);
       validateResolvers.current.delete(msg.reqId);
       resolver?.({ ok: msg.ok, message: msg.message });
+    } else if (msg.t === 'elements') {
+      onElements?.(msg.items);
     }
   };
 

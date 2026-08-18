@@ -57,6 +57,10 @@ export function DiagramScreen() {
   const [composerOpen, setComposerOpen] = useState(false);
   const [codeDraft, setCodeDraft] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  // Só usado pra doc tipo 'raw' (sem modelo estruturado) — o runtime que informa quais trechos
+  // a Camada 3 conseguiu mapear. Fica no DiagramScreen (não no DiagramCanvas) porque a aba
+  // "Elementos" desmonta o canvas — o estado precisa sobreviver à troca de aba.
+  const [rawElements, setRawElements] = useState<{ id: string; texto: string }[]>([]);
 
   const code = useMemo(() => serialize(doc), [doc]);
   const tokens = useMemo(() => toRuntimeTokens(colors), [colors]);
@@ -185,7 +189,16 @@ export function DiagramScreen() {
 
       {tab === 'canvas' ? (
         <View style={styles.canvasArea}>
-          <DiagramCanvas ref={canvasRef} code={code} theme={scheme} tokens={tokens} sel={sel} onTap={handleTap} onError={setErrorMsg} />
+          <DiagramCanvas
+            ref={canvasRef}
+            code={code}
+            theme={scheme}
+            tokens={tokens}
+            sel={sel}
+            onTap={handleTap}
+            onError={setErrorMsg}
+            onElements={setRawElements}
+          />
 
           {!nEls ? (
             <View style={[styles.empty, { backgroundColor: colors.surface }]} pointerEvents="box-none">
@@ -224,7 +237,7 @@ export function DiagramScreen() {
         </View>
       ) : null}
 
-      {tab === 'elements' ? <ElementsList /> : null}
+      {tab === 'elements' ? <ElementsList rawElements={rawElements} /> : null}
 
       {tab === 'code' ? (
         <View style={styles.canvasArea}>
@@ -246,7 +259,7 @@ export function DiagramScreen() {
   );
 }
 
-function ElementsList() {
+function ElementsList({ rawElements }: { rawElements: { id: string; texto: string }[] }) {
   const { space } = useTheme();
   const doc = useDoc((s) => s.doc);
   const select = useDoc((s) => s.select);
@@ -256,7 +269,11 @@ function ElementsList() {
       ? doc.nodes.map((n) => ({ key: n.id, title: n.label || n.id, subtitle: n.id, sel: { kind: 'node' as const, id: n.id } }))
       : doc.tipo === 'er'
         ? doc.tables.map((t) => ({ key: t.id, title: t.id, subtitle: `${t.cols.length} colunas`, sel: { kind: 'table' as const, id: t.id } }))
-        : [];
+        : doc.tipo === 'raw'
+          ? [...rawElements]
+              .sort((a, b) => Number(a.id.split(':')[0]) - Number(b.id.split(':')[0]))
+              .map((el) => ({ key: el.id, title: el.texto, subtitle: undefined, sel: { kind: 'txt' as const, id: el.id } }))
+          : [];
 
   return (
     <ScrollView contentContainerStyle={{ padding: space.lg }}>

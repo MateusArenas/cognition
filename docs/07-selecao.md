@@ -48,18 +48,35 @@ de verdade (ou testar num device), nunca assumir que `<text>` é onde o rótulo 
 
 ## Camada 3 — texto (os outros 23 tipos)
 
-Todo elemento editável acaba sendo um pedaço de texto no código-fonte. Para cada `<text>` do
-SVG em ordem de documento: pegar o conteúdo aparado, achar a primeira ocorrência *ainda não
-usada* dele no código (resolve textos repetidos), usar a forma envolvente como alvo quando
-existir (cartão, barra, caixa do ator — não as letras), criar hit `txt:<inicio>:<fim>`. Textos
-**gerados** pelo renderer (eixo do Gantt, percentuais da pizza) não existem na fonte e não são
-selecionáveis — documentar isso na interface.
+Todo elemento editável acaba sendo um pedaço de texto no código-fonte. Para cada `<text>`
+**ou `<foreignObject>`** do SVG em ordem de documento: pegar o conteúdo aparado, achar a
+primeira ocorrência *ainda não usada* dele no código (resolve textos repetidos), usar a forma
+envolvente como alvo quando existir (cartão, barra, caixa do ator — não as letras), criar hit
+`txt:<inicio>:<fim>`. Textos **gerados** pelo renderer (eixo do Gantt, percentuais da pizza)
+não existem na fonte e não são selecionáveis — documentar isso na interface.
+
+**Bug real, mesma família do da Camada 2**: `mapearTextoGenerico` só varria `<text>` — mas o
+Mermaid 11 desenha rótulo de nó em vários dos 23 tipos (state, class, ...) como
+`<foreignObject><div><span><p>`, igual ao ER. Resultado: `stateDiagram` renderizava normal, mas
+tocar num estado não selecionava nada — só as etiquetas de transição (que continuam saindo em
+`<text>`) respondiam. Corrigido igual: `host.querySelectorAll('text, foreignObject')` em vez de
+só `'text'` — os dois tipos de elemento respondem a `.textContent`/`.getBoundingClientRect()`
+do mesmo jeito, então o resto do algoritmo não precisou mudar.
 
 ## Rede de segurança
 
 Se nenhuma camada mapear nada, avisar e apontar para a lista de elementos — falha silenciosa
 aqui é o que torna o bug difícil de achar. Expor, na tela de ajuda, a versão do Mermaid
 carregada.
+
+**A lista de elementos em si (a aba "Elementos") não existia pra tipo `raw`** — só flow/er
+tinham fonte pra ela (o próprio `Doc` estruturado). Tipo `raw` não tem modelo estruturado do
+lado RN (§6, é só `{code}`), então quem sabe quais trechos a Camada 3 conseguiu mapear é o
+runtime — ele manda `{t:'elements', items:[{id,texto}]}` depois de `mapearTextoGenerico`
+(`bridge.ts`), e `DiagramScreen` guarda esse estado por cima do `DiagramCanvas` porque a própria
+aba "Elementos" desmonta o canvas ao trocar de aba. Sem isso a aba ficava sempre em "Nenhum
+elemento ainda" pra qualquer um dos 23 tipos genéricos — quebrando o requisito de acessibilidade
+do §17 ("a lista de elementos não é acessório, é o que torna o app usável com VoiceOver").
 
 ## Chaves de seleção
 

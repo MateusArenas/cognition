@@ -317,8 +317,13 @@
     var ocupados = [];
     var livre = function (a, b) { return !ocupados.some(function (o) { return a < o[1] && b > o[0]; }); };
     var camada = document.createElementNS(SVGNS, 'g'); camada.setAttribute('class', 'hitlayer');
+    var elementos = [];
 
-    Array.prototype.slice.call(host.querySelectorAll('text')).forEach(function (el) {
+    // `<text>` cobre a maioria dos 23 tipos daqui, mas o Mermaid 11 desenha rótulo de nó em
+    // vários deles (state, class, ...) como <foreignObject><div><span><p> — mesmo problema já
+    // achado na Camada 2 do ER (docs/07-selecao.md). `.textContent`/`.getBoundingClientRect()`
+    // funcionam igual nos dois tipos de elemento, então basta somar os dois na varredura.
+    Array.prototype.slice.call(host.querySelectorAll('text, foreignObject')).forEach(function (el) {
       var bruto = (el.textContent || '').trim();
       if (!bruto || bruto.length > 140) return;
       var cb = el.getBoundingClientRect();
@@ -341,8 +346,13 @@
       var pad = alvo === cb ? 5 : 0;
       var c = { left: alvo.left - pad, right: alvo.right + pad, top: alvo.top - pad, bottom: alvo.bottom + pad };
       camada.appendChild(retanguloDeToque(c, 'txt:' + de + ':' + ate, svgPt));
+      elementos.push({ id: de + ':' + ate, texto: bruto });
     });
 
+    // A lista de elementos (§17: "caminho alternativo de navegação" — não acessório, é o que
+    // torna o app usável com VoiceOver) sai daqui porque só o runtime sabe quais trechos a
+    // Camada 3 conseguiu mapear; tipo raw não tem modelo estruturado do lado RN.
+    postToRN({ t: 'elements', items: elementos });
     if (!camada.childNodes.length) return false;
     currentSVG.appendChild(camada);
     return true;

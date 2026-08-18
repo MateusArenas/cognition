@@ -18,12 +18,17 @@ export type ToWeb =
 //
 // 'validated' é a base da validação da IA antes de aplicar (§14.3): usa o `mermaid.parse` de
 // verdade que já está carregado no runtime, em vez de reimplementar um validador à parte.
+// 'elements' só é relevante pra tipo 'raw' (os 23 tipos sem modelo estruturado — flow/er já
+// têm a lista de elementos vinda do próprio Doc, não precisam disso). O runtime é quem sabe
+// quais trechos de texto a Camada 3 conseguiu mapear como toque, então é ele quem informa —
+// ver docs/07-selecao.md.
 export type FromWeb =
   | { t: 'ready' }
   | { t: 'tap'; sel: Selection | null; duplo: boolean }
   | { t: 'error'; message: string }
   | { t: 'png'; base64: string }
-  | { t: 'validated'; reqId: string; ok: boolean; message?: string };
+  | { t: 'validated'; reqId: string; ok: boolean; message?: string }
+  | { t: 'elements'; items: { id: string; texto: string }[] };
 
 export function sendToWeb(ref: RefObject<WebView | null>, msg: ToWeb) {
   ref.current?.injectJavaScript(`window.__handle(${JSON.stringify(msg)}); true;`);
