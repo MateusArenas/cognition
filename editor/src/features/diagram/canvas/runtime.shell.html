@@ -431,9 +431,20 @@
     if (tipo === 'raw') { mapearTextoGenerico(code); return; }
 
     if (tipo === 'flow') {
-      host.querySelectorAll('g.node, g[data-node], g[id^="flowchart-"]').forEach(function (g) {
+      // Bug real: `render()` chama `window.mermaid.render(id, code)` com um id PRÓPRIO
+      // (`mmd1`, `mmd2`, ... um contador que nunca reinicia) — o Mermaid usa esse id como
+      // PREFIXO de todo id interno da <svg>, então o <g> de um nó vira
+      // "mmd2-flowchart-A-7", nunca só "flowchart-A-7". `g[id^="flowchart-"]` não batia com
+      // nada (achado via g.node mesmo assim, essa parte do seletor era só morta) e
+      // `.replace(/^flowchart-/, '')` não removia o prefixo "mmd2-" — sobrava
+      // "mmd2-flowchart-A" em vez de "A" como sel.id. O toque acertava o nó certo (a seleção
+      // azul geometricamente batia — por isso nunca foi visto como bug de seleção) mas o RN
+      // procurava esse id sujo em `doc.nodes` e não achava nada, então a ActionBar nunca
+      // abria. `.replace(/^.*?flowchart-/, '')` (não-guloso) remove até o "flowchart-" real,
+      // seja qual for o prefixo de render na frente dele.
+      host.querySelectorAll('g.node, g[data-node], g[id*="flowchart-"]').forEach(function (g) {
         var id = g.getAttribute('data-id') || '';
-        if (!id) id = (g.getAttribute('id') || '').replace(/^flowchart-/, '').replace(/-\d+$/, '');
+        if (!id) id = (g.getAttribute('id') || '').replace(/^.*?flowchart-/, '').replace(/-\d+$/, '');
         if (id && !g.dataset.selKey) g.dataset.selKey = 'node:' + id;
       });
     }

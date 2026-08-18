@@ -80,6 +80,21 @@ antes da tab bar existir) ficava atrás da barra nova, e o `Toast` global (calib
 antigo) passou a cair atrás do FAB depois que ele subiu — ver
 [docs/03-design-system.md](docs/03-design-system.md).
 
+**Barra de ações contextual nunca abria pra nó nenhum de fluxograma** (reportado pelo usuário:
+"clico e fica o azul em volta, mas não sobe a barra de opções"). Não era regressão recente nem
+específico de nó recém-criado — a linha 269-272 deste arquivo já vinha marcando esse caminho
+como "ninguém viu essa tela ainda", e era exatamente aqui que o bug morava desde sempre:
+`tagTargets()` tirava só o `"flowchart-"` literal do começo do `id` do `<g>`, mas o Mermaid 11
+prefixa esse `id` com o argumento passado pra `mermaid.render(id, code)` (`"mmd2-flowchart-A-7"`,
+não `"flowchart-A-7"`) — sobrava `sel.id = "mmd2-flowchart-A"`, que nunca bate com nenhum
+`doc.nodes[].id` de verdade. O destaque azul continuava aparecendo certinho (geometricamente
+correto, por isso nunca foi visto como bug de seleção) porque ele só compara `data-sel-key`
+contra si mesmo. Corrigido e confirmado via reprodução real (`serialize()`+`addNode()` de
+verdade, Playwright headless comparando os ids resultantes contra `doc.nodes`) — ver
+[docs/07-selecao.md](docs/07-selecao.md). `npm run verify:canvas` ganhou uma checagem
+específica pra essa classe de bug, confirmada revertendo a correção e vendo o teste falhar
+antes de reaplicá-la.
+
 ---
 
 - [x] **Etapa 0 — Scaffold do projeto** (pré-requisito, fora da lista original do spec)
@@ -266,10 +281,12 @@ redescobertas do zero:
   lista de tarefas), barra de formatação com respiro correto do home indicator, persistência
   automática (o documento reaparece na Biblioteca depois de fechar). Ver docs/10-markdown.md
   pros dois bugs reais achados e corrigidos nessa passada (Estrutura pulando sempre pro início
-  do documento; modo Ler sem rolagem). **O que ainda não foi verificado visualmente**: barra de
-  ações completa (flow/ER), inspetores, compositor, assistente de IA, exportar/compartilhar/
-  importar — a lógica foi implementada com cuidado e passa nos testes automatizados, mas
-  ninguém viu essas telas na tela ainda.
+  do documento; modo Ler sem rolagem). Toque em nó de fluxograma abrindo a barra de ações
+  contextual **agora também confirmado** — era exatamente esse caminho que escondia o bug do
+  `sel.id` sujo (ver acima e docs/07-selecao.md); ER já estava certo, não usa a mesma
+  extração de id. **O que ainda não foi verificado visualmente**: inspetores, compositor,
+  assistente de IA, exportar/compartilhar/importar — a lógica foi implementada com cuidado e
+  passa nos testes automatizados, mas ninguém viu essas telas na tela ainda.
 - **`EXPO_PUBLIC_API_ORIGIN` para o assistente de IA.** Em dev, `services/ai.ts` tenta
   adivinhar a origem da rota `/api/diagrama` a partir do host do Metro — funciona no caminho
   comum, mas veja `docs/11-assistente-ia.md` antes de um deploy de verdade.

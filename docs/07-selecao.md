@@ -17,6 +17,24 @@ Nós têm `data-id` (Mermaid 11+) ou `id="flowchart-<id>-<n>"` (10.x) — tratar
 a ordem no DOM segue a do código, o índice basta. **Alvos de toque em linha são finos demais
 para dedo** — clone cada `<path>` com `stroke-width:26` transparente numa camada de hit.
 
+**Bug real, achado a partir de um relato do usuário ("clico e fica o azul em volta, mas não
+sobe a barra de ações"):** o `id="flowchart-<id>-<n>"` acima está incompleto — na prática o
+Mermaid 11 (nem `data-id` está presente nos nós do `templateFlow()`, então cai sempre neste
+caminho) gera `id="<renderId>-flowchart-<id>-<n>"`, com `<renderId>` sendo o primeiro argumento
+de `mermaid.render(id, code)` (`'mmd' + contador`, nunca reinicia — ver `render()`). `tagTargets()`
+só tirava o `"flowchart-"` literal do **começo** da string; como a string de verdade começa com
+`"mmd2-flowchart-..."`, nada era removido, e sobrava `sel.id = "mmd2-flowchart-A"` em vez de
+`"A"`. O toque continuava acertando o elemento certo (o destaque azul batia geometricamente —
+por isso nunca foi visto como bug de seleção, e `npm run verify:canvas` também não pegava,
+porque ele só compara `sel.id` contra o próprio `data-sel-key`, nunca contra um id de verdade)
+mas o lado RN nunca achava esse id sujo em `doc.nodes` — `ActionBarController` retornava `null`
+e a barra de ações contextual nunca abria, pra QUALQUER nó de fluxograma, não só nós recém-
+criados. Corrigido trocando `.replace(/^flowchart-/, '')` por `.replace(/^.*?flowchart-/, '')`
+(não-guloso — remove tudo até o `"flowchart-"` de verdade, seja qual for o prefixo de render na
+frente). `verify-canvas-selection.mjs` ganhou uma checagem específica pra essa classe de bug
+(`sel.id` não pode carregar o prefixo `mmd<N>-`) — confirmada revertendo a correção e vendo o
+teste falhar antes de reaplicá-la.
+
 ## Camada 2 — geometria (modelo relacional)
 
 A tabela do ER é uma pilha de retângulos: cabeçalho + uma faixa por coluna.

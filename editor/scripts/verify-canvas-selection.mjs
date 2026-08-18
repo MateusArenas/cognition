@@ -143,6 +143,20 @@ async function testarDiagrama(browser, caso) {
       continue;
     }
 
+    // Regressão real (docs/06-canvas.md): render() usa mermaid.render(id, code) com um id
+    // PRÓPRIO ('mmd1', 'mmd2', ...) que o Mermaid prefixa em todo id interno da <svg> — o <g>
+    // de um nó vira "mmd2-flowchart-A-7", não "flowchart-A-7". tagTargets() tirava só o
+    // "flowchart-" literal do começo, sobrando o prefixo de render no sel.id ("mmd2-flowchart-A"
+    // em vez de "A"). A seleção azul batia geometricamente (por isso nunca foi vista como bug
+    // de seleção — esse teste também não pegava, já que compara contra o PRÓPRIO sel.id, não
+    // contra um id de verdade) mas o RN nunca achava esse id sujo em doc.nodes, então a
+    // ActionBar nunca abria. Este teste não tem o Doc estruturado (só recebe `code`), então a
+    // checagem é só "o id não carrega esse prefixo de render" — não "bate com doc.nodes".
+    if (tap.sel.kind === 'node' && /^mmd\d/.test(tap.sel.id)) {
+      falhas.push({ rotulo: alvo.rotulo, sel: tap.sel, motivo: 'sel.id vazou o prefixo de render do mermaid.render() — RN nunca acha isso em doc.nodes' });
+      continue;
+    }
+
     await page.evaluate((sel) => window.__handle({ t: 'select', sel }), tap.sel);
     await page.waitForTimeout(60);
     const conf = await page.evaluate((sel) => {
