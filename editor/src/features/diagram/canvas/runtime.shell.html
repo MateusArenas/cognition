@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<!--
+  Shell do runtime offline do Mermaid (docs/06-canvas.md, ESPECIFICACAO-APP-RN-EXPO.md §8).
+  scripts/build-runtime.mjs injeta o Mermaid minificado no placeholder de script logo abaixo
+  e gera runtime.html (não versionado). Este arquivo é só: config do Mermaid, render, mapeamento de
+  toque (as 3 camadas — §9), desenho da seleção, gestos de pan/zoom. Nada de sheets,
+  formulários ou export de UI — isso é tudo React Native, do outro lado da ponte.
+
+  Adaptação real em relação ao protótipo monolítico (editor-mermaid.html): lá, todo o app
+  compartilhava um único `doc` em memória, então mapear uma aresta para `edge:<id>` podia usar
+  o id real direto do modelo. Aqui o runtime só recebe `code` (texto Mermaid) — sem o modelo
+  estruturado — então aresta/relação são identificadas pelo ÍNDICE na ordem do DOM (que é a
+  mesma ordem do código, ver a nota do serializer). O lado RN resolve esse índice para o id
+  real antes de guardar a seleção (ver domain/selection.ts#resolveTapSelection). Nó, tabela,
+  coluna e texto já usam ids/offsets reais — não precisam de tradução.
+-->
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;overflow:hidden;background:transparent;touch-action:none;overscroll-behavior:none}
+  #viewport{position:absolute;inset:0;overflow:hidden}
+  #stage{position:absolute;top:0;left:0;transform-origin:0 0}
+  #host svg{display:block;max-width:none!important;height:auto}
+  #host .selbracket{stroke:#0A84FF;fill:none;stroke-width:2.5;vector-effect:non-scaling-stroke;stroke-linecap:round}
+  #host .selglow{fill:#0A84FF;opacity:.12}
+  #host .hitline{stroke:transparent;fill:none;stroke-width:26;stroke-linecap:round}
+  #host .hitbox{fill:transparent}
+
+</style>
+</head>
+<body>
+<div id="viewport"><div id="stage"><div id="host"></div></div></div>
+<script>/*__MERMAID__*/</script>
+<script>
+(function () {
+  'use strict';
+  var SVGNS = 'http://www.w3.org/2000/svg';
+  var viewport = document.getElementById('viewport');
+  var stage = document.getElementById('stage');
+  var host = document.getElementById('host');
+
+  // ---------------------------------------------------------------------
+  // Ponte: RN -> Web usa injectJavaScript (window.__handle), Web -> RN usa
+  // sempre postMessage (docs/06-canvas.md).
+  // ---------------------------------------------------------------------
+  function postToRN(msg) {
+    if (window.ReactNativeWebView) window.ReactNativeWebView.postMessage(JSON.stringify(msg));
+  }
+
+  // Erro de JS não-tratado no runtime não tinha nenhum jeito de chegar no lado RN — sem isso,
+  // um bug aqui dentro parece "canvas em branco, sem pista nenhuma" (foi exatamente assim que
+  // o bug real do build-runtime.mjs — ver docs/06-canvas.md — apareceu).
+  window.onerror = function (msg, src, line, col, err) {
+    postToRN({ t: 'error', message: 'Erro de JS no runtime: ' + msg + ' @' + line + ':' + col });
+  };
+
+  var state = { code: '', theme: 'dark', tokens: {}, sel: null };
+  var currentSVG = null, renderSeq = 0, usarThemeCSS = true;
+  var view = { x: 0, y: 0, k: 1 };
+  var viewInit = false;
+
+  function applyView() {
+    stage.style.transform = 'translate(' + view.x + 'px,' + view.y + 'px) scale(' + view.k + ')';
+  }
+
+  // Bug real, achado com log de device (número em mãos, não só teoria): o CTM que
+  // `currentSVG.getScreenCTM()` devolve reflete certinho a TRANSLAÇÃO de `#stage` (o
+  // `view.x/y`), mas ignora a ESCALA (`view.k`) — sempre, de forma consistente, não é uma
+  // corrida/race. É um limite conhecido do WebKit: `getScreenCTM()` não incorpora
+  // `transform:scale()` aplicado num ANCESTRAL HTML da `<svg>` (diferente de um `transform`
+  // interno num `<g>`, que funciona normal). Toda conversão tela→SVG que passava por
+  // `getScreenCTM().inverse()` (Camada 2/3 de seleção — `mapearER`, `mapearTextoGenerico`,
+  // `drawSelection`, ver docs/07-selecao.md) saía com o tamanho errado sempre que `view.k !==
+  // 1` — ou seja, sempre que o diagrama não tá em 100% de zoom, o caso comum. Como já
+  // conhecemos `view.x/y/k` (são as próprias variáveis que setam essa transform), não tem
+  // por que perguntar pro WebKit reconstruir o que já sabemos: converte na mão.
+  function screenToSvg(x, y) {
+    return { x: (x - view.x) / view.k, y: (y - view.y) / view.k };
+  }
+
+  var fitTentativas = 0;
+  function fit() {
+    if (!currentSVG) return;
+    // Logo depois do 'ready', o WebView às vezes ainda não terminou o próprio layout interno
+    // — viewport.clientWidth/Height chegam 0. Calcular a transform nesse instante empurra o
+    // diagrama pra fora da tela (x/y negativos enormes) em vez de só desenhar pequeno: parece
+    // "não desenhou nada". Espera um frame e tenta de novo, em vez de aplicar a conta errada.
+    if ((!viewport.clientWidth || !viewport.clientHeight) && fitTentativas < 60) {
+      fitTentativas++;
+      requestAnimationFrame(fit);
+      return;
+    }
+    fitTentativas = 0;
+    var vb = currentSVG.getBBox ? currentSVG.getBBox() : null;
+    var w = (currentSVG.width && currentSVG.width.baseVal) ? currentSVG.width.baseVal.value : (vb ? vb.width : 600);
+    var h = (currentSVG.height && currentSVG.height.baseVal) ? currentSVG.height.baseVal.value : (vb ? vb.height : 400);
+    var W = viewport.clientWidth - 28, H = viewport.clientHeight - 28;
+    if (!w || !h) return;
+    view.k = Math.max(0.15, Math.min(W / w, H / h, 1.6));
+    view.x = (viewport.clientWidth - w * view.k) / 2;
+    view.y = (viewport.clientHeight - h * view.k) / 2;
+    applyView();
+  }
+
+  // Selecionar algo faz a ActionBar aparecer embaixo, o que encolhe a área do canvas (o
+  // WebView é redimensionado pelo RN) — `fit()` só rodava uma vez, na carga, e nada reagia a
+  // esse redimensionamento depois: `view.x/y/k` ficavam calculados pro tamanho ANTIGO do
+  // viewport. Reencaixa sempre que o WebView muda de tamanho de verdade, e refaz hits +
+  // seleção contra a geometria já assentada (mesma coisa que uma remontagem faria, sem
+  // precisar destruir e recriar o WebView inteiro).
+  var resizeTimer = null;
+  if (typeof ResizeObserver !== 'undefined') {
+    new ResizeObserver(function () {
+      if (!viewInit) return;
+      if (resizeTimer) clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(function () {
+        fit();
+        tagTargets();
+        drawSelection();
+      }, 60);
+    }).observe(viewport);
+  }
+
+  function zoomTo(k, cx, cy) {
+    var r = viewport.getBoundingClientRect();
+    var x = cx - r.left, y = cy - r.top;
+    view.x = x - (x - view.x) * (k / view.k);
+    view.y = y - (y - view.y) * (k / view.k);
+    view.k = k;
+    applyView();
+  }
+
+  // -----------------------------------------------------------------------
+  // Config e render do Mermaid. htmlLabels:false e useMaxWidth:false não são
+  // opcionais — ver as armadilhas em docs/14-nativo-e-armadilhas.md.
+  // -----------------------------------------------------------------------
+  function configMermaid() {
+    var t = state.tokens;
+    var dark = state.theme === 'dark';
+    var css = usarThemeCSS ? (
+      '.er.entityBox, rect.entityBox { fill:' + t.surface + '; stroke:' + t.separatorBold + '; }' +
+      '.er.attributeBoxOdd, rect.attributeBoxOdd { fill:' + t.surface2 + '; stroke:' + t.separatorBold + '; }' +
+      '.er.attributeBoxEven, rect.attributeBoxEven { fill:' + t.surface3 + '; stroke:' + t.separatorBold + '; }' +
+      '.er.entityLabel, text.entityLabel { fill:' + t.label + ' !important; }' +
+      '.er.attributeLabel, text.attributeLabel { fill:' + t.label + ' !important; }' +
+      '.er.relationshipLabelBox { fill:' + t.bg + '; opacity:.85; }' +
+      '.er.relationshipLabel, text.relationshipLabel { fill:' + t.label + ' !important; }' +
+      '.er.relationshipLine { stroke:' + t.labelSecondary + '; }' +
+      '.classGroup rect, .classGroup line { stroke:' + t.separatorBold + '; }' +
+      '.actor { fill:' + t.surface2 + '; stroke:' + t.separatorBold + '; }' +
+      'text.actor > tspan { fill:' + t.label + '; }' +
+      '.messageText, .noteText, .loopText, .labelText, .sectionTitle { fill:' + t.label + '; }' +
+      '.titleText, .taskTextOutsideRight, .taskTextOutsideLeft { fill:' + t.label + '; }' +
+      '.statediagram-state rect { fill:' + t.surface2 + '; stroke:' + t.separatorBold + '; }'
+    ) : '';
+
+    window.mermaid.initialize({
+      startOnLoad: false, securityLevel: 'loose', theme: 'base', themeCSS: css,
+      fontFamily: '-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,system-ui,sans-serif',
+      fontSize: 15,
+      flowchart: { htmlLabels: false, useMaxWidth: false, curve: 'basis', padding: 14, nodeSpacing: 44, rankSpacing: 56 },
+      er: { useMaxWidth: false, entityPadding: 12, minEntityWidth: 110 },
+      themeVariables: {
+        darkMode: dark,
+        background: t.bg,
+        primaryColor: t.surface2, primaryTextColor: t.label,
+        primaryBorderColor: t.separatorBold, secondaryColor: t.surface3,
+        tertiaryColor: t.surface, lineColor: dark ? '#8C96A3' : '#5C6673',
+        textColor: t.label, mainBkg: t.surface2,
+        nodeBorder: t.separatorBold, clusterBkg: dark ? 'rgba(63,208,214,.05)' : 'rgba(14,143,151,.06)',
+        clusterBorder: t.separatorBold, edgeLabelBackground: t.bg,
+        titleColor: t.label,
+        attributeBackgroundColorOdd: t.surface2, attributeBackgroundColorEven: t.surface3,
+        entityBkg: t.surface, entityBorder: t.separatorBold,
+        noteBkgColor: t.surface3, noteTextColor: t.label, noteBorderColor: t.separatorBold,
+        actorBkg: t.surface2, actorBorder: t.separatorBold, actorTextColor: t.label, actorLineColor: t.labelSecondary,
+        signalColor: t.label, signalTextColor: t.label,
+        labelBoxBkgColor: t.surface2, labelBoxBorderColor: t.separatorBold, labelTextColor: t.label,
+        loopTextColor: t.label, activationBkgColor: t.surface3, activationBorderColor: t.separatorBold,
+        sequenceNumberColor: t.bg,
+        classText: t.label, taskTextColor: t.label, taskTextDarkColor: t.label,
+        sectionBkgColor: t.surface2, sectionBkgColor2: t.surface3, altSectionBkgColor: t.surface,
+        gridColor: t.separatorBold, todayLineColor: t.red,
+        pie1: t.blue, pieTitleTextColor: t.label, pieSectionTextColor: t.label,
+        pieOuterStrokeWidth: '1px', pieStrokeColor: t.separatorBold,
+        git0: t.blue, gitBranchLabel0: t.label,
+        nodeTextColor: t.label,
+      },
+    });
+  }
+
+  function render() {
+    var code = (state.code || '').trim();
+    if (!code) { host.innerHTML = ''; currentSVG = null; return; }
+    if (!window.mermaid) { postToRN({ t: 'error', message: 'Não consegui carregar a biblioteca Mermaid.' }); return; }
+
+    var id = 'mmd' + (++renderSeq);
+    window.mermaid.render(id, code).then(function (out) {
+      applyRendered(out);
+    }).catch(function (e1) {
+      if (usarThemeCSS) {
+        usarThemeCSS = false;
+        configMermaid();
+        window.mermaid.render(id + 'r', code).then(function (out) {
+          usarThemeCSS = true;
+          applyRendered(out);
+        }).catch(function (e2) {
+          usarThemeCSS = true;
+          configMermaid();
+          fail(e2);
+        });
+      } else {
+        fail(e1);
+      }
+    });
+
+    function fail(e) {
+      var leftover = document.getElementById('d' + id);
+      if (leftover) leftover.remove();
+      postToRN({ t: 'error', message: 'Mermaid recusou o código:\n' + (e && e.message ? e.message : String(e)) });
+    }
+  }
+
+  function applyRendered(out) {
+    host.innerHTML = (out && out.svg) || out;
+    var tmp = document.getElementById('d' + renderSeq); if (tmp) tmp.remove();
+    var tmp2 = document.getElementById('d' + renderSeq + 'r'); if (tmp2) tmp2.remove();
+    currentSVG = host.querySelector('svg');
+    if (currentSVG) {
+      currentSVG.removeAttribute('style');
+      currentSVG.style.maxWidth = 'none';
+      currentSVG.style.overflow = 'visible';
+    }
+    tagTargets();
+    drawSelection();
+    if (!viewInit) { fit(); viewInit = true; } else { applyView(); }
+  }
+
+  // -----------------------------------------------------------------------
+  // As 3 camadas de seleção (docs/07-selecao.md).
+  // -----------------------------------------------------------------------
+  function retanguloDeToque(c, chave, svgPt) {
+    var a = svgPt(c.left, c.top), b = svgPt(c.right, c.bottom);
+    var r = document.createElementNS(SVGNS, 'rect');
+    r.setAttribute('x', Math.min(a.x, b.x)); r.setAttribute('y', Math.min(a.y, b.y));
+    r.setAttribute('width', Math.abs(b.x - a.x)); r.setAttribute('height', Math.abs(b.y - a.y));
+    r.setAttribute('class', 'hitbox');
+    r.dataset.selKey = chave;
+    return r;
+  }
+
+  // Deriva a lista ordenada de tabelas direto do texto (o runtime não recebe o
+  // modelo estruturado, só `code` — ver a nota no topo do arquivo).
+  function tabelasDoCodigo(code) {
+    var ids = [];
+    code.split('\n').forEach(function (ln) {
+      var m = /^\s*([A-Za-z0-9_-]+)(?:\[[^\]]*\])?\s*\{/.exec(ln);
+      if (m) ids.push(m[1]);
+    });
+    return ids;
+  }
+
+  // Mermaid 11 desenha cada tabela como <g id="...-entity-<NOME>-<n>"> com o nome real da
+  // entidade embutido no id — bem mais estável que casar por texto (rótulos de tabela/coluna
+  // saem em <foreignObject><div><span>, não em <text>, então a antiga heurística baseada em
+  // `<text>` nunca encontrava nada e a seleção de tabela ficava morta). Cada linha de atributo
+  // é um `<g class="row-rect-odd">`/`<g class="row-rect-even">` dentro desse grupo, na mesma
+  // ordem do modelo — usar a geometria deles direto, sem reconstruir por clustering de texto.
+  function mapearER(code) {
+    var nomes = tabelasDoCodigo(code);
+    if (!currentSVG || !nomes.length) return false;
+    var svgPt = screenToSvg;
+
+    var grupos = Array.prototype.slice.call(host.querySelectorAll('g[id]')).filter(function (g) {
+      return g.id.indexOf('-entity-') >= 0;
+    });
+    var camadaTab = document.createElementNS(SVGNS, 'g'); camadaTab.setAttribute('class', 'hitlayer');
+    var camadaCol = document.createElementNS(SVGNS, 'g'); camadaCol.setAttribute('class', 'hitlayer');
+    var achou = 0;
+
+    nomes.forEach(function (tabId) {
+      var sufixo = new RegExp('-entity-' + tabId + '-\\d+$');
+      var g = grupos.find(function (gg) { return sufixo.test(gg.id); });
+      if (!g) return;
+      var cx = g.getBoundingClientRect();
+      if (cx.width < 10 || cx.height < 10) return;
+      achou++;
+      camadaTab.appendChild(retanguloDeToque(cx, 'table:' + tabId, svgPt));
+
+      var linhas = Array.prototype.slice.call(g.querySelectorAll('.row-rect-odd, .row-rect-even'));
+      linhas.forEach(function (l, i) {
+        var b = l.getBoundingClientRect();
+        if (b.height < 6) return;
+        camadaCol.appendChild(retanguloDeToque(b, 'col:' + tabId + '#' + i, svgPt));
+      });
+    });
+
+    if (!achou) return false;
+    currentSVG.appendChild(camadaTab);
+    currentSVG.appendChild(camadaCol);
+    return true;
+  }
+
+  function mapearTextoGenerico(code) {
+    if (!currentSVG || !code) return false;
+    var svgPt = screenToSvg;
+
+    var b0 = currentSVG.getBoundingClientRect();
+    var areaSVG = (b0.width * b0.height) || 1;
+    var formas = Array.prototype.slice.call(host.querySelectorAll('rect,polygon,circle,ellipse'))
+      .map(function (e) { return { b: e.getBoundingClientRect() }; })
+      .filter(function (o) { return o.b.width > 6 && o.b.height > 6 && o.b.width * o.b.height < areaSVG * 0.45; });
+
+    var ocupados = [];
+    var livre = function (a, b) { return !ocupados.some(function (o) { return a < o[1] && b > o[0]; }); };
+    var camada = document.createElementNS(SVGNS, 'g'); camada.setAttribute('class', 'hitlayer');
+
+    Array.prototype.slice.call(host.querySelectorAll('text')).forEach(function (el) {
+      var bruto = (el.textContent || '').trim();
+      if (!bruto || bruto.length > 140) return;
+      var cb = el.getBoundingClientRect();
+      if (!cb.width || !cb.height) return;
+
+      var de = -1, pos = code.indexOf(bruto);
+      while (pos >= 0) { if (livre(pos, pos + bruto.length)) { de = pos; break; } pos = code.indexOf(bruto, pos + 1); }
+      if (de < 0) return;
+      var ate = de + bruto.length;
+      ocupados.push([de, ate]);
+
+      var alvo = cb, menor = Infinity;
+      formas.forEach(function (f) {
+        var b = f.b;
+        if (b.left <= cb.left + 2 && b.right >= cb.right - 2 && b.top <= cb.top + 2 && b.bottom >= cb.bottom - 2) {
+          var a = b.width * b.height;
+          if (a < menor) { menor = a; alvo = b; }
+        }
+      });
+      var pad = alvo === cb ? 5 : 0;
+      var c = { left: alvo.left - pad, right: alvo.right + pad, top: alvo.top - pad, bottom: alvo.bottom + pad };
+      camada.appendChild(retanguloDeToque(c, 'txt:' + de + ':' + ate, svgPt));
+    });
+
+    if (!camada.childNodes.length) return false;
+    currentSVG.appendChild(camada);
+    return true;
+  }
+
+  function tipoDoCodigo(code) {
+    var primeira = (code.split('\n')[0] || '').trim();
+    if (/^erDiagram\b/i.test(primeira)) return 'er';
+    if (/^(flowchart|graph)\b/i.test(primeira)) return 'flow';
+    return 'raw';
+  }
+
+  function tagTargets() {
+    if (!currentSVG) return;
+    // Idempotente: chamado de novo (fora de um render, ver o ResizeObserver acima) não pode
+    // empilhar camadas de hit duplicadas por cima das antigas.
+    currentSVG.querySelectorAll('.hitlayer').forEach(function (n) { n.remove(); });
+    var code = state.code || '';
+    var tipo = tipoDoCodigo(code);
+
+    if (tipo === 'raw') { mapearTextoGenerico(code); return; }
+
+    if (tipo === 'flow') {
+      host.querySelectorAll('g.node, g[data-node], g[id^="flowchart-"]').forEach(function (g) {
+        var id = g.getAttribute('data-id') || '';
+        if (!id) id = (g.getAttribute('id') || '').replace(/^flowchart-/, '').replace(/-\d+$/, '');
+        if (id && !g.dataset.selKey) g.dataset.selKey = 'node:' + id;
+      });
+    }
+
+    // Linhas: a ordem no DOM segue a ordem do código — o índice basta (ver a nota
+    // no topo do arquivo sobre por que aresta/relação usam índice, não id real).
+    var seletor = tipo === 'flow'
+      ? '.edgePaths path, path.flowchart-link, g.edgePath path, path.relation'
+      : 'path.relationshipLine, .er.relationshipLine, g.edgePaths path';
+    var links = Array.prototype.slice.call(host.querySelectorAll(seletor));
+    if (!links.length) {
+      links = Array.prototype.slice.call(host.querySelectorAll('path')).filter(function (p) {
+        return /flowchart-link|relationshipLine|edge|relation/i.test(p.getAttribute('class') || '');
+      });
+    }
+    var kind = tipo === 'flow' ? 'edge' : 'rel';
+    var layer = document.createElementNS(SVGNS, 'g'); layer.setAttribute('class', 'hitlayer');
+    links.forEach(function (p, i) {
+      var hit = p.cloneNode(false);
+      hit.setAttribute('class', 'hitline');
+      hit.removeAttribute('marker-end'); hit.removeAttribute('marker-start');
+      hit.setAttribute('style', 'stroke:transparent;fill:none;stroke-width:26px');
+      hit.dataset.selKey = kind + ':' + i;
+      var ctm = p.getScreenCTM(), root = currentSVG.getScreenCTM();
+      if (ctm && root) {
+        var m = root.inverse().multiply(ctm);
+        hit.setAttribute('transform', 'matrix(' + [m.a, m.b, m.c, m.d, m.e, m.f].join(',') + ')');
+      }
+      layer.appendChild(hit);
+    });
+    if (layer.childNodes.length) currentSVG.appendChild(layer);
+
+    if (tipo === 'er') mapearER(code);
+  }
+
+  // -----------------------------------------------------------------------
+  // Destaque de seleção: colchetes de mira (ver desenho no protótipo).
+  // -----------------------------------------------------------------------
+  function drawSelection() {
+    if (!currentSVG) return;
+    currentSVG.querySelectorAll('.sellayer').forEach(function (n) { n.remove(); });
+    if (!state.sel) return;
+    var el = host.querySelector('[data-sel-key="' + state.sel.kind + ':' + state.sel.id + '"]');
+    if (!el) return;
+    var r = el.getBoundingClientRect();
+    if (!r.width) return;
+    var a = screenToSvg(r.left, r.top), b = screenToSvg(r.right, r.bottom);
+    var pad = 7, x1 = Math.min(a.x, b.x) - pad, y1 = Math.min(a.y, b.y) - pad;
+    var x2 = Math.max(a.x, b.x) + pad, y2 = Math.max(a.y, b.y) + pad;
+    var L = Math.min(18, (x2 - x1) / 3, (y2 - y1) / 3);
+    var g = document.createElementNS(SVGNS, 'g');
+    g.setAttribute('class', 'sellayer'); g.setAttribute('pointer-events', 'none');
+    var rect = document.createElementNS(SVGNS, 'rect');
+    rect.setAttribute('x', x1); rect.setAttribute('y', y1);
+    rect.setAttribute('width', x2 - x1); rect.setAttribute('height', y2 - y1);
+    rect.setAttribute('rx', 6); rect.setAttribute('class', 'selglow');
+    g.appendChild(rect);
+    var d = [
+      'M' + x1 + ',' + (y1 + L) + 'V' + y1 + 'H' + (x1 + L),
+      'M' + (x2 - L) + ',' + y1 + 'H' + x2 + 'V' + (y1 + L),
+      'M' + x2 + ',' + (y2 - L) + 'V' + y2 + 'H' + (x2 - L),
+      'M' + (x1 + L) + ',' + y2 + 'H' + x1 + 'V' + (y2 - L),
+    ].join(' ');
+    var p = document.createElementNS(SVGNS, 'path');
+    p.setAttribute('d', d); p.setAttribute('class', 'selbracket');
+    g.appendChild(p);
+    currentSVG.appendChild(g);
+  }
+
+  function revealSelection(fracaoTopo) {
+    if (!state.sel || !currentSVG) return;
+    var el = host.querySelector('[data-sel-key="' + state.sel.kind + ':' + state.sel.id + '"]');
+    if (!el) return;
+    var r = el.getBoundingClientRect(), v = viewport.getBoundingClientRect();
+    if (!r.width) return;
+    var alvoX = v.left + v.width / 2, alvoY = v.top + v.height * (fracaoTopo != null ? fracaoTopo : 0.3);
+    view.x += alvoX - (r.left + r.width / 2);
+    view.y += alvoY - (r.top + r.height / 2);
+    applyView();
+  }
+
+  // -----------------------------------------------------------------------
+  // Gestos: um dedo arrasta, dois dão zoom, toque seleciona, toque duplo no
+  // elemento abre o painel completo (RN decide isso ao receber `tap`), toque
+  // duplo no vazio alterna enquadrar/160% (docs/06-canvas.md).
+  // -----------------------------------------------------------------------
+  var ptrs = new Map();
+  var gest = null;
+  var lastTapT = 0, lastTapX = 0, lastTapY = 0;
+
+  viewport.addEventListener('pointerdown', function (e) {
+    viewport.setPointerCapture(e.pointerId);
+    ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, moved: 0 });
+    if (ptrs.size === 2) {
+      var vals = Array.from(ptrs.values());
+      var a = vals[0], b = vals[1];
+      gest = { d: Math.hypot(a.x - b.x, a.y - b.y), k: view.k, cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2, vx: view.x, vy: view.y };
+    }
+  }, { passive: false });
+
+  viewport.addEventListener('pointermove', function (e) {
+    var p = ptrs.get(e.pointerId); if (!p) return;
+    var dx = e.clientX - p.x, dy = e.clientY - p.y;
+    p.moved += Math.abs(dx) + Math.abs(dy); p.x = e.clientX; p.y = e.clientY;
+    if (ptrs.size === 1) { view.x += dx; view.y += dy; applyView(); }
+    else if (ptrs.size === 2 && gest) {
+      var vals = Array.from(ptrs.values());
+      var a = vals[0], b = vals[1];
+      var nd = Math.hypot(a.x - b.x, a.y - b.y);
+      var k = Math.max(0.12, Math.min(4, gest.k * (nd / (gest.d || 1))));
+      var rect = viewport.getBoundingClientRect();
+      var cx = gest.cx - rect.left, cy = gest.cy - rect.top;
+      view.x = cx - (cx - gest.vx) * (k / gest.k);
+      view.y = cy - (cy - gest.vy) * (k / gest.k);
+      view.k = k; applyView();
+    }
+  }, { passive: false });
+
+  function endPtr(e) {
+    var p = ptrs.get(e.pointerId);
+    ptrs.delete(e.pointerId);
+    if (ptrs.size < 2) gest = null;
+    if (!p) return;
+    if (p.moved < 10 && Math.hypot(e.clientX - p.sx, e.clientY - p.sy) < 10) handleTap(e.clientX, e.clientY);
+  }
+  viewport.addEventListener('pointerup', endPtr);
+  viewport.addEventListener('pointercancel', function (e) { ptrs.delete(e.pointerId); gest = null; });
+
+  function handleTap(cx, cy) {
+    var agora = Date.now();
+    var duplo = (agora - lastTapT < 330) && (Math.hypot(cx - lastTapX, cy - lastTapY) < 32);
+    lastTapT = agora; lastTapX = cx; lastTapY = cy;
+    var el = document.elementFromPoint(cx, cy);
+    var t = el && el.closest ? el.closest('[data-sel-key]') : null;
+    if (!t) {
+      if (duplo) { view.k > 1.05 ? fit() : zoomTo(1.6, cx, cy); }
+      else { postToRN({ t: 'tap', sel: null, duplo: false }); }
+      return;
+    }
+    var chave = t.dataset.selKey, corte = chave.indexOf(':');
+    var kind = chave.slice(0, corte), id = chave.slice(corte + 1);
+    postToRN({ t: 'tap', sel: { kind: kind, id: id }, duplo: !!duplo });
+  }
+
+  // -----------------------------------------------------------------------
+  // Dispatcher de mensagens vindas do RN (docs/06-canvas.md §8.2).
+  // -----------------------------------------------------------------------
+  window.__handle = function (msg) {
+    if (!msg || !msg.t) return;
+    if (msg.t === 'render') {
+      state.code = msg.code || '';
+      state.theme = msg.theme || 'dark';
+      state.tokens = msg.tokens || {};
+      configMermaid();
+      render();
+    } else if (msg.t === 'select') {
+      state.sel = msg.sel || null;
+      drawSelection();
+    } else if (msg.t === 'reveal') {
+      revealSelection(msg.fracaoTopo);
+    } else if (msg.t === 'fit') {
+      fit();
+    } else if (msg.t === 'exportPng') {
+      exportPng(msg.scale || 2);
+    } else if (msg.t === 'validate') {
+      validate(msg.code, msg.reqId);
+    }
+  };
+
+  // Validação da resposta da IA antes de aplicar (§14.3): usa o mermaid.parse de verdade que
+  // já está carregado aqui, sem reimplementar um validador à parte no lado RN.
+  function validate(code, reqId) {
+    if (!window.mermaid || !window.mermaid.parse) {
+      postToRN({ t: 'validated', reqId: reqId, ok: false, message: 'Mermaid não carregou.' });
+      return;
+    }
+    Promise.resolve(window.mermaid.parse(code, { suppressErrors: false })).then(function () {
+      postToRN({ t: 'validated', reqId: reqId, ok: true });
+    }).catch(function (e) {
+      postToRN({ t: 'validated', reqId: reqId, ok: false, message: (e && e.message) ? e.message : String(e) });
+    });
+  }
+
+  function exportPng(scale) {
+    if (!currentSVG) return;
+    try {
+      var svgStr = new XMLSerializer().serializeToString(currentSVG);
+      var svgBlobUrl = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgStr)));
+      var img = new Image();
+      img.onload = function () {
+        var w = img.width || currentSVG.width.baseVal.value;
+        var h = img.height || currentSVG.height.baseVal.value;
+        var canvas = document.createElement('canvas');
+        canvas.width = w * scale; canvas.height = h * scale;
+        var ctx = canvas.getContext('2d');
+        ctx.fillStyle = state.tokens.bg || '#000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        var dataUrl = canvas.toDataURL('image/png');
+        postToRN({ t: 'png', base64: dataUrl.split(',')[1] });
+      };
+      img.onerror = function () { postToRN({ t: 'error', message: 'Falha ao gerar PNG.' }); };
+      img.src = svgBlobUrl;
+    } catch (e) {
+      postToRN({ t: 'error', message: 'Falha ao gerar PNG: ' + (e && e.message ? e.message : e) });
+    }
+  }
+
+  postToRN({ t: 'ready' });
+})();
+</script>
+</body>
+</html>
