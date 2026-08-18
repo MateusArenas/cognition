@@ -1,0 +1,17 @@
+# Config mínima do Maestro (Camada 2 de testes de interface — E2E mobile de verdade).
+# Ver docs/13-qualidade-e-testes.md para o porquê de Maestro em vez de Detox/Playwright.
+#
+# Nenhum flow de comportamento ainda: não existe fluxo ponta-a-ponta até a Etapa 2+.
+# Os arquivos de fluxo (um por caminho crítico do produto) vão em editor/e2e/*.yaml e
+# são escritos junto com a etapa que fecha aquele fluxo — não numa etapa de testes à parte.
+#
+# Como rodar quando houver flows:
+#   1. Gerar o dev build (o app usa libs nativas — react-native-webview, expo-sqlite —
+#      que exigem dev client, não funcionam no Expo Go puro):
+#        npx expo prebuild
+#        npx expo run:ios      # ou: npx expo run:android
+#   2. Instalar a CLI do Maestro (uma vez): curl -Ls "https://get.maestro.mobile.dev" | bash
+#   3. Rodar os flows: npm run e2e   (chama `maestro test e2e`)
+# bundleIdentifier real, gerado pelo primeiro `expo run:ios` (prebuild automático) — se o
+# android.package divergir depois de um `expo run:android`, ajuste aqui também.
+appId: com.arenas-math.editor
