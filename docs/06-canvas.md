@@ -102,17 +102,35 @@ segundo era.
 
    Confirmado com log real: `view.k=0.575`, mas a largura convertida via CTM saía igual à
    largura em pixels de tela (i.e., como se o CTM achasse escala=1). Corrigido trocando a
-   dependência de `getScreenCTM()` por uma conversão manual — já temos `view.x/y/k` (são as
-   variáveis que a própria `applyView()` usa pra montar a transform), não tem por que pedir pro
-   WebKit reconstruir o que já sabemos: `screenToSvg(x,y) = {x: (x-view.x)/view.k, y:
-   (y-view.y)/view.k}`. Ver `runtime.shell.html`, função `screenToSvg` logo depois de
-   `applyView()`.
+   dependência de `getScreenCTM()` por uma conversão manual usando `view.x/y/k` (são as
+   variáveis que a própria `applyView()` usa pra montar a transform) — essa primeira versão do
+   `screenToSvg` ainda tinha o bug 3 abaixo escondido, corrigida de vez depois.
 
-Diagnosticado ao vivo rodando o Expo Go real num simulador iOS (não dá pra reproduzir em
+3. **Terceira rodada, achada testando stateDiagram** (docs/07-selecao.md): o Mermaid às vezes
+   declara `width="100%"` na `<svg>` em vez de um valor em px batendo com o `viewBox` — o ER
+   usa px explícito, por isso o bug 2 nunca revelou este aqui. Isso dá à própria `<svg>` uma
+   escala intrínseca própria (resolvida pelo layout CSS de `#host`, independente do nosso
+   `view.k`) — as duas escalas **compõem** em vez de uma substituir a outra, e nem `fit()` nem
+   a v1 do `screenToSvg` esperavam por uma segunda escala. Ao contrário do bug 2, este
+   reproduz igual em Chromium headless — não é peculiaridade do WebKit, é aritmética: Mermaid
+   larga uma ambiguidade de escala, e o runtime confiava demais que `width`/`height` sempre
+   bate com o `viewBox` (só bate por coincidência nos diagramas mais simples, como o ER).
+   Corrigido em duas frentes, redundantes de propósito: `applyRendered()` agora normaliza
+   `width`/`height` da `<svg>` pro `viewBox` exato assim que renderiza (elimina a segunda
+   escala na raiz — todo diagrama passa a se comportar como o ER, que já batia 1:1), e
+   `screenToSvg`/`fit()` passaram a medir a relação de verdade entre pixel de tela e unidade de
+   viewBox via `getBoundingClientRect()` contra `viewBox.baseVal` — não depende mais de saber
+   se há uma ou duas escalas em jogo, funciona de qualquer jeito. Ver `screenToSvg()` e `fit()`
+   em `runtime.shell.html`.
+
+Bugs 1-2 diagnosticados ao vivo rodando o Expo Go real num simulador iOS (bug 2 não reproduz em
 Chromium headless) com instrumentação temporária (`postToRN` reportando geometria real pro
-Metro) — removida depois de confirmado. Testando de novo: sem simulador/device à mão,
-`window.__handle({t:'tap', sel:{...}})` disparado por um `setTimeout` no próprio runtime
-simula o toque sem precisar de touch real (útil já que `xcrun simctl` não tem comando de tap).
+Metro) — removida depois de confirmado; sem simulador/device à mão,
+`window.__handle({t:'tap', sel:{...}})` disparado por um `setTimeout` no próprio runtime simula
+o toque sem precisar de touch real (útil já que `xcrun simctl` não tem comando de tap). O bug 3
+foi achado e confirmado inteiramente em Chromium headless — ver `npm run verify:canvas`
+(docs/13-qualidade-e-testes.md), que agora cobre os 5 tipos de diagrama relevantes de forma
+permanente, não só um teste avulso de sessão.
 
 **Diagnóstico se o canvas ficar em branco/escuro**: `DiagramCanvas` agora distingue 3 estados
 visíveis em vez de só sumir — (1) `useRuntimeHtml` falhou ao carregar o asset (mostra o erro

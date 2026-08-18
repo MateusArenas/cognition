@@ -81,6 +81,31 @@ dependência explícita. Isso era diferente no SDK 57, onde `@react-native/jest-
 precisava ser fixado à mão para bater com `react-native@0.86.2` — se este projeto voltar a
 subir de SDK no futuro, reavalie se esse pin volta a ser necessário.
 
+### Camada 1.5 — verificação de geometria do canvas (Playwright headless)
+
+Nem vitest nem jest conseguem testar a lógica de seleção do runtime
+(`runtime.shell.html`): ela depende de `getBoundingClientRect()`, `viewBox` e `transform` de
+verdade, que só existem com um motor de renderização real — nenhum dos dois roda um DOM/SVG de
+verdade. Essa lacuna foi exatamente o que deixou passar dois bugs reais (Camada 2/3 mapeando o
+elemento errado; a conversão tela↔SVG saindo com tamanho errado — ver docs/06-canvas.md e
+docs/07-selecao.md) até alguém testar num device de verdade.
+
+`npm run verify:canvas` (`editor/scripts/verify-canvas-selection.mjs`) fecha essa lacuna sem
+precisar de simulador: sobe `runtime.html` num Chromium headless via Playwright, renderiza um
+diagrama de cada tipo relevante (ER, flowchart, state, class, sequence), toca em cada elemento
+selecionável de verdade (clique do mouse, não injeção direta de mensagem) e confere duas coisas
+por elemento: (1) o toque selecionou o elemento certo, não outro; (2) o destaque azul cobre
+exatamente o elemento que `data-sel-key` mirou, com o centro batendo. Roda separado do
+`npm test` normal — precisa baixar o Chromium do Playwright (`npx playwright install
+chromium`, uma vez só), pesado demais pro dia a dia — mas é o jeito mais rápido de confirmar
+uma mudança em `runtime.shell.html` sem precisar de simulador/device.
+
+Uma limitação pré-existente e sem relação com os bugs corrigidos fica documentada e pulada de
+propósito no script (`LIMITACOES_CONHECIDAS`): o rótulo de uma relação ER diagonal/curva pode
+cair exatamente na borda do hit de 26px da linha, e tocar o texto nesse caso raro não seleciona
+a relação — é sobre onde a curva Bezier passa, não sobre conversão de coordenadas, e não foi
+mexido de propósito pra não arriscar o que já está funcionando no ER.
+
 ### Camada 2 — E2E com Maestro, contra o app mobile de verdade
 
 Decisão tomada nesta sessão: **Maestro**, não Playwright (automação de navegador, não dirige

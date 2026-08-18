@@ -66,19 +66,32 @@
     stage.style.transform = 'translate(' + view.x + 'px,' + view.y + 'px) scale(' + view.k + ')';
   }
 
-  // Bug real, achado com log de device (número em mãos, não só teoria): o CTM que
-  // `currentSVG.getScreenCTM()` devolve reflete certinho a TRANSLAÇÃO de `#stage` (o
-  // `view.x/y`), mas ignora a ESCALA (`view.k`) — sempre, de forma consistente, não é uma
-  // corrida/race. É um limite conhecido do WebKit: `getScreenCTM()` não incorpora
-  // `transform:scale()` aplicado num ANCESTRAL HTML da `<svg>` (diferente de um `transform`
-  // interno num `<g>`, que funciona normal). Toda conversão tela→SVG que passava por
-  // `getScreenCTM().inverse()` (Camada 2/3 de seleção — `mapearER`, `mapearTextoGenerico`,
-  // `drawSelection`, ver docs/07-selecao.md) saía com o tamanho errado sempre que `view.k !==
-  // 1` — ou seja, sempre que o diagrama não tá em 100% de zoom, o caso comum. Como já
-  // conhecemos `view.x/y/k` (são as próprias variáveis que setam essa transform), não tem
-  // por que perguntar pro WebKit reconstruir o que já sabemos: converte na mão.
+  // Duas rodadas de bug aqui, mesma família — WebKit e o Mermaid discordando sobre o que
+  // "escala" quer dizer:
+  //
+  // 1) `currentSVG.getScreenCTM()` reflete certinho a TRANSLAÇÃO de `#stage` (`view.x/y`), mas
+  //    ignora a ESCALA CSS (`view.k`) — limite conhecido do WebKit: `getScreenCTM()` não
+  //    incorpora `transform:scale()` de um ANCESTRAL HTML da `<svg>`.
+  // 2) Trocar por `(tela - view.x/y) / view.k` "resolveu" o ER, mas quebrou em diagramas onde o
+  //    Mermaid declara `width="100%"` em vez de um valor em px batendo com o viewBox (achado
+  //    testando stateDiagram — a tabela do ER usa px explícito, por isso nunca apareceu ali).
+  //    Nesse caso `view.k` só cobre a escala do NOSSO `transform:scale()`; fica de fora a
+  //    escala EMBUTIDA na própria `<svg>` (o quanto o `width="100%"` resolve pra em pixels,
+  //    dividido pelo viewBox) — um fator a mais, real, que `view.k` sozinho não capta.
+  //
+  // A saída robusta pras duas: não reconstruir a escala nenhuma delas — medir a relação atual
+  // de verdade entre pixel de tela e unidade de viewBox via getBoundingClientRect() (que
+  // reflete QUALQUER fonte de escala, CSS ou intrínseca da própria SVG) contra viewBox.baseVal.
+  // Sem depender de view.k nem de getScreenCTM.
   function screenToSvg(x, y) {
-    return { x: (x - view.x) / view.k, y: (y - view.y) / view.k };
+    var vb = currentSVG && currentSVG.viewBox && currentSVG.viewBox.baseVal;
+    if (!vb || !vb.width || !vb.height) return { x: x, y: y };
+    var r = currentSVG.getBoundingClientRect();
+    if (!r.width || !r.height) return { x: x, y: y };
+    return {
+      x: vb.x + (x - r.left) * (vb.width / r.width),
+      y: vb.y + (y - r.top) * (vb.height / r.height),
+    };
   }
 
   var fitTentativas = 0;
@@ -94,9 +107,17 @@
       return;
     }
     fitTentativas = 0;
-    var vb = currentSVG.getBBox ? currentSVG.getBBox() : null;
-    var w = (currentSVG.width && currentSVG.width.baseVal) ? currentSVG.width.baseVal.value : (vb ? vb.width : 600);
-    var h = (currentSVG.height && currentSVG.height.baseVal) ? currentSVG.height.baseVal.value : (vb ? vb.height : 400);
+    // O Mermaid às vezes declara `width="100%"` (sem `height`) em vez de um valor em px batendo
+    // com o viewBox (achado testando stateDiagram — o ER usa px explícito, por isso nunca
+    // apareceu ali). Nesse caso `width.baseVal.value` resolve pro tamanho renderizado no layout
+    // CSS, não pro tamanho intrínseco do diagrama — usar isso aqui faz o encaixe calcular a
+    // escala errada (o dobro, o triplo do que devia). O viewBox é a fonte de verdade
+    // inequívoca do tamanho intrínseco; só cai pro width/height ou getBBox() se o Mermaid não
+    // tiver posto viewBox nenhum.
+    var box = currentSVG.viewBox && currentSVG.viewBox.baseVal;
+    var vb = (!box || !box.width || !box.height) && currentSVG.getBBox ? currentSVG.getBBox() : null;
+    var w = box && box.width ? box.width : (currentSVG.width && currentSVG.width.baseVal ? currentSVG.width.baseVal.value : (vb ? vb.width : 600));
+    var h = box && box.height ? box.height : (currentSVG.height && currentSVG.height.baseVal ? currentSVG.height.baseVal.value : (vb ? vb.height : 400));
     var W = viewport.clientWidth - 28, H = viewport.clientHeight - 28;
     if (!w || !h) return;
     view.k = Math.max(0.15, Math.min(W / w, H / h, 1.6));
@@ -233,6 +254,18 @@
       currentSVG.removeAttribute('style');
       currentSVG.style.maxWidth = 'none';
       currentSVG.style.overflow = 'visible';
+      // O Mermaid às vezes declara `width="100%"` (sem `height`) em vez de um valor em px
+      // batendo com o viewBox (achado testando stateDiagram — o ER usa px explícito, por isso
+      // nunca apareceu ali). Isso dá pra própria <svg> uma escala intrínseca independente,
+      // resolvida pelo layout CSS de #host — que some com a nossa transform de zoom em #stage
+      // em vez de ser substituída por ela. `fit()`/`screenToSvg` assumem só UMA escala (a
+      // nossa). Normaliza width/height pro viewBox exato assim que renderiza, pra eliminar essa
+      // segunda escala de vez — todo diagrama passa a se comportar como o ER, que já batia 1:1.
+      var vbSize = currentSVG.viewBox && currentSVG.viewBox.baseVal;
+      if (vbSize && vbSize.width && vbSize.height) {
+        currentSVG.setAttribute('width', vbSize.width);
+        currentSVG.setAttribute('height', vbSize.height);
+      }
     }
     tagTargets();
     drawSelection();
@@ -424,7 +457,10 @@
     var el = host.querySelector('[data-sel-key="' + state.sel.kind + ':' + state.sel.id + '"]');
     if (!el) return;
     var r = el.getBoundingClientRect();
-    if (!r.width) return;
+    // `!r.width` sozinho barra relação/aresta perfeitamente vertical (bounding box sem
+    // extensão horizontal nenhuma — largura 0 é geometricamente válida ali, não "não achou
+    // nada"). Só desiste se não tiver largura NEM altura — aí sim não tem o que desenhar.
+    if (!r.width && !r.height) return;
     var a = screenToSvg(r.left, r.top), b = screenToSvg(r.right, r.bottom);
     var pad = 7, x1 = Math.min(a.x, b.x) - pad, y1 = Math.min(a.y, b.y) - pad;
     var x2 = Math.max(a.x, b.x) + pad, y2 = Math.max(a.y, b.y) + pad;
@@ -453,7 +489,7 @@
     var el = host.querySelector('[data-sel-key="' + state.sel.kind + ':' + state.sel.id + '"]');
     if (!el) return;
     var r = el.getBoundingClientRect(), v = viewport.getBoundingClientRect();
-    if (!r.width) return;
+    if (!r.width && !r.height) return;
     var alvoX = v.left + v.width / 2, alvoY = v.top + v.height * (fracaoTopo != null ? fracaoTopo : 0.3);
     view.x += alvoX - (r.left + r.width / 2);
     view.y += alvoY - (r.top + r.height / 2);

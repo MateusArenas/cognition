@@ -63,6 +63,20 @@ tocar num estado não selecionava nada — só as etiquetas de transição (que 
 só `'text'` — os dois tipos de elemento respondem a `.textContent`/`.getBoundingClientRect()`
 do mesmo jeito, então o resto do algoritmo não precisou mudar.
 
+**Segundo bug, mais sério, achado no mesmo diagnóstico**: mesmo depois do fix acima, tocar num
+estado às vezes selecionava (visualmente) OUTRO estado, ou o destaque azul aparecia bem longe
+do que foi tocado — e alguns elementos não selecionavam nada mesmo estando visíveis. Não era
+mais sobre `<text>` vs `<foreignObject>`: era o mesmo tipo de ambiguidade de escala do bug 3 em
+docs/06-canvas.md — o Mermaid declara `width="100%"` na `<svg>` de vários dos 23 tipos (não só
+state) em vez de um px batendo com o `viewBox`, dando à `<svg>` uma escala própria que soma com
+a nossa. Como o hit e o destaque são calculados em momentos diferentes (um na hora do render,
+outro na hora da seleção), o erro de escala nem sempre é o mesmo nos dois — o que produz
+exatamente esse sintoma de "seleciona a coisa errada" ou "não seleciona nada", em vez de um erro
+de tamanho consistente. Corrigido na raiz (normalização de `width`/`height` pro `viewBox`,
+`screenToSvg`/`fit()` medindo a escala de verdade) — ver docs/06-canvas.md. Verificado com `npm
+run verify:canvas` tocando em CADA elemento selecionável de 5 tipos de diagrama (ER, flow,
+state, class, sequence), não só amostragem manual.
+
 ## Rede de segurança
 
 Se nenhuma camada mapear nada, avisar e apontar para a lista de elementos — falha silenciosa

@@ -214,6 +214,13 @@ testes jest continuam todos passando. Ver a nota de versões em
 Nada aqui bloqueia o app de funcionar — são lacunas reais, documentadas pra não serem
 redescobertas do zero:
 
+- **Rótulo de relação ER diagonal/curva, num caso raro, não seleciona ao tocar no texto.**
+  Achado escrevendo `npm run verify:canvas` (ver docs/13-qualidade-e-testes.md): se o rótulo
+  cai exatamente na borda do hit de 26px da linha (a curva Bezier pode não passar perto do
+  texto), tocar nele não pega a relação — precisa tocar na linha em si. É sobre onde a curva
+  passa, não sobre conversão de coordenadas (nada a ver com os bugs de escala corrigidos em
+  docs/06-canvas.md/docs/07-selecao.md), e não foi mexido de propósito pra não arriscar o que
+  já está 100% no ER. Documentado como limitação conhecida no próprio script de verificação.
 - **Persistir a escolha de tema do usuário.** `store/useSettings.ts` não existe — o app segue
   o tema do sistema, mas não guarda uma escolha manual. Não estava em nenhuma etapa do
   roteiro original; é um buraco real no spec, não só neste build.
