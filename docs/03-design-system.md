@@ -70,6 +70,28 @@ somando como `paddingTop` no `BottomSheetView` — mesmo padrão já usado pro `
 `borderBottomColor` sem largura — nunca aparecia). Corrige todo `Sheet` do app de uma vez
 (inspetores, Outline, ShareSheet, AiSheet) — é o componente compartilhado.
 
+**Bug real: teclado cobria o campo de texto dentro de um `Sheet`, sem empurrar nada** (relatado
+pelo usuário: "o keyboard fica por cima e eu não vejo nada"). Causa: `Field` usava `TextInput`
+puro do React Native — o `@gorhom/bottom-sheet` só sabe que um input dele ganhou foco (pra
+decidir se estica o sheet, `keyboardBehavior`) através do PRÓPRIO `BottomSheetTextInput` da
+lib, que registra foco/blur num estado interno (`animatedKeyboardState`, via
+`useBottomSheetInternal()`). Um `TextInput` comum nunca dispara esse registro — o sheet fica
+cego pro fato de que tem campo focado ali dentro, e o teclado do SO simplesmente aparece por
+cima de tudo, sem o sheet reagir. Corrigido com um Context (`insideSheetContext.ts`) que
+`Sheet` propaga como `true` pros filhos — `Field` lê esse contexto e troca `TextInput` por
+`BottomSheetTextInput` só quando está dentro de um `Sheet` (fora dele — `AlertDialog`, busca da
+Biblioteca — continua `TextInput` normal; `BottomSheetTextInput` lança erro fora do contexto da
+lib). Confirmado ao vivo no simulador, antes/depois: sem a correção, o sheet ficava parado no
+snap de 45% e o teclado cobria o campo por completo; com ela, o sheet expande sozinho pro snap
+de 92% e o campo focado fica visível acima do teclado.
+
+**Armadilha de ambiente, não do app**: o Simulador iOS, por padrão, vem com "Connect Hardware
+Keyboard" ligado (Simulator.app → I/O → Keyboard) — nesse modo o teclado na tela NUNCA aparece
+(o simulador assume que você vai digitar pelo teclado físico do Mac), então testar foco de
+campo sem desligar essa opção parece "nada acontece" mesmo com tudo funcionando certo. Sem
+tocar (este ambiente não tem `simctl` pra simular touch), o jeito de confirmar foi forçar o
+foco via `ref.focus()` num `useEffect` temporário.
+
 **Bug real: fundo branco atrás da sheet no tema escuro.** O efeito "tela encolhe atrás da
 sheet aberta" (`SheetChromeContainer`, acima) tira o `View` animado de baixo da escala 100% —
 o vão revelado nessa borda mostra o que estiver *atrás* dele, não o que está dentro. Sem cor de

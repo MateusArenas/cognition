@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../useTheme';
 import { Icon } from '../Icon';
 import { useOptionalSheetChrome } from '../SheetChrome';
+import { InsideSheetContext } from './insideSheetContext';
 
 function dismiss(ref: ForwardedRef<BottomSheetModal>) {
   if (ref && typeof ref === 'object') ref.current?.dismiss();
@@ -72,7 +73,10 @@ export const Sheet = forwardRef<BottomSheetModal, Props>(function Sheet(
           sobrepondo o título — bug real, reportado pelo usuário ("o header fica em cima de
           Colunas"). */}
       <BottomSheetView style={[styles.body, { paddingTop: headHeight, paddingBottom: 16 + insets.bottom }]}>
-        {children}
+        {/* Field usa isso pra trocar TextInput por BottomSheetTextInput — sem esse componente
+            específico da lib, o teclado não sabe que um input aqui dentro ganhou foco e não
+            reposiciona nada, cobrindo o campo (bug real reportado pelo usuário). */}
+        <InsideSheetContext.Provider value={true}>{children}</InsideSheetContext.Provider>
       </BottomSheetView>
     </BottomSheetModal>
   );
