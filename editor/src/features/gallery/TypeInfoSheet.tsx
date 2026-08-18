@@ -3,10 +3,21 @@ import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { StyleSheet, Text, View } from 'react-native';
 import { Sheet } from '@/design/components/Sheet';
 import { useTheme } from '@/design/useTheme';
-import type { TipoDiagrama } from '@/domain/mermaid/catalog';
+
+// Aceita a forma estrutural, não `TipoDiagrama` inteiro — o card "Documento" da galeria (que
+// não é um tipo de diagrama Mermaid, não tem `id`/`grupo`/`code`) usa a mesma sheet.
+interface TipoInfo {
+  nome: string;
+  kw: string;
+  oque: string;
+  quando: string;
+  visual?: boolean;
+  /** Nota extra na faixa verde, quando não é sobre edição visual (ex.: card "Documento"). */
+  nota?: string;
+}
 
 interface Props {
-  tipo: TipoDiagrama | null;
+  tipo: TipoInfo | null;
 }
 
 export const TypeInfoSheet = forwardRef<BottomSheetModal, Props>(function TypeInfoSheet({ tipo }, ref) {
@@ -24,9 +35,11 @@ export const TypeInfoSheet = forwardRef<BottomSheetModal, Props>(function TypeIn
           <Text style={[styles.label, { color: colors.blue }]}>QUANDO USAR</Text>
           <Text style={[styles.body, { color: colors.label }]}>{tipo.quando}</Text>
         </View>
-        {tipo.visual ? (
+        {tipo.visual || tipo.nota ? (
           <View style={[styles.badge, { backgroundColor: colors.surface, borderRadius: radius.control }]}>
-            <Text style={{ color: colors.green, fontSize: 13 }}>Editável tocando no desenho — os outros tipos editam pelo código.</Text>
+            <Text style={{ color: colors.green, fontSize: 13 }}>
+              {tipo.visual ? 'Editável tocando no desenho — os outros tipos editam pelo código.' : tipo.nota}
+            </Text>
           </View>
         ) : null}
       </View>

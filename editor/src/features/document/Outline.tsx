@@ -15,12 +15,12 @@ interface Entrada {
   offset: number;
 }
 
-function coletar(nodes: MdNode[], offsetAcumulado = 0): Entrada[] {
+function coletar(nodes: MdNode[]): Entrada[] {
   const out: Entrada[] = [];
   for (const n of nodes) {
-    if (n.t === 'heading') out.push({ tipo: 'titulo', texto: n.filhos.map((f) => (f.t === 'text' ? f.texto : '')).join(''), nivel: n.nivel, offset: offsetAcumulado });
+    if (n.t === 'heading') out.push({ tipo: 'titulo', texto: n.filhos.map((f) => (f.t === 'text' ? f.texto : '')).join(''), nivel: n.nivel, offset: n.ini });
     else if (n.t === 'mermaid') out.push({ tipo: 'diagrama', texto: 'Diagrama', nivel: 1, offset: n.ini });
-    else if (n.t === 'quote') out.push(...coletar(n.filhos, offsetAcumulado));
+    else if (n.t === 'quote') out.push(...coletar(n.filhos));
   }
   return out;
 }

@@ -1,7 +1,8 @@
 // Modelos prontos usados pela galeria (Etapa 10) e pelos testes de round-trip.
-import type { ErDoc, FlowDoc } from '../types';
+import type { ErDoc, FlowDoc, MdDoc } from '../types';
 import { uid } from '../id';
-import { blankER, blankFlow } from './factory';
+import { blankER, blankFlow, blankMd } from './factory';
+import { serialize } from './serialize';
 
 export function templateFlow(): FlowDoc {
   const d = blankFlow('Recebimento de carga');
@@ -89,4 +90,39 @@ export function templateER(): ErDoc {
     { id: uid('r'), from: 'PRODUTO', to: 'ITEM_PEDIDO', cardL: '||', cardR: 'o{', identifying: false, label: 'é pedido em' },
   ];
   return d;
+}
+
+// Mesmo tema "Recebimento de carga" dos outros dois modelos — mostra a ida-e-volta
+// documento↔diagrama (§13.4) já com um exemplo de verdade, não um bloco vazio. O card
+// "Documento" da galeria abre este; "Em branco" usa blankMd() puro.
+export function templateMd(): MdDoc {
+  const linhas = [
+    '# Recebimento de carga',
+    '',
+    'Documento de referência do fluxo de entrada no armazém. Toque em **Editar** no diagrama',
+    'abaixo para ajustá-lo no canvas — ao voltar, o texto aqui atualiza sozinho.',
+    '',
+    '## Fluxo',
+    '',
+    '```mermaid',
+    serialize(templateFlow()),
+    '```',
+    '',
+    '## Regras',
+    '',
+    '| Situação | Ação | Responsável |',
+    '| --- | --- | --- |',
+    '| Nota confere | Liberar descarga | Conferente |',
+    '| Divergência de quantidade | Registrar e reconferir | Supervisor |',
+    '',
+    '## Pendências',
+    '',
+    '- [x] Definir o layout da etiqueta',
+    '- [ ] Fechar o contrato de leitura DataMatrix',
+    '- [ ] Validar o tempo de resposta da fila',
+    '',
+    '> Divergência de nota bloqueia a descarga. Sem exceção.',
+    '',
+  ];
+  return blankMd('Especificação de recebimento', linhas.join('\n'));
 }

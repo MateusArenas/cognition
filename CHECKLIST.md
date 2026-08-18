@@ -12,10 +12,11 @@ corrente mudar. Isso é o ponto de retomada entre sessões — não precisa rele
 para saber onde parou. Ver a regra de manutenção no topo do [CLAUDE.md](CLAUDE.md): qualquer
 mudança de escopo aqui também atualiza o doc correspondente em `docs/`.
 
-**Progresso atual: as 16 etapas do roteiro original estão implementadas, e o canvas foi
-confirmado renderizando de verdade num simulador iOS real** (fluxograma e ER, com screenshot —
-formas, cores de classe, subgrafos, cardinalidade, tudo certo). O que resta é polimento
-contínuo (ver "Pendências conhecidas" no fim deste arquivo).
+**Progresso atual: as 16 etapas do roteiro original estão implementadas, e o canvas e o editor
+de documento Markdown foram confirmados renderizando de verdade num simulador iOS real**
+(fluxograma, ER e os tipos genéricos com seleção correta; documento Markdown com diagrama
+embutido renderizado dentro do cartão, tabela, tarefas, barra de formatação). O que resta é
+polimento contínuo (ver "Pendências conhecidas" no fim deste arquivo).
 
 **Bug real encontrado e corrigido nesta rodada:** `import * as FileSystem from
 'expo-file-system'` (SDK 54+) parece funcionar — `tsc` não reclama, `expo export` builda —
@@ -143,6 +144,14 @@ testes jest continuam todos passando. Ver a nota de versões em
   **Sem o segundo flow Maestro ainda** — precisa de simulador/dev build. Ver
   [docs/10-markdown.md](docs/10-markdown.md).
 
+  **Lacuna real, fechada numa sessão posterior**: as Etapas 11-12 entregaram o editor de
+  documento inteiro, mas a Galeria (Etapa 6/`GalleryScreen`) só oferecia os 25 tipos de
+  diagrama — não existia NENHUM jeito, a partir da UI, de criar um documento Markdown. A
+  seção "Documentos" da Galeria (2 cards: exemplo com diagrama embutido, e em branco) e os
+  dois bugs reais achados testando isso pela primeira vez (Estrutura sempre pulando pro início
+  do documento; modo Ler sem rolagem) ficam documentados em
+  [docs/10-markdown.md](docs/10-markdown.md).
+
 - [x] **Etapa 13 — Biblioteca com SQLite e busca** — 2 dias
   `services/storage.ts` (schema exato do spec, `INSERT ... ON CONFLICT DO UPDATE`),
   `domain/searchText.ts` (índice de busca, pura — testável sem SQLite),
@@ -239,12 +248,17 @@ redescobertas do zero:
   Expo Go) continuam funcionando normalmente pra testar tudo que não exige dev build.
 - **O que já foi verificado visualmente, de verdade, num simulador iOS real** (iPhone 15 Pro
   Max, iOS 17.5, via Expo Go — screenshots tiradas com `xcrun simctl io booted screenshot`):
-  canvas renderizando fluxograma e ER com formas/cores/subgrafos/cardinalidade corretos,
-  seleção reagindo a toque (`__handle recebeu: select` no log de debug usado durante o
-  diagnóstico), navegação entre Biblioteca → documento. **O que ainda não foi verificado
-  visualmente**: barra de ações completa, inspetores, compositor, markdown, galeria,
-  assistente de IA, exportar/compartilhar/importar — a lógica foi implementada com cuidado e
-  passa nos testes automatizados, mas ninguém viu essas telas na tela ainda.
+  canvas renderizando fluxograma, ER e os outros tipos genéricos com seleção correta (ver
+  docs/06-canvas.md/docs/07-selecao.md), navegação Biblioteca → Galeria → documento →
+  Biblioteca, e **o editor de documento Markdown por inteiro** — Escrever, Ler (título,
+  parágrafo com negrito, diagrama embutido renderizando de verdade dentro do cartão, tabela,
+  lista de tarefas), barra de formatação com respiro correto do home indicator, persistência
+  automática (o documento reaparece na Biblioteca depois de fechar). Ver docs/10-markdown.md
+  pros dois bugs reais achados e corrigidos nessa passada (Estrutura pulando sempre pro início
+  do documento; modo Ler sem rolagem). **O que ainda não foi verificado visualmente**: barra de
+  ações completa (flow/ER), inspetores, compositor, assistente de IA, exportar/compartilhar/
+  importar — a lógica foi implementada com cuidado e passa nos testes automatizados, mas
+  ninguém viu essas telas na tela ainda.
 - **`EXPO_PUBLIC_API_ORIGIN` para o assistente de IA.** Em dev, `services/ai.ts` tenta
   adivinhar a origem da rota `/api/diagrama` a partir do host do Metro — funciona no caminho
   comum, mas veja `docs/11-assistente-ia.md` antes de um deploy de verdade.

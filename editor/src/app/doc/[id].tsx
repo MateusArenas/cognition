@@ -2,13 +2,13 @@ import { useEffect, useState } from 'react';
 import { useLocalSearchParams } from 'expo-router';
 import { useDoc } from '@/store/useDoc';
 import { useAutosave } from '@/store/useAutosave';
-import { templateER, templateFlow } from '@/domain/mermaid/templates';
+import { templateER, templateFlow, templateMd } from '@/domain/mermaid/templates';
 import { blankMd } from '@/domain/mermaid/factory';
 import { loadDoc } from '@/services/storage';
 import { DiagramScreen } from '@/features/diagram/DiagramScreen';
 import { DocumentScreen } from '@/features/document/DocumentScreen';
 
-// Rota fina (docs/02-setup-e-estrutura.md): "flow-demo"/"er-demo"/"md-novo" abrem um
+// Rota fina (docs/02-setup-e-estrutura.md): "flow-demo"/"er-demo"/"md-novo"/"md-demo" abrem um
 // template; "aberto" é usado pela galeria e pelo documento markdown, que já chamaram
 // openDoc() antes de navegar; qualquer outro id é carregado da biblioteca (Etapa 13). Salva
 // sozinho a partir daqui — ver useAutosave.
@@ -24,6 +24,7 @@ export default function DocScreen() {
       if (id === 'er-demo') openDoc(templateER());
       else if (id === 'flow-demo') openDoc(templateFlow());
       else if (id === 'md-novo') openDoc(blankMd('Novo documento', '# Novo documento\n\nComece a escrever…'));
+      else if (id === 'md-demo') openDoc(templateMd());
       else if (id !== 'aberto') {
         const salvo = await loadDoc(id);
         if (!cancelado && salvo) openDoc(salvo);

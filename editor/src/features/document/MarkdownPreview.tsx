@@ -1,5 +1,5 @@
 import { Fragment } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '@/design/useTheme';
 import type { Inline, MdItem, MdNode } from '@/domain/markdown/render';
 import { MermaidBlock } from './MermaidBlock';
@@ -11,14 +11,16 @@ interface Props {
 }
 
 // Modo Ler (§13.1, §13.3): a árvore de MdNode vira componentes RN — sem
-// dangerouslySetInnerHTML, porque RN não tem isso.
+// dangerouslySetInnerHTML, porque RN não tem isso. Rola por conta própria (mesmo respiro
+// horizontal do editor, 18pt) — sem isso, um documento mais longo que a tela ficava cortado
+// e sem jeito de rolar até o fim.
 export function MarkdownPreview({ nodes, onToggleTask, onEditBlock }: Props) {
   return (
-    <View>
+    <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
       {nodes.map((n, i) => (
         <Block key={i} node={n} onToggleTask={onToggleTask} onEditBlock={onEditBlock} />
       ))}
-    </View>
+    </ScrollView>
   );
 }
 
@@ -157,6 +159,7 @@ function InlineText({ filhos }: { filhos: Inline[] }) {
 }
 
 const styles = StyleSheet.create({
+  scroll: { padding: 18, paddingBottom: 32 },
   taskRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 9 },
   box: { width: 21, height: 21, borderRadius: 11, borderWidth: 1.8, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
   row: { flexDirection: 'row' },

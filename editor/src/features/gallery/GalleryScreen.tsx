@@ -8,34 +8,72 @@ import { useTheme } from '@/design/useTheme';
 import { useDoc } from '@/store/useDoc';
 import { GRUPOS, TIPOS, type TipoDiagrama } from '@/domain/mermaid/catalog';
 import { parseMermaid } from '@/domain/mermaid/parse';
-import { templateER, templateFlow } from '@/domain/mermaid/templates';
+import { blankMd } from '@/domain/mermaid/factory';
+import { templateER, templateFlow, templateMd } from '@/domain/mermaid/templates';
+import type { Doc } from '@/domain/types';
 import { TypeInfoSheet } from './TypeInfoSheet';
 
-// A galeria dos 25 tipos (§6.5) — Novo documento abre aqui (§15). ZenUML/Wardley ficam de
-// fora de propósito (ver docs/04-dominio.md).
+const INFO_DOCUMENTO = {
+  nome: 'Documento',
+  kw: 'markdown',
+  oque: 'Texto formatado com títulos, listas, tarefas, tabelas e código — e diagramas Mermaid embutidos.',
+  quando: 'Especificação, README, ata de reunião — qualquer coisa que precise de texto e desenho juntos.',
+  nota: 'Toque em Editar num diagrama do documento e ele abre no canvas. Ao voltar, o texto atualiza sozinho.',
+};
+
+// A galeria dos 25 tipos de diagrama (§6.5) + os dois pontos de partida pra documento
+// markdown (§13, sem equivalente na spec original — o protótipo já tinha essa seção
+// "Documentos", só nunca tinha sido portada). ZenUML/Wardley ficam de fora de propósito (ver
+// docs/04-dominio.md).
 export function GalleryScreen() {
   const { colors, space, radius } = useTheme();
   const openDoc = useDoc((s) => s.openDoc);
   const infoRef = useRef<BottomSheetModal>(null);
-  const [infoTipo, setInfoTipo] = useState<TipoDiagrama | null>(null);
+  const [infoTipo, setInfoTipo] = useState<(TipoDiagrama | typeof INFO_DOCUMENTO) | null>(null);
 
-  function abrir(tipo: TipoDiagrama) {
-    if (tipo.id === 'flow') openDoc(templateFlow());
-    else if (tipo.id === 'er') openDoc(templateER());
-    else if (tipo.code) openDoc(parseMermaid(tipo.code, tipo.nome));
-    else return;
+  function abrirDoc(doc: Doc) {
+    openDoc(doc);
     router.push('/doc/aberto');
   }
 
-  function abrirInfo(tipo: TipoDiagrama) {
+  function abrir(tipo: TipoDiagrama) {
+    if (tipo.id === 'flow') abrirDoc(templateFlow());
+    else if (tipo.id === 'er') abrirDoc(templateER());
+    else if (tipo.code) abrirDoc(parseMermaid(tipo.code, tipo.nome));
+  }
+
+  function abrirInfo(tipo: TipoDiagrama | typeof INFO_DOCUMENTO) {
     setInfoTipo(tipo);
     infoRef.current?.present();
   }
 
   return (
     <View style={[styles.root, { backgroundColor: colors.bg }]}>
-      <NavBar title="Novo diagrama" left={{ label: 'Cancelar', onPress: () => router.back() }} />
+      <NavBar title="Novo" left={{ label: 'Cancelar', onPress: () => router.back() }} />
       <ScrollView contentContainerStyle={{ padding: space.lg }}>
+        <View style={{ marginBottom: space.lg }}>
+          <Text style={[styles.grupo, { color: colors.labelSecondary }]}>DOCUMENTOS</Text>
+          <View style={styles.grid}>
+            <View style={[styles.card, { backgroundColor: colors.surface, borderRadius: radius.card }]}>
+              <Pressable style={styles.cardMain} onPress={() => abrirDoc(templateMd())}>
+                <Text style={[styles.nome, { color: colors.label }]} numberOfLines={1}>Documento</Text>
+                <Text style={[styles.tagVisual, { color: colors.blue }]}>COM DIAGRAMA</Text>
+              </Pressable>
+              <Pressable style={styles.info} onPress={() => abrirInfo(INFO_DOCUMENTO)} accessibilityLabel="Sobre Documento">
+                <Icon name="info" size={18} color={colors.blue} />
+              </Pressable>
+            </View>
+            <View style={[styles.card, { backgroundColor: colors.surface, borderRadius: radius.card }]}>
+              <Pressable
+                style={styles.cardMain}
+                onPress={() => abrirDoc(blankMd('Novo documento', '# Novo documento\n\nComece a escrever…'))}
+              >
+                <Text style={[styles.nome, { color: colors.label }]} numberOfLines={1}>Em branco</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+
         {GRUPOS.map((grupo) => (
           <View key={grupo} style={{ marginBottom: space.lg }}>
             <Text style={[styles.grupo, { color: colors.labelSecondary }]}>{grupo.toUpperCase()}</Text>

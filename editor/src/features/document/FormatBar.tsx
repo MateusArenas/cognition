@@ -1,4 +1,5 @@
 import { Pressable, ScrollView, StyleSheet, Text } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/design/useTheme';
 import { REGUA, TABELA_MODELO, cycleHeading, insertAt, insertLink, toggleLinePrefix, toggleTask, toggleWrap, type EditResult } from '@/domain/markdown/format';
 
@@ -18,6 +19,7 @@ interface Props {
 // linhas do cursor (prefixo), como no Notas.
 export function FormatBar({ text, selection, onApply, onInsertDiagram }: Props) {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const { start, end } = selection;
 
   const acoes: Array<{ key: string; label: string; run: () => void }> = [
@@ -40,7 +42,7 @@ export function FormatBar({ text, selection, onApply, onInsertDiagram }: Props) 
       horizontal
       showsHorizontalScrollIndicator={false}
       style={[styles.bar, { backgroundColor: colors.surface, borderTopColor: colors.separator }]}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[styles.content, { paddingBottom: 8 + insets.bottom }]}
       keyboardShouldPersistTaps="always"
     >
       {acoes.map((a) => (

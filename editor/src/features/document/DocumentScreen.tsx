@@ -89,6 +89,7 @@ export function DocumentScreen() {
           <MarkdownEditor
             value={live.value}
             onChangeText={live.onChangeText}
+            selection={selection}
             onSelectionChange={setSelection}
             onFocus={live.onFocus}
             onBlur={live.onBlur}

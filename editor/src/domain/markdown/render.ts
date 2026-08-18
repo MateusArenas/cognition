@@ -6,10 +6,10 @@
 // isso o parser inline é um scanner manual, sem regex de lookbehind em lugar nenhum — e
 // proteger os code spans primeiro, senão `**` dentro de crase vira negrito.
 //
-// Limitação conhecida: offsets de bloco mermaid só são exatos no nível raiz e dentro de
-// listas — dentro de uma citação (`>`), o conteúdo é re-parseado como markdown independente
-// (offsets relativos à citação, não ao documento). Mermaid dentro de citação é raro o
-// suficiente pra aceitar isso por ora.
+// Limitação conhecida: offsets de bloco mermaid e de título (`ini`, usado pela aba Estrutura,
+// docs/10-markdown.md) só são exatos no nível raiz e dentro de listas — dentro de uma citação
+// (`>`), o conteúdo é re-parseado como markdown independente (offsets relativos à citação, não
+// ao documento). Título/mermaid dentro de citação é raro o suficiente pra aceitar isso por ora.
 
 export type Inline =
   | { t: 'text'; texto: string }
@@ -28,7 +28,7 @@ export interface MdItem {
 }
 
 export type MdNode =
-  | { t: 'heading'; nivel: 1 | 2 | 3 | 4; filhos: Inline[] }
+  | { t: 'heading'; nivel: 1 | 2 | 3 | 4; filhos: Inline[]; ini: number }
   | { t: 'paragraph'; filhos: Inline[] }
   | { t: 'list'; ordenada: boolean; itens: MdItem[] }
   | { t: 'quote'; filhos: MdNode[] }
@@ -103,7 +103,7 @@ export function renderMarkdown(md: string): MdNode[] {
 
     const h = /^(#{1,4})\s+(.*)$/.exec(line);
     if (h) {
-      nodes.push({ t: 'heading', nivel: h[1].length as 1 | 2 | 3 | 4, filhos: parseInline(h[2]) });
+      nodes.push({ t: 'heading', nivel: h[1].length as 1 | 2 | 3 | 4, filhos: parseInline(h[2]), ini: offsets[i] });
       i++;
       continue;
     }

@@ -18,6 +18,16 @@ describe('renderMarkdown — blocos', () => {
     expect(nodes.map((n) => (n.t === 'heading' ? n.nivel : null))).toEqual([1, 2, 3, 4]);
   });
 
+  it('título guarda o offset de onde a linha começa (usado pela aba Estrutura pra pular até lá)', () => {
+    const md = 'Texto antes.\n\n## Segundo título\n\nMais texto.';
+    const nodes = renderMarkdown(md);
+    const h = nodes.find((n) => n.t === 'heading');
+    expect(h).toBeTruthy();
+    if (h?.t === 'heading') {
+      expect(md.slice(h.ini, h.ini + '## Segundo título'.length)).toBe('## Segundo título');
+    }
+  });
+
   it('reconhece régua horizontal', () => {
     expect(renderMarkdown('---')[0]).toEqual({ t: 'hr' });
   });
