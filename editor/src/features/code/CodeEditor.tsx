@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useTheme } from '@/design/useTheme';
 import { tokenize, type TokenType } from './highlight';
@@ -23,12 +23,14 @@ interface Props {
 // métrica — por isso `metrics` é compartilhado entre as duas, nunca duplicado.
 export function CodeEditor({ code, onChangeText, onFocus, onBlur, editable = true }: Props) {
   const { colors, scheme } = useTheme();
-  const [focused, setFocused] = useState(false);
   const tokens = useMemo(() => tokenize(code), [code]);
   const palette = COLORS[scheme];
 
   return (
-    <View style={[styles.wrap, { backgroundColor: colors.surface, borderColor: focused ? colors.blue : 'transparent' }]}>
+    // Sem borda e sem cartão arredondado de propósito — pedido do usuário ("não quero borda
+    // por volta do código"). O fundo (colors.surface) é o mesmo do container em DiagramScreen,
+    // pra ficar tudo uma superfície só, sem costura de cor nenhuma.
+    <View style={[styles.wrap, { backgroundColor: colors.surface }]}>
       {/* Bug real: rolar dava a impressão de escrolar, mas o texto colorido ficava parado —
           o <Text> de realce e o TextInput eram irmãos soltos; o TextInput rolava por conta
           própria (scroll nativo dele, invisível já que o texto dele é transparente) sem mexer
@@ -48,14 +50,8 @@ export function CodeEditor({ code, onChangeText, onFocus, onBlur, editable = tru
           <TextInput
             value={code}
             onChangeText={onChangeText}
-            onFocus={() => {
-              setFocused(true);
-              onFocus?.();
-            }}
-            onBlur={() => {
-              setFocused(false);
-              onBlur?.();
-            }}
+            onFocus={onFocus}
+            onBlur={onBlur}
             editable={editable}
             multiline
             scrollEnabled={false}
@@ -80,7 +76,7 @@ const metrics = {
 };
 
 const styles = StyleSheet.create({
-  wrap: { flex: 1, borderRadius: 12, borderWidth: 1.5, overflow: 'hidden' },
+  wrap: { flex: 1 },
   scrollContent: { flexGrow: 1 },
   editArea: { flex: 1 },
   hl: { pointerEvents: 'none' },

@@ -1,5 +1,5 @@
 import { BlurView } from 'expo-blur';
-import { Keyboard, Pressable, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
+import { Keyboard, Pressable, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import { KeyboardStickyView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '@/design/Icon';
@@ -51,7 +51,7 @@ export function CodeKeyboardBar({ canUndo, canRedo, onUndo, onRedo, onLayout }: 
               hitSlop={8}
               style={({ pressed }) => ({ opacity: !canUndo ? 0.3 : pressed ? 0.5 : 1 })}
             >
-              <Icon name="undo" size={19} />
+              <Icon name="undo" size={22} />
             </Pressable>
             <Pressable
               onPress={onRedo}
@@ -61,7 +61,7 @@ export function CodeKeyboardBar({ canUndo, canRedo, onUndo, onRedo, onLayout }: 
               hitSlop={8}
               style={({ pressed }) => ({ opacity: !canRedo ? 0.3 : pressed ? 0.5 : 1 })}
             >
-              <Icon name="redo" size={19} />
+              <Icon name="redo" size={22} />
             </Pressable>
           </View>
           <Pressable
@@ -69,10 +69,9 @@ export function CodeKeyboardBar({ canUndo, canRedo, onUndo, onRedo, onLayout }: 
             accessibilityRole="button"
             accessibilityLabel="Confirmar e fechar o teclado"
             hitSlop={8}
-            style={({ pressed }) => [styles.confirm, { opacity: pressed ? 0.5 : 1 }]}
+            style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}
           >
-            <Text style={{ color: colors.blue, fontSize: 14, fontWeight: '600' }}>Confirmar</Text>
-            <Icon name="check" size={15} />
+            <Icon name="check" size={22} />
           </Pressable>
         </BlurView>
       </View>
@@ -89,9 +88,8 @@ const styles = StyleSheet.create({
   },
   bar: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingVertical: 10, borderWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: 20, paddingVertical: 14, borderWidth: StyleSheet.hairlineWidth,
     overflow: 'hidden',
   },
-  side: { flexDirection: 'row', gap: 20 },
-  confirm: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  side: { flexDirection: 'row', gap: 24 },
 });

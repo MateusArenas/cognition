@@ -46,7 +46,10 @@ uma unidade só, nunca mais desalinham.
 do canvas, [06-canvas.md](06-canvas.md)) e Confirmar, que só chama `Keyboard.dismiss()`: isso já
 tira o foco do `TextInput` (cursor some) e dispara o `onBlur` existente (`commitCode`), sem
 precisar de ref pro editor. Colada ao teclado com `KeyboardStickyView`, mesmo padrão já usado
-na barra de formatação do editor de markdown ([10-markdown.md](10-markdown.md)).
+na barra de formatação do editor de markdown ([10-markdown.md](10-markdown.md)). Os três botões
+são só ícone (`undo`/`redo`/`check`, 22pt) — a primeira versão tinha rótulo "Confirmar" ao lado
+do ícone; o usuário pediu só ícone, e um tamanho não tão compacto quanto a segunda versão
+tinha ficado.
 
 Visual: cápsula flutuante com `BlurView` (mesma linguagem do `Chip`/`ActionBar`, §5.2) — não
 uma barra full-bleed colada nas bordas. Margem de 2pt uniforme no `wrap` (ajustada depois de
@@ -73,3 +76,14 @@ somar essa altura à do teclado no cálculo de padding da lib (`relativeKeyboard
 significar "distância do topo da tela" na documentação da lib. Detalhe fino: `onLayout` não
 inclui a própria `marginBottom` do elemento — sem somar isso também, a compensação ficava
 subestimada bem por pouco (a última linha aparecia cortada atrás da barra).
+
+**Bug real: borda azul de foco e costura de cor entre o editor e o fundo por trás do
+teclado** (pedido do usuário: "não quero borda por volta do código" + "quero que o fundo atrás
+do keyboard seja a mesma cor do fundo do código"). `CodeEditor` tinha um `wrap` em cartão —
+`borderRadius`, `borderWidth`, e borda azul quando focado — pedido removido por completo (sem
+cartão, sem borda, só a cor de fundo `colors.surface` preenchendo tudo). A "costura" vinha de
+`CodeKeyboardBar` ser um `BlurView` — o que aparece por trás do blur é o que estiver
+*fisicamente atrás dele na tela*, e antes isso era o `colors.bg` (preto) do `root` do
+`DiagramScreen`, diferente do `colors.surface` (cinza escuro) do editor logo acima. Corrigido
+envolvendo o editor **e** a `CodeKeyboardBar` juntos numa `View` com `backgroundColor:
+colors.surface` — agora o blur revela a mesma cor de fundo do código, sem salto visível.

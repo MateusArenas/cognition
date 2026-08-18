@@ -276,27 +276,29 @@ export function DiagramScreen() {
       {tab === 'elements' ? <ElementsList rawElements={rawElements} /> : null}
 
       {tab === 'code' ? (
-        // CodeEditor é um TextInput multiline flex:1 sem tela de trás nenhuma — sem isso, o
-        // teclado só sobrepunha o campo (bug real reportado pelo usuário: "fica sobrepondo").
-        // KeyboardAvoidingView (react-native-keyboard-controller, já usado no editor de
-        // markdown) encolhe a área disponível pra caber acima do teclado — keyboardVerticalOffset
-        // soma a altura real da CodeKeyboardBar (medida via onLayout, abaixo) por cima da
-        // altura do teclado, senão a barra flutuante cobre a última linha visível do editor
-        // (bug real reportado pelo usuário: "o scroll tem que subir mais... compensar o
-        // tamanho da toolbar").
-        <KeyboardAvoidingView style={styles.canvasArea} behavior="padding" keyboardVerticalOffset={codeBarHeight}>
-          <CodeEditor code={codeDraft ?? code} onChangeText={handleCodeChange} onBlur={commitCode} />
-        </KeyboardAvoidingView>
-      ) : null}
-
-      {tab === 'code' ? (
-        <CodeKeyboardBar
-          canUndo={!!history.past.length}
-          canRedo={!!history.future.length}
-          onUndo={undo}
-          onRedo={redo}
-          onLayout={setCodeBarHeight}
-        />
+        // Fundo colors.surface aqui (não colors.bg do root) — cobre TANTO o editor quanto a
+        // área onde a CodeKeyboardBar flutua, pra o blur dela revelar essa mesma cor por trás
+        // em vez do preto do root (bug real reportado pelo usuário: "quero que o fundo atras
+        // do keyboard seja a mesma cor do fundo do código").
+        <View style={[styles.canvasArea, { backgroundColor: colors.surface }]}>
+          {/* CodeEditor é um TextInput multiline flex:1 sem tela de trás nenhuma — sem isso, o
+              teclado só sobrepunha o campo (bug real: "fica sobrepondo"). KeyboardAvoidingView
+              (react-native-keyboard-controller, já usado no editor de markdown) encolhe a área
+              disponível pra caber acima do teclado — keyboardVerticalOffset soma a altura real
+              da CodeKeyboardBar (medida via onLayout, abaixo) por cima da altura do teclado,
+              senão a barra flutuante cobre a última linha visível do editor (bug real: "o
+              scroll tem que subir mais... compensar o tamanho da toolbar"). */}
+          <KeyboardAvoidingView style={styles.canvasArea} behavior="padding" keyboardVerticalOffset={codeBarHeight}>
+            <CodeEditor code={codeDraft ?? code} onChangeText={handleCodeChange} onBlur={commitCode} />
+          </KeyboardAvoidingView>
+          <CodeKeyboardBar
+            canUndo={!!history.past.length}
+            canRedo={!!history.future.length}
+            onUndo={undo}
+            onRedo={redo}
+            onLayout={setCodeBarHeight}
+          />
+        </View>
       ) : null}
 
       {doc.tipo === 'flow' ? <NodeComposer visible={composerOpen} onClose={() => setComposerOpen(false)} /> : null}
