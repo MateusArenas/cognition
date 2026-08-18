@@ -1,6 +1,6 @@
 import { BottomSheetModal, BottomSheetView, type BottomSheetModalProps } from '@gorhom/bottom-sheet';
-import { forwardRef, useCallback, useMemo, type ForwardedRef, type ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { forwardRef, useCallback, useMemo, useState, type ForwardedRef, type ReactNode } from 'react';
+import { Pressable, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../useTheme';
 import { Icon } from '../Icon';
@@ -26,6 +26,7 @@ export const Sheet = forwardRef<BottomSheetModal, Props>(function Sheet(
   const { setOpen } = useOptionalSheetChrome();
   const insets = useSafeAreaInsets();
   const points = useMemo(() => snapPoints ?? ['45%', '92%'], [snapPoints]);
+  const [headHeight, setHeadHeight] = useState(0);
 
   const handleChange = useCallback<NonNullable<BottomSheetModalProps['onChange']>>(
     (index, position, type) => {
@@ -45,7 +46,10 @@ export const Sheet = forwardRef<BottomSheetModal, Props>(function Sheet(
       style={{ borderRadius: radius.sheet }}
       {...rest}
     >
-      <View style={[styles.head, { borderBottomColor: colors.separator }]}>
+      <View
+        onLayout={(e: LayoutChangeEvent) => setHeadHeight(e.nativeEvent.layout.height)}
+        style={[styles.head, { borderBottomColor: colors.separator }]}
+      >
         <Text style={[styles.title, { color: colors.label }]} numberOfLines={1}>
           {title}
         </Text>
@@ -62,13 +66,23 @@ export const Sheet = forwardRef<BottomSheetModal, Props>(function Sheet(
           <Icon name="close" size={14} color={colors.labelSecondary} />
         </Pressable>
       </View>
-      <BottomSheetView style={[styles.body, { paddingBottom: 16 + insets.bottom }]}>{children}</BottomSheetView>
+      {/* BottomSheetView se posiciona absolute/top:0 por dentro (biblioteca) — ignora
+          completamente a altura do `head` acima, por mais que ele venha antes no JSX. Sem esse
+          paddingTop medido de verdade, o conteúdo (children) nasce debaixo do próprio header,
+          sobrepondo o título — bug real, reportado pelo usuário ("o header fica em cima de
+          Colunas"). */}
+      <BottomSheetView style={[styles.body, { paddingTop: headHeight, paddingBottom: 16 + insets.bottom }]}>
+        {children}
+      </BottomSheetView>
     </BottomSheetModal>
   );
 });
 
 const styles = StyleSheet.create({
-  head: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 18, paddingBottom: 10 },
+  head: {
+    flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 18,
+    paddingTop: 6, paddingBottom: 10, borderBottomWidth: StyleSheet.hairlineWidth,
+  },
   title: { flex: 1, fontSize: 20, fontWeight: '700' },
   tag: { fontFamily: 'Menlo', fontSize: 11.5, borderRadius: 7, paddingVertical: 3, paddingHorizontal: 7 },
   close: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },

@@ -56,6 +56,20 @@ Cobrem o app inteiro — construir antes de qualquer tela.
 
 Ver também [13-qualidade-e-testes.md](13-qualidade-e-testes.md) para acessibilidade e Dynamic Type.
 
+**Bug real: o cabeçalho do `Sheet` ficava sobreposto ao próprio conteúdo** (reportado pelo
+usuário: "aperto em Colunas ou Editar... o header dele fica encima de Colunas ou outro
+texto"). Causa raiz é da biblioteca, não do nosso código: `BottomSheetView` (o corpo rolável)
+tem `position:'absolute', top:0` no próprio estilo interno
+(`@gorhom/bottom-sheet/.../bottomSheetView/styles.ts`) — ele ignora completamente a altura do
+`head` (nosso título + botão fechar) que vem ANTES dele no JSX, porque não participa do fluxo
+normal de flexbox; sempre desenha a partir do topo do sheet, por baixo do header. `COLUNAS`
+(primeira linha do `TableInspector`) e `FORMA` (primeira do `NodeInspector`) nasciam literalmente
+atrás do título "Tabela"/"Nó". Corrigido medindo a altura real do `head` com `onLayout` e
+somando como `paddingTop` no `BottomSheetView` — mesmo padrão já usado pro `ActionBar`/FABs
+(ver "Navegação" abaixo). `head` ganhou `borderBottomWidth` de verdade também (tinha
+`borderBottomColor` sem largura — nunca aparecia). Corrige todo `Sheet` do app de uma vez
+(inspetores, Outline, ShareSheet, AiSheet) — é o componente compartilhado.
+
 **Bug real: fundo branco atrás da sheet no tema escuro.** O efeito "tela encolhe atrás da
 sheet aberta" (`SheetChromeContainer`, acima) tira o `View` animado de baixo da escala 100% —
 o vão revelado nessa borda mostra o que estiver *atrás* dele, não o que está dentro. Sem cor de
