@@ -49,11 +49,19 @@ precisar de ref pro editor. Colada ao teclado com `KeyboardStickyView`, mesmo pa
 na barra de formatação do editor de markdown ([10-markdown.md](10-markdown.md)).
 
 Visual: cápsula flutuante com `BlurView` (mesma linguagem do `Chip`/`ActionBar`, §5.2) — não
-uma barra full-bleed colada nas bordas. Margens de 2pt (`marginHorizontal`/`marginTop`/
-`marginBottom` no wrap — ajustadas depois de grandes demais na primeira versão), cantos
-arredondados (`radius.card`), sombra sutil no `wrap` (não no `BlurView` — `overflow:'hidden'`
-do blur cortaria a própria sombra, por isso a sombra mora num `View` externo sem clip e o blur
-com raio+clip fica num filho por dentro).
+uma barra full-bleed colada nas bordas. Margem de 2pt uniforme no `wrap` (ajustada depois de
+grandes demais na primeira versão), cantos arredondados (`radius.card`), sombra sutil no `wrap`
+(não no `BlurView` — `overflow:'hidden'` do blur cortaria a própria sombra, por isso a sombra
+mora num `View` externo sem clip e o blur com raio+clip fica num filho por dentro).
+
+**Bug real: a barra ficava longe demais do teclado** (reportado pelo usuário: "a toolbar ainda
+está muito longe do keyboard"). `KeyboardStickyView` sozinho já cola sem gap nenhum — o
+afastamento vinha inteiro de um `marginBottom: insets.bottom` no `wrap`, aplicado igual com o
+teclado aberto OU fechado. Fechado isso está certo (o home indicator ocupa esse espaço físico);
+aberto, o próprio teclado já vai até o fim da tela — não sobra `insets.bottom` nenhum ali, só
+empurrava a barra pra longe à toa. Corrigido com o prop `offset` do `KeyboardStickyView`
+(`{closed: -insets.bottom, opened: 0}`) — `insets.bottom` só entra quando fechado; aberto, a
+barra cola direto no teclado, só com a margem fixa de 2pt do `wrap`.
 
 **Bug real: a barra cobria a última linha visível do editor.** `KeyboardAvoidingView`
 (`behavior="padding"`) só sabe compensar a altura do TECLADO — não tem ideia de que

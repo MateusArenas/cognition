@@ -26,13 +26,20 @@ export function CodeKeyboardBar({ canUndo, canRedo, onUndo, onRedo, onLayout }: 
   const insets = useSafeAreaInsets();
 
   return (
-    <KeyboardStickyView>
+    // KeyboardStickyView por si só já cola sem gap nenhum — o afastamento vinha inteiro de
+    // marginBottom: insets.bottom no wrap, aplicado igual com o teclado aberto OU fechado.
+    // Com o teclado fechado isso é certo (o home indicator ocupa esse espaço); aberto, o
+    // teclado já vai até o fim físico da tela — não sobra insets.bottom nenhum ali, então
+    // aquela margem só empurrava a barra pra longe do teclado à toa (bug real reportado pelo
+    // usuário: "a toolbar ainda está muito longe do keyboard"). offset por estado resolve:
+    // insets.bottom só entra fechado; aberto, cola direto (só a margem fixa de 2 do wrap).
+    <KeyboardStickyView offset={{ closed: -insets.bottom, opened: 0 }}>
       <View
         // onLayout não inclui a própria margem (marginBottom, embaixo) — soma aqui, senão
         // DiagramScreen subcompensa exatamente por essa margem e a última linha visível do
         // editor fica um pouco atrás da barra.
-        onLayout={(e: LayoutChangeEvent) => onLayout?.(e.nativeEvent.layout.height + 2 + insets.bottom)}
-        style={[styles.wrap, { marginBottom: 2 + insets.bottom }]}
+        onLayout={(e: LayoutChangeEvent) => onLayout?.(e.nativeEvent.layout.height + 2)}
+        style={styles.wrap}
       >
         <BlurView intensity={50} tint={scheme} style={[styles.bar, { borderRadius: radius.card, borderColor: colors.separator }]}>
           <View style={styles.side}>
@@ -77,7 +84,7 @@ const styles = StyleSheet.create({
   // Sombra e margens no wrap (sem overflow:hidden — cortaria a própria sombra); raio + blur +
   // clip no filho, senão o BlurView vaza retângulo por fora dos cantos arredondados.
   wrap: {
-    marginHorizontal: 2, marginTop: 2,
+    margin: 2,
     shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 8, shadowOffset: { width: 0, height: 2 },
   },
   bar: {
