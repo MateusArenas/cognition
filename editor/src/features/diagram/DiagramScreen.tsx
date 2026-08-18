@@ -170,11 +170,7 @@ export function DiagramScreen() {
         title={doc.nome}
         subtitle={doc.tipo === 'flow' ? 'Fluxograma' : doc.tipo === 'er' ? 'Modelo relacional' : doc.tipo === 'raw' ? doc.kind : 'Documento'}
         left={{ label: retornoMd ? '‹ Documento' : '‹ Biblioteca', onPress: voltar }}
-        right={[
-          { label: 'Desfazer', onPress: undo, disabled: !history.past.length },
-          { label: 'Refazer', onPress: redo, disabled: !history.future.length },
-          { label: 'Exportar', onPress: () => exportarTexto(doc) },
-        ]}
+        right={[{ label: 'Exportar', onPress: () => exportarTexto(doc) }]}
       />
 
       <Segmented
@@ -211,6 +207,11 @@ export function DiagramScreen() {
             <Chip label="Ajustar" onPress={() => canvasRef.current?.fit()} />
             <Chip label="PNG" onPress={exportarComoPng} />
             {retornoMd ? <Chip label="Voltar ao documento" onPress={voltar} /> : null}
+          </View>
+
+          <View style={styles.hudRight}>
+            <Chip icon="undo" accessibilityLabel="Desfazer" onPress={undo} disabled={!history.past.length} />
+            <Chip icon="redo" accessibilityLabel="Refazer" onPress={redo} disabled={!history.future.length} />
           </View>
 
           {linkMode.ativo ? (
@@ -292,6 +293,7 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   canvasArea: { flex: 1 },
   hud: { position: 'absolute', top: 12, left: 12, flexDirection: 'row', flexWrap: 'wrap', gap: 8, maxWidth: '70%' },
+  hudRight: { position: 'absolute', top: 12, right: 12, flexDirection: 'row', gap: 8 },
   empty: {
     position: 'absolute', left: 14, right: 14, top: 20, padding: 16, borderRadius: 16, maxWidth: 420, alignSelf: 'center',
   },
