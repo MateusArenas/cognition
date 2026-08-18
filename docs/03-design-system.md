@@ -70,6 +70,13 @@ somando como `paddingTop` no `BottomSheetView` — mesmo padrão já usado pro `
 `borderBottomColor` sem largura — nunca aparecia). Corrige todo `Sheet` do app de uma vez
 (inspetores, Outline, ShareSheet, AiSheet) — é o componente compartilhado.
 
+**Bug real, refinamento de acabamento: `headHeight` sozinho só evitava a sobreposição — a
+primeira linha do conteúdo ficava colada direto na borda do header, sem respiro nenhum**
+(reportado pelo usuário: "está ficando colado o topo do border bottom do header"). Corrigido
+somando `space.lg` (16pt) de folga tanto no topo (`headHeight + space.lg`) quanto embaixo
+(`space.lg + insets.bottom`, espelhando o respiro que o rodapé já tinha) — mesmo espaçamento
+usado no resto do design system, não um número novo inventado pra ocasião.
+
 **Bug real: teclado cobria o campo de texto dentro de um `Sheet`, sem empurrar nada** (relatado
 pelo usuário: "o keyboard fica por cima e eu não vejo nada"). Causa: `Field` usava `TextInput`
 puro do React Native — o `@gorhom/bottom-sheet` só sabe que um input dele ganhou foco (pra
@@ -120,6 +127,24 @@ mostrava o branco padrão da janela nativa mesmo no tema escuro. Corrigido dando
 `backgroundColor: colors.bg` pro `GestureHandlerRootView` — precisou de um componente próprio
 (`RootShell`) porque `useTheme()` só funciona dentro do `ThemeProvider`, e `RootLayout` em si
 está fora dele até renderizar os filhos.
+
+**Bug real: a tela ficava travada encolhida (efeito "atrás da sheet") mesmo com tudo
+fechado** (reportado pelo usuário: "às vezes fica travado como o print" — screenshot mostrando
+o app inteiro visivelmente encolhido/com cantos arredondados, sem sheet nenhuma aberta).
+`SheetChromeProvider.setOpen` usa `openCount`, um contador (não um booleano), de propósito —
+pra sheets empilhadas abrirem/fecharem sem atropelar uma à outra. Mas `Sheet.tsx` chamava
+`setOpen(index >= 0)` no `onChange` da `BottomSheetModal` **a cada troca de índice de snap**,
+não só ao abrir/fechar de verdade — e com o `enableDynamicSizing` (ver "Bug real" mais abaixo
+sobre isso), um único "abrir" já passa por 2+ índices (o snap inicial, depois o snap medido de
+verdade a partir do conteúdo, ou o offset do teclado). Cada troca intermediária incrementava
+`openCount` de novo; fechar decrementa só uma vez — o contador ficava permanentemente positivo,
+e a tela nunca mais voltava ao tamanho normal. Corrigido detectando a BORDA da transição
+(`wasOpenRef`, um ref comparando o estado aberto/fechado anterior) em vez de chamar `setOpen` a
+cada `onChange` cru — `setOpen` agora dispara só quando aberto↔fechado de fato muda, não a cada
+troca de snap dentro do "aberto". Reproduzido e confirmado ao vivo no simulador: abrir um
+`TableInspector`, focar um campo (dispara o resize do teclado — a troca extra de índice) e
+fechar — sem a correção, a tela ficava visivelmente encolhida mesmo depois de fechado; com ela,
+volta ao tamanho normal todas as vezes.
 
 ## Ícones
 
