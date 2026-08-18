@@ -1,6 +1,6 @@
 import { BottomSheetModal, BottomSheetView, type BottomSheetModalProps } from '@gorhom/bottom-sheet';
 import { forwardRef, useCallback, useMemo, useState, type ForwardedRef, type ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
+import { Pressable, StyleSheet, Text, useWindowDimensions, View, type LayoutChangeEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../useTheme';
 import { Icon } from '../Icon';
@@ -17,7 +17,7 @@ interface Props extends Partial<BottomSheetModalProps> {
   children: ReactNode;
 }
 
-// @gorhom/bottom-sheet com BottomSheetModal, snaps ['45%','92%'], grabber 36x5, cantos 14.
+// @gorhom/bottom-sheet com BottomSheetModal, snap inicial em 45%, grabber 36x5, cantos 14.
 // Fundo `bg` — as linhas agrupadas por dentro é que são `surface` (§5.2).
 export const Sheet = forwardRef<BottomSheetModal, Props>(function Sheet(
   { title, tag, children, snapPoints, onChange, ...rest },
@@ -26,7 +26,14 @@ export const Sheet = forwardRef<BottomSheetModal, Props>(function Sheet(
   const { colors, radius } = useTheme();
   const { setOpen } = useOptionalSheetChrome();
   const insets = useSafeAreaInsets();
-  const points = useMemo(() => snapPoints ?? ['45%', '92%'], [snapPoints]);
+  const { height: windowHeight } = useWindowDimensions();
+  // Só o snap pequeno por padrão — sem um '92%' fixo, quem decide o quão alto o sheet pode
+  // ficar é o próprio conteúdo (`enableDynamicSizing`, abaixo), não um número arbitrário. Quem
+  // chama com snapPoints explícito (ShareSheet) continua no controle.
+  const points = useMemo(() => snapPoints ?? ['45%'], [snapPoints]);
+  // Teto pro tamanho dinâmico — sem isso um conteúdo muito comprido tentaria abrir maior que a
+  // tela. Mesma folga de sempre (92%) menos a safe area de cima.
+  const maxDynamicContentSize = Math.round(windowHeight * 0.92 - insets.top);
   const [headHeight, setHeadHeight] = useState(0);
 
   const handleChange = useCallback<NonNullable<BottomSheetModalProps['onChange']>>(
@@ -41,6 +48,11 @@ export const Sheet = forwardRef<BottomSheetModal, Props>(function Sheet(
     <BottomSheetModal
       ref={ref}
       snapPoints={points}
+      enableDynamicSizing
+      maxDynamicContentSize={maxDynamicContentSize}
+      // Sem isso, no snap mais alto (dinâmico ou '92%' explícito) o header nasce colado no
+      // status bar/notch — reportado pelo usuário ("respeitar o safe area do status bar").
+      topInset={insets.top}
       onChange={handleChange}
       backgroundStyle={{ backgroundColor: colors.bg }}
       handleIndicatorStyle={{ backgroundColor: colors.separatorBold, width: 36, height: 5 }}

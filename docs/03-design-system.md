@@ -82,8 +82,28 @@ cima de tudo, sem o sheet reagir. Corrigido com um Context (`insideSheetContext.
 `BottomSheetTextInput` só quando está dentro de um `Sheet` (fora dele — `AlertDialog`, busca da
 Biblioteca — continua `TextInput` normal; `BottomSheetTextInput` lança erro fora do contexto da
 lib). Confirmado ao vivo no simulador, antes/depois: sem a correção, o sheet ficava parado no
-snap de 45% e o teclado cobria o campo por completo; com ela, o sheet expande sozinho pro snap
-de 92% e o campo focado fica visível acima do teclado.
+snap de 45% e o teclado cobria o campo por completo; com ela, o sheet expande sozinho e o campo
+focado fica visível acima do teclado (o quanto expande, ver o refinamento logo abaixo).
+
+**Refinamento pedido pelo usuário: o sheet só devia crescer até quase 100% se o conteúdo
+justificasse — e, quando crescesse tanto, tinha que respeitar a safe area do status bar.** A
+primeira versão do fix acima usava `snapPoints={['45%', '92%']}` fixos, e o algoritmo do
+`keyboardBehavior:'interactive'` da lib (`highestDetentPosition - keyboardHeight`, em
+`BottomSheet.tsx`) sempre usa o snap **mais alto configurado** como referência — não o
+conteúdo. Com `'92%'` sempre no array, qualquer sheet (mesmo um formulário de 3 campos) subia
+quase até o topo ao focar um input, sobrando um vão vazio enorme entre o conteúdo curto e o
+teclado. Corrigido em duas partes: (1) o `Sheet` agora só declara o snap pequeno (`'45%'`) por
+padrão e liga `enableDynamicSizing` (já era o padrão da lib, agora explícito) com
+`maxDynamicContentSize` como teto — a própria lib mede a altura real do conteúdo
+(`useAnimatedDetents.ts`) e injeta um snap dinâmico do tamanho exato que ele precisa; esse
+dinâmico só ganha do `'45%'` (vira o "mais alto") quando o conteúdo realmente é maior que
+45% da tela — formulário curto continua curto, tabela de 13 colunas cresce de verdade. (2)
+`topInset={insets.top}` no `BottomSheetModal` — sem isso, no snap mais alto (dinâmico ou não)
+o título nascia colado no status bar/notch. Confirmado ao vivo com dois casos: tabela de 3
+colunas (cresce só o suficiente, sobra diagrama visível acima) e a mesma tabela com +10
+colunas adicionadas via `apply()` (cresce de verdade, header com respiro limpo abaixo do
+relógio). `snapPoints` explícito (`ShareSheet`, `['36%']`) continua sendo respeitado como
+antes — só o `Sheet` sem essa prop passou a decidir sozinho.
 
 **Armadilha de ambiente, não do app**: o Simulador iOS, por padrão, vem com "Connect Hardware
 Keyboard" ligado (Simulator.app → I/O → Keyboard) — nesse modo o teclado na tela NUNCA aparece
