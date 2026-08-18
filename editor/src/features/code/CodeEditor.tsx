@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Platform, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useTheme } from '@/design/useTheme';
 import { tokenize, type TokenType } from './highlight';
 
@@ -29,33 +29,44 @@ export function CodeEditor({ code, onChangeText, onFocus, onBlur, editable = tru
 
   return (
     <View style={[styles.wrap, { backgroundColor: colors.surface, borderColor: focused ? colors.blue : 'transparent' }]}>
-      <Text style={[StyleSheet.absoluteFill, metrics, styles.hl]} allowFontScaling={false}>
-        {tokens.map((t, i) => (
-          <Text key={i} style={{ color: palette[t.type], fontStyle: t.type === 'com' ? 'italic' : 'normal', fontWeight: t.type === 'kw' ? '600' : '400' }}>
-            {t.text}
+      {/* Bug real: rolar dava a impressão de escrolar, mas o texto colorido ficava parado —
+          o <Text> de realce e o TextInput eram irmãos soltos; o TextInput rolava por conta
+          própria (scroll nativo dele, invisível já que o texto dele é transparente) sem mexer
+          no <Text> absoluto por baixo, que sempre desenhava a partir do topo do wrap. Corrigido
+          pondo os dois dentro do MESMO ScrollView (scrollEnabled=false no TextInput, ele só
+          cresce com o conteúdo) — como sobem juntos como uma unidade só, nunca mais desalinham. */}
+      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="always">
+        <View style={styles.editArea}>
+          <Text style={[StyleSheet.absoluteFill, metrics, styles.hl]} allowFontScaling={false}>
+            {tokens.map((t, i) => (
+              <Text key={i} style={{ color: palette[t.type], fontStyle: t.type === 'com' ? 'italic' : 'normal', fontWeight: t.type === 'kw' ? '600' : '400' }}>
+                {t.text}
+              </Text>
+            ))}
+            {'\n'}
           </Text>
-        ))}
-        {'\n'}
-      </Text>
-      <TextInput
-        value={code}
-        onChangeText={onChangeText}
-        onFocus={() => {
-          setFocused(true);
-          onFocus?.();
-        }}
-        onBlur={() => {
-          setFocused(false);
-          onBlur?.();
-        }}
-        editable={editable}
-        multiline
-        autoCapitalize="none"
-        autoCorrect={false}
-        spellCheck={false}
-        allowFontScaling={false}
-        style={[metrics, styles.input, { color: 'transparent' }]}
-      />
+          <TextInput
+            value={code}
+            onChangeText={onChangeText}
+            onFocus={() => {
+              setFocused(true);
+              onFocus?.();
+            }}
+            onBlur={() => {
+              setFocused(false);
+              onBlur?.();
+            }}
+            editable={editable}
+            multiline
+            scrollEnabled={false}
+            autoCapitalize="none"
+            autoCorrect={false}
+            spellCheck={false}
+            allowFontScaling={false}
+            style={[metrics, styles.input, { color: 'transparent' }]}
+          />
+        </View>
+      </ScrollView>
     </View>
   );
 }
@@ -70,6 +81,8 @@ const metrics = {
 
 const styles = StyleSheet.create({
   wrap: { flex: 1, borderRadius: 12, borderWidth: 1.5, overflow: 'hidden' },
+  scrollContent: { flexGrow: 1 },
+  editArea: { flex: 1 },
   hl: { pointerEvents: 'none' },
-  input: { flex: 1, textAlignVertical: 'top' },
+  input: { textAlignVertical: 'top' },
 });

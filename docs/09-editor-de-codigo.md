@@ -29,3 +29,21 @@ aba "Código" (`DiagramScreen`) só o envolvia numa `View` comum. Corrigido troc
 por `KeyboardAvoidingView` (`react-native-keyboard-controller` — a mesma lib já usada no
 editor de markdown, `behavior="padding"`) — a área disponível encolhe pra caber acima do
 teclado, e o cursor fica visível dentro dela.
+
+**Bug real: rolar dava a impressão de escrolar, mas o texto colorido ficava parado no lugar**
+(reportado pelo usuário: "ta escrolando mas o texto nao desce junto"). O `<Text>` de realce e o
+`TextInput` eram irmãos soltos dentro do `wrap` — o `TextInput` (multiline, scroll nativo
+ligado por padrão) rolava por conta própria quando o código passava do tamanho da tela, mas o
+`<Text>` absoluto por baixo (o que o usuário efetivamente enxerga, já que o texto do
+`TextInput` é transparente) nunca se movia, sempre desenhado a partir do topo do `wrap`.
+Corrigido pondo os dois dentro do mesmo `ScrollView` (`scrollEnabled={false}` no `TextInput` —
+ele só cresce com o conteúdo, sem rolar por conta própria) — como sobem e descem juntos como
+uma unidade só, nunca mais desalinham.
+
+## Barra colada ao teclado
+
+`CodeKeyboardBar` (`features/code/CodeKeyboardBar.tsx`) — desfazer/refazer (mesma ação do HUD
+do canvas, [06-canvas.md](06-canvas.md)) e Confirmar, que só chama `Keyboard.dismiss()`: isso já
+tira o foco do `TextInput` (cursor some) e dispara o `onBlur` existente (`commitCode`), sem
+precisar de ref pro editor. Colada ao teclado com `KeyboardStickyView`, mesmo padrão já usado
+na barra de formatação do editor de markdown ([10-markdown.md](10-markdown.md)).

@@ -28,6 +28,7 @@ import { ActionBarController, type ActionBarControllerHandle } from './ActionBar
 import { NodeComposer } from './composers/NodeComposer';
 import { TableComposer } from './composers/TableComposer';
 import { CodeEditor } from '@/features/code/CodeEditor';
+import { CodeKeyboardBar } from '@/features/code/CodeKeyboardBar';
 import { AiSheet } from '@/features/ai/AiSheet';
 import { ShareSheet } from './ShareSheet';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
@@ -281,6 +282,10 @@ export function DiagramScreen() {
         <KeyboardAvoidingView style={styles.canvasArea} behavior="padding">
           <CodeEditor code={codeDraft ?? code} onChangeText={handleCodeChange} onBlur={commitCode} />
         </KeyboardAvoidingView>
+      ) : null}
+
+      {tab === 'code' ? (
+        <CodeKeyboardBar canUndo={!!history.past.length} canRedo={!!history.future.length} onUndo={undo} onRedo={redo} />
       ) : null}
 
       {doc.tipo === 'flow' ? <NodeComposer visible={composerOpen} onClose={() => setComposerOpen(false)} /> : null}
