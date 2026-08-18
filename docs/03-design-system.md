@@ -99,6 +99,25 @@ mapeando `lucide-react-native` pro próprio build CJS do pacote via `moduleNameM
 `jest.config.js`, em vez de mexer em `transform`/`transformIgnorePatterns` (mais simples e não
 arrisca destransformar outra coisa).
 
+**Bug real: os 3 botões de "Adicionar etapa" (`NodeComposer`) ficavam com altura zero — sem
+texto visível, só a borda superior de cada um empilhada.** `AlertDialog` tem duas variantes
+de barra de botões: em linha (2 botões, `flexDirection:'row'`) e empilhada (3+, `'column'`).
+As duas usavam `flex:1` no botão. Em RN, `flex:1` é atalho pra `flexGrow:1; flexShrink:1;
+flexBasis:0%` — **não** `flexBasis:'auto'` como no CSS web ingênuo. Isso é inofensivo na
+variante em linha (`flex:1` só afeta LARGURA ali, a altura vem do conteúdo via cross-axis) mas
+fatal na empilhada: a altura de cada botão (o eixo principal, agora) começa em zero, e só
+cresce se o container pai (`btns`, sem altura fixa) tiver espaço extra pra distribuir — que ele
+não tem, porque a própria altura dele é derivada do conteúdo dos filhos, que também começam em
+zero. Resultado: todo mundo colapsa pra zero, um problema circular que nunca daria erro nem
+warning. Só a variante de 2 botões (usada em toda confirmação de exclusão) tinha sido exercida
+antes — a de 3+ (só existia em `NodeComposer`) nunca tinha sido testada nem no simulador.
+Corrigido tirando `flex:1` do botão empilhado (o `View` column já estica os filhos pra largura
+cheia por padrão via `alignItems:'stretch'`, e a altura vira a do próprio conteúdo — padding +
+texto — sem flex nenhum envolvido); `flex:1` continua só na variante em linha, onde é
+necessário pra dividir a largura igual entre os botões. `AlertDialog.test.tsx` ganhou um teste
+pra 3 botões (RTL não mede layout real — não pegaria o colapso sozinho — mas garante que os
+três continuam no DOM e clicáveis).
+
 ## Navegação (tab bar)
 
 `app/(tabs)/_layout.tsx` — duas abas, **Biblioteca** e **Ajustes** (`features/settings/`, nova:

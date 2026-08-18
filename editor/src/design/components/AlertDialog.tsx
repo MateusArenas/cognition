@@ -39,6 +39,7 @@ export function AlertDialog({ visible, title, message, buttons, children, onRequ
                   onPress={b.onPress}
                   style={({ pressed }) => [
                     styles.btn,
+                    !stacked && styles.btnRow,
                     !stacked && i > 0 && { borderLeftWidth: StyleSheet.hairlineWidth, borderLeftColor: colors.separator },
                     stacked && i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.separator },
                     pressed && { backgroundColor: colors.surface2 },
@@ -73,5 +74,13 @@ const styles = StyleSheet.create({
   btns: { borderTopWidth: StyleSheet.hairlineWidth, marginTop: 12 },
   btnsRow: { flexDirection: 'row' },
   btnsStacked: { flexDirection: 'column' },
-  btn: { flex: 1, paddingVertical: 13, paddingHorizontal: 8 },
+  // `flex:1` no RN equivale a flexBasis:0% — em flexDirection:'row' isso só afasta a LARGURA
+  // (o que a gente quer, pra dividir igual entre 2 botões), mas num container 'column' de
+  // altura automática (`btns`, sem altura fixa) isso zera a ALTURA de cada botão antes de
+  // distribuir espaço — e não hà espaço extra pra distribuir porque o próprio pai não tem
+  // altura definida. Bug real: os 3 botões de "Adicionar etapa" (NodeComposer) ficavam com
+  // altura zero, só a borda superior de cada um visível, texto nenhum. `flex:1` só entra na
+  // variante em linha; empilhados usam a altura de conteúdo normal (padding + texto).
+  btn: { paddingVertical: 13, paddingHorizontal: 8 },
+  btnRow: { flex: 1 },
 });
