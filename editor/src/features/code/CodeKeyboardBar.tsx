@@ -86,7 +86,7 @@ const styles = StyleSheet.create({
   // Sombra e margens no wrap (sem overflow:hidden — cortaria a própria sombra); raio + blur +
   // clip no filho, senão o BlurView vaza retângulo por fora dos cantos arredondados.
   wrap: {
-    margin: 2,
+    margin: 12,
     shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 8, shadowOffset: { width: 0, height: 2 },
   },
   bar: {

@@ -4,9 +4,9 @@
 > Protótipo funcional: [editor-mermaid.html](../editor-mermaid.html) — comportamento ambíguo
 > se resolve olhando ele.
 
-Um editor de diagramas Mermaid e documentos Markdown, feito para o celular.
+Um editor de diagramas Mermaid, documentos Markdown e rabiscos, feito para o celular.
 
-## Os quatro tipos de arquivo
+## Os cinco tipos de arquivo
 
 | Tipo | O que é | Como se edita |
 |---|---|---|
@@ -14,6 +14,7 @@ Um editor de diagramas Mermaid e documentos Markdown, feito para o celular.
 | `er` | Modelo relacional | Toque no desenho: tabelas, colunas, cardinalidades |
 | `raw` | Os outros 23 tipos do Mermaid | Toque no elemento → edita o trecho de código correspondente |
 | `md` | Documento Markdown | Editor estilo Notas, com diagramas Mermaid embutidos e editáveis |
+| `rabisco` | Desenho livre (.svg) | Canvas nativo (Skia) — caneta, formas, texto, seleção, IA — ver [16-rabisco.md](16-rabisco.md) |
 
 ## As três promessas que definem o produto
 

@@ -1,4 +1,4 @@
-import type { ErDoc, FlowDoc, MdDoc, RawDoc } from '../types';
+import type { ErDoc, FlowDoc, MdDoc, RabiscoDoc, RawDoc } from '../types';
 import { newDocId } from '../id';
 
 function base() {
@@ -45,5 +45,14 @@ export function blankMd(nome: string, md: string): MdDoc {
     tipo: 'md',
     nome: nome || 'Novo documento',
     md: md || '',
+  };
+}
+
+export function blankRabisco(nome?: string): RabiscoDoc {
+  return {
+    ...base(),
+    tipo: 'rabisco',
+    nome: nome || 'Novo rabisco',
+    elements: [],
   };
 }

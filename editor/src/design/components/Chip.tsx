@@ -10,12 +10,16 @@ interface Props {
   onPress?: () => void;
   mono?: boolean;
   disabled?: boolean;
+  // Estado "ligado" (botão-alternância, ex.: seleção aditiva do Rabisco) — mesmo preenchimento
+  // azul translúcido por trás do ícone usado pra ferramenta/forma ativa no Dock, só que aqui
+  // dentro do Chip pra reaproveitar em qualquer cápsula de HUD que precise de um toggle.
+  active?: boolean;
 }
 
 // Cápsula translúcida com blur — equivalente ao backdrop-filter do protótipo (§5.2). Com
 // `icon` em vez de `label` vira uma cápsula redonda só-ícone (Desfazer/Refazer do HUD do
 // canvas), mesmo visual, sem duplicar o Pressable+BlurView.
-export function Chip({ label, icon, accessibilityLabel, onPress, mono, disabled }: Props) {
+export function Chip({ label, icon, accessibilityLabel, onPress, mono, disabled, active }: Props) {
   const { colors, radius, scheme } = useTheme();
   const tintColor = mono ? colors.labelSecondary : colors.blue;
 
@@ -24,7 +28,7 @@ export function Chip({ label, icon, accessibilityLabel, onPress, mono, disabled 
       onPress={disabled ? undefined : onPress}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}
-      accessibilityState={{ disabled }}
+      accessibilityState={{ disabled, selected: active }}
       style={({ pressed }) => ({ opacity: disabled ? 0.35 : pressed ? 0.45 : 1, borderRadius: radius.pill })}
     >
       <BlurView
@@ -33,6 +37,7 @@ export function Chip({ label, icon, accessibilityLabel, onPress, mono, disabled 
         style={[
           icon ? styles.chipIcon : styles.chip,
           { borderRadius: radius.pill, borderColor: colors.separator },
+          active && { backgroundColor: colors.blue + '26' },
         ]}
       >
         {icon ? (

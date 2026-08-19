@@ -23,6 +23,11 @@ export function serialize(d: Doc): string {
       return serializeER(d);
     case 'flow':
       return serializeFlow(d);
+    case 'rabisco':
+      // Sem representação em texto Mermaid — Rabisco não passa pelo canvas WebView (é
+      // renderizado direto em Skia, ver docs/16-rabisco.md), então isso nunca alimenta um
+      // `mermaid.render()` de verdade. Só existe pra função continuar total sobre `Doc`.
+      return '%% rabisco — sem representação em texto Mermaid';
   }
 }
 

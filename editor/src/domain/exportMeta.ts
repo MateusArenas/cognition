@@ -3,11 +3,11 @@
 import type { Doc } from './types';
 
 export function exportExtension(doc: Doc): string {
-  return doc.tipo === 'md' ? '.md' : '.mmd';
+  return doc.tipo === 'md' ? '.md' : doc.tipo === 'rabisco' ? '.svg' : '.mmd';
 }
 
 export function exportMime(doc: Doc): string {
-  return doc.tipo === 'md' ? 'text/markdown' : 'text/plain';
+  return doc.tipo === 'md' ? 'text/markdown' : doc.tipo === 'rabisco' ? 'image/svg+xml' : 'text/plain';
 }
 
 export function slugFilename(nome: string): string {

@@ -8,7 +8,7 @@ import { useTheme } from '@/design/useTheme';
 import { useDoc } from '@/store/useDoc';
 import { GRUPOS, TIPOS, type TipoDiagrama } from '@/domain/mermaid/catalog';
 import { parseMermaid } from '@/domain/mermaid/parse';
-import { blankMd } from '@/domain/mermaid/factory';
+import { blankMd, blankRabisco } from '@/domain/mermaid/factory';
 import { templateER, templateFlow, templateMd } from '@/domain/mermaid/templates';
 import type { Doc } from '@/domain/types';
 import { TypeInfoSheet } from './TypeInfoSheet';
@@ -69,6 +69,18 @@ export function GalleryScreen() {
                 onPress={() => abrirDoc(blankMd('Novo documento', '# Novo documento\n\nComece a escrever…'))}
               >
                 <Text style={[styles.nome, { color: colors.label }]} numberOfLines={1}>Em branco</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+
+        <View style={{ marginBottom: space.lg }}>
+          <Text style={[styles.grupo, { color: colors.labelSecondary }]}>DESENHO</Text>
+          <View style={styles.grid}>
+            <View style={[styles.card, { backgroundColor: colors.surface, borderRadius: radius.card }]}>
+              <Pressable style={styles.cardMain} onPress={() => abrirDoc(blankRabisco('Novo rabisco'))}>
+                <Text style={[styles.nome, { color: colors.label }]} numberOfLines={1}>Rabisco</Text>
+                <Text style={[styles.tagVisual, { color: colors.blue }]}>DESENHO LIVRE</Text>
               </Pressable>
             </View>
           </View>

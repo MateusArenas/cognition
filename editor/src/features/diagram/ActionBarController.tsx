@@ -9,7 +9,7 @@ import { useTheme } from '@/design/useTheme';
 import { useToast } from '@/design/components/Toast';
 import { useDoc } from '@/store/useDoc';
 import { hapticWarning } from '@/services/haptics';
-import type { ErDoc, FlowDoc, RawDoc } from '@/domain/types';
+import type { Doc, ErDoc, FlowDoc, RawDoc } from '@/domain/types';
 import { colunaDe, relById, tableById } from '@/domain/mermaid/lookup';
 import * as flow from '@/domain/mutations/flow';
 import * as er from '@/domain/mutations/er';
@@ -291,7 +291,7 @@ function inspectorTitle(kind: InspectorKind): string {
   }
 }
 
-function describeSelection(doc: FlowDoc | ErDoc | RawDoc | { tipo: 'md' }, sel: NonNullable<ReturnType<typeof useDoc.getState>['sel']>): string {
+function describeSelection(doc: Doc, sel: NonNullable<ReturnType<typeof useDoc.getState>['sel']>): string {
   if (sel.kind === 'node' && doc.tipo === 'flow') return doc.nodes.find((n) => n.id === sel.id)?.label || sel.id;
   if (sel.kind === 'edge' && doc.tipo === 'flow') return doc.edges.find((e) => e.id === sel.id)?.label || 'ligação';
   if (sel.kind === 'group' && doc.tipo === 'flow') return doc.groups.find((g) => g.id === sel.id)?.label || sel.id;

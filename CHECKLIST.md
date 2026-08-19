@@ -217,6 +217,311 @@ antes de reaplicá-la.
   alerta em telas pequenas, mais cobertura de haptics). Ver
   [docs/13-qualidade-e-testes.md](docs/13-qualidade-e-testes.md).
 
+- [x] **Etapa R1 — Rabisco: domínio + canvas Skia + caneta** — pedido do usuário, fora do
+  roteiro original de 16 etapas
+  Novo 5º tipo de documento (`rabisco`, `.svg`) — canvas de desenho tipo Excalidraw, primeira
+  fatia de um roadmap maior (R1-R5). `domain/rabisco/{mutations,geom,palette}.ts`,
+  `features/rabisco/{RabiscoScreen,Canvas,Dock}.tsx`. Decisão de arquitetura: Skia nativo
+  (`@shopify/react-native-skia`, confirmado `inExpoGo: true`), não WebView — desenhar é a
+  interação central, não tem motor JS pra rodar (diferente do Mermaid). Reaproveita toda a
+  plumbing genérica já existente (`useDoc`/undo-redo, SQLite, design tokens) em vez de portar
+  a store/persistência própria que o spec de referência propunha pra um app standalone. Nesta
+  etapa: câmera (pan/pinça), caneta com suavização (curva quadrática), borracha, desfazer/
+  refazer — confirmado no simulador (traço desenha, apaga por proximidade, desfazer restaura).
+
+- [x] **Etapa R2 — Rabisco: formas, seleção, setas com binding, texto**
+  Segunda fatia do roadmap. `geom.ts` ganhou `elementGeometry`/`hitTest`/`bindingAt`/
+  `pickBindable`/`resolvedPoints` e a renderização "à mão livre" via PRNG seedado (porte de
+  `rough.ts` do protótipo); `mutations.ts` ganhou `moveElement`/`resizeElement`/
+  `duplicateElement`. `Dock.tsx` reescrito: seleção, mão, caneta, forma (popover de 5 formas),
+  texto, borracha. `Canvas.tsx` ganhou a máquina de estados de seleção (mover/redimensionar/
+  arrastar ponta de seta) e criação de forma/linha/seta por arrasto, com ligação automática de
+  seta em forma na borda mais próxima. Texto usa `AlertDialog`+`Field` já existentes, não um
+  overlay próprio. Confirmado no simulador: retângulo desenha com cantos arredondados e traço
+  sketchy, seleção→mover→redimensionar funciona de ponta a ponta, seta perto de uma forma liga
+  automaticamente (id do alvo confirmado), texto é colocado como elemento vazio editável,
+  borracha remove formas (não só traços) e apagar um elemento ligado não quebra quem apontava
+  pra ele. Verificação usou instrumentação temporária (chamada direta das funções de gesto),
+  não toque sintético calibrado — os alvos de toque do app são pequenos demais pra acertar de
+  forma confiável no simulador.
+  Ver [docs/16-rabisco.md](docs/16-rabisco.md) pro roadmap R3-R5 (painel de estilo completo,
+  IA, exportar) ainda não construído.
+
+- [x] **Etapa R2.1 — Rabisco: acertos de paridade com o protótipo (seleção, cor)**
+  Usuário reportou que a seleção estava "bugada" e faltava preenchimento, comparando com
+  `whiteboard-ios.html`. Três correções: (1) `hitTest` agora usa o modelo de duas passadas do
+  protótipo — forma sem preenchimento só é achada perto da borda de primeira, o miolo vazio
+  dela só conta como fallback se nada mais foi achado, senão uma forma grande e vazia bloqueava
+  selecionar o que estava desenhado dentro/por cima dela; (2) alças de redimensionar e caixa de
+  seleção passaram a ser desenhadas em px de TELA (não de cena) — ficam do mesmo tamanho visual
+  em qualquer zoom, bem maiores que antes; (3) nova `StyleBar.tsx` com faixa de cor de borda
+  (sempre visível) e preenchimento (só formas), e criar forma/linha/seta agora já seleciona e
+  troca pra ferramenta de seleção (igual ao `setTool('select')` do protótipo), pra ajustar cor
+  na hora sem trocar de ferramenta. +3 testes em `geom.test.ts` (162 total). Confirmado ao vivo:
+  preenchimento sólido renderiza, alças bem maiores e visíveis, criar retângulo já seleciona com
+  a faixa de cor aparecendo, mudar a cor da borda aplica no elemento certo.
+
+- [x] **Etapa R2.2 — Rabisco: escolha de alça de redimensionar corrigida**
+  Seguindo o R2.1, usuário reportou que redimensionar ainda estava "descontrolado" — arrastar de
+  lado fazia crescer demais. Causa raiz: `selectStart` pegava a PRIMEIRA alça dentro da
+  tolerância de toque (ordem `nw,n,ne,w,e,...`), não a MAIS PERTO — perto de um canto de forma
+  pequena, duas alças cabem na mesma tolerância, e um toque um pouco impreciso perto de "e"
+  podia agarrar "ne", fazendo um arrasto lateral também mexer a altura. Corrigido pra achar a
+  alça de menor distância, testada contra as mesmas posições PADDED usadas pra desenhar (antes
+  o hit-test usava a caixa sem padding — um lugar diferente de onde a bolinha aparecia). Padding
+  entre a borda e as alças aumentou de 9 pra 14px de tela (`HANDLE_PAD_PX`, compartilhado entre
+  hit-test e desenho). Confirmado ao vivo: tocar 5px fora do centro exato da alça "e" e arrastar
+  de lado mudou só a largura, na proporção exata do arrasto — altura intacta.
+
+- [x] **Etapa R2.3 — Rabisco: toque parado agora seleciona (Gesture.Tap)**
+  Usuário reportou "tenho que mover pra selecionar". Causa raiz bem mais fundamental que as
+  anteriores: `Gesture.Pan()` só reconhece a partir de um evento de MOVIMENTO — um toque
+  matematicamente parado nunca dispara `onStart`, nem com `.minDistance(0)` (setado também, pra
+  arrastos de verdade não terem um "salto" inicial de ~10pt não capturado). Seleção, texto e
+  borracha rodavam tudo dentro do `onStart` do Pan, então um toque sem nenhum arrasto nunca
+  fazia nada. Corrigido com um `Gesture.Tap()` de verdade, composto junto no `Gesture.Race`
+  — toque parado vira `tapAt(x,y)`, que reaproveita `selectStart`+`selectEnd` (seleção) ou
+  chama `placeText`/`eraseAt` direto. De brinde: uma leitura de SharedValue direto no render de
+  `Canvas.tsx` (`scale.value`, pro tamanho das alças) que disparava o aviso de "strict mode" do
+  Reanimated em cada frame de arrasto virou um `useState` espelhado via `useAnimatedReaction`.
+  Confirmado ao vivo, repetidas vezes: toque simples sem arrasto seleciona a forma na hora; e um
+  arrasto de mover/redimensionar segue proporcionalmente o dedo, sem crescimento fora de
+  controle. Verificação desta etapa precisou de instrumentação por `console.log` (visível no
+  terminal do Metro) em vez de screenshot — a técnica de screenshot sozinha não distinguia
+  "gesto não reconhecido" de "coordenada errada", e esse par de causas raiz só ficou claro
+  assim; sempre removida antes do commit.
+
+- [x] **Etapa R3 — Rabisco: zoom, cotovelo de seta, texto de verdade, borracha com rastro,
+  cor completa, fundo** — pedido do usuário em 7 partes, fora do roteiro
+  (1) HUD de zoom (topo, `-`/porcentagem/`+`) — achado ao vivo: os botões não respondiam porque
+  estavam aninhados DENTRO do `GestureDetector` do canvas, que capturava o toque antes de
+  chegar num `Pressable` filho; corrigido movendo o HUD pra fora, como irmão do
+  `GestureDetector`. (2) **Bug real de resize que sobreviveu ao R2.2**: `selectUpdate`
+  recomputava a caixa a partir da SAÍDA do frame anterior (`cur.box`), não da caixa original,
+  enquanto o delta já é o TOTAL desde o início do gesto — a cada um dos ~60 frames/s de um
+  arrasto real, o delta total inteiro somava de novo em cima de uma caixa que já tinha esse
+  delta embutido (cresce quase quadrático com a duração, não a distância); os testes do R2.2 só
+  chamavam `selectUpdate` um punhado de vezes, nunca pegaram isso. Corrigido guardando a caixa
+  original imutável no `DragState` e recomputando `applyResize` sempre do zero. Confirmado
+  chamando `selectUpdate` 40x pra mesma posição (imita 60fps): resultado idêntico a uma
+  chamada. (3) Variações de seta (`straight`/`curved`/`elbow`) com UI na `StyleBar` — o campo já
+  existia no domínio, faltava a UI e o roteamento de `elbow` em si (porte de `elbowRoute`/
+  `headingAt` do protótipo); ligação de seta em forma (já existia desde o R2) confirmada
+  continuando a funcionar. (4) **Texto não funcionava de verdade**: `placeText` só criava um
+  elemento vazio sem jeito de editar; agora abre o editor na hora de tocar (igual a
+  `openText()` do protótipo), com o teclado já focado — confirmado ao vivo, inclusive o
+  descarte de texto vazio ao cancelar. (5) Borracha com rastro temporário — traço translúcido
+  que acompanha o dedo enquanto apaga, nunca vira elemento nem entra no undo. (6) Seletor de
+  cor completo (`ColorPicker.tsx`) — quadrado de saturação/valor + barra de matiz com gradientes
+  do Skia, campos hex/rgba bidirecionais (`domain/rabisco/color.ts`, testado), e uma faixa de
+  "cores usadas no quadro" no lugar de um conta-gotas pixel-a-pixel. (7) Fundo do canvas
+  liso/grade/pontilhado, um botão no topo cicla os 3, um `Path` só por padrão (não um nó Skia
+  por linha/ponto). +11 testes (173 total). Ver [docs/16-rabisco.md](docs/16-rabisco.md) pro
+  roadmap R4-R5 (IA, exportar) ainda não construído.
+- [x] **Etapa R3.1 — Rabisco: texto visível, tamanho/família/alinhamento, opacidade, camadas**
+  — pedido do usuário em 5 partes. (1) **Bug real: texto nunca desenhava, com cor nenhuma** —
+  causa raiz `matchFont({ fontSize })` sem `fontFamily` caía no default `'System'`, que não é um
+  nome de família que o `FontMgr`/`CTFontManager` do Skia reconhece no iOS — `matchFamilyStyle`
+  não achava nada, o `SkFont` resultante não desenhava glifo nenhum, sem erro nenhum. Corrigido
+  sempre passando um nome real (`'Helvetica Neue'`/`'Georgia'`/`'Menlo'`, via novo dicionário
+  `FONT_FAMILIES`); confirmado ao vivo com Fast Refresh, texto apareceu na hora. (2) Tamanho de
+  fonte nomeado S/M/L/XL (`FONT_SIZES`, mesmos valores 16/22/32/48 dos presets P/M/G/GG do
+  protótipo) via `Segmented` (componente já existente, reaproveitado). (3) Família de fonte
+  (Sans/Serif/Mono) — novo campo `fontFamily` no domínio, chave agnóstica de plataforma, nome
+  real só na UI. (4) Alinhamento de texto (esquerda/centro/direita) — novo campo `textAlign`
+  (extensão deliberada, não existe no protótipo), renderizado com `font.measureText()` pra
+  deslocar cada linha dentro da caixa. Caixa agora medida de verdade (`measureText`) em vez de
+  chute por caractere. (5) Opacidade — já existia no domínio/render, só faltava UI: novo
+  `OpacityTrack` (faixa arrastável própria, 10-100% em passos de 5%, mesmo padrão de toque do
+  `ColorPicker`). (6) Camadas — 4 mutações puras novas (`bringForward`/`sendBackward`/
+  `bringToFront`/`sendToBack`, reordenam `doc.elements`) com UI na `StyleBar`; tentativa inicial
+  no HUD superior colidiu com o HUD de zoom (6 chips + pílula não cabem numa tela de
+  ~390-430pt) — movido pra dentro da `StyleBar`, mais consistente com todo o resto de controle
+  por-elemento. +5 testes (178 total). Achado de ferramental: `ConnectHardwareKeyboard` do
+  simulador vinha desligado, por isso digitar via `cliclick t:`/`osascript keystroke` nunca
+  funcionou a sessão inteira — contornado tocando as teclas do teclado na tela uma a uma. Ver
+  [docs/16-rabisco.md](docs/16-rabisco.md).
+- [x] **Etapa R3.2 — Rabisco: duplo toque pra editar texto, picker arrastável/destravado,
+  opacidade sem travar cor, feedback de camada, ferramenta padrão** — pedido do usuário em 6
+  partes. (1) Editar texto exigia só UM toque, mesmo pra selecionar — corrigido: toque único só
+  seleciona, editor abre com duplo toque (`Gesture.Tap().numberOfTaps(2)` +
+  `.requireExternalGestureToFail()`, o padrão do RNGH pra distinguir toque único de duplo) ou
+  pelo chip "Editar" novo (só quando o selecionado é texto). (2) e (3) **Dois bugs reais com a
+  mesma causa raiz**: opacidade "bugava" a cor de preenchimento, e o `ColorPicker` "travava" sem
+  deixar selecionar cor — ambos usavam o sistema de responder puro do RN
+  (`onStartShouldSetResponder`) aninhado entre vários `Pressable`, negociação de toque nada
+  confiável nessa combinação; trocado por `Gesture.Pan` com `onBegin` (dispara já no toque
+  inicial) em ambos — mesmo reconhecedor nativo já provado em `Canvas.tsx`. Confirmado ao vivo:
+  arrastar opacidade e tocar cor em sequência aplicam os dois certos; tocar em qualquer ponto do
+  quadrado de saturação/matiz responde na hora. (4) `ColorPicker` agora arrastável pelo título
+  (mais uma barrinha "grabber" decorativa) — `Gesture.Pan` clampado
+  (`Math.min`/`Math.max` contra o tamanho da janela) pra nunca sair da tela; botão fechar (X)
+  deliberadamente FORA do `GestureDetector` do título (Pressable aninhado dentro de
+  GestureDetector não recebe toque — achado da Etapa R3, reaplicado aqui). (5) Feedback de
+  camada: os 4 botões de reordenar agora mostram um toast (`useToast()`, já existente)
+  "Camada X → Y de Z" a cada toque, comparando a posição antes/depois via
+  `useDoc.getState()`. (6) Ferramenta padrão ao abrir um rabisco novo trocada de `'draw'` pra
+  `'select'`. Nenhum teste novo (sem mutação/tipo novo, só rewiring de gesto e UI — 178 total
+  continua). Achado de ferramental: `measureInWindow()` (temporário) resolveu em segundos uma
+  série de toques "que não batiam em nada" — a `StyleBar` tem altura variável (número de linhas
+  muda com o tipo selecionado), então uma coordenada "confirmada" numa tela vira errada duas
+  linhas depois sem aviso nenhum; medir a posição real bate o palpite visual toda vez. Ver
+  [docs/16-rabisco.md](docs/16-rabisco.md).
+- [x] **Etapa R3.3 — Rabisco: destaque de ligação de seta, histerese de soltar, conta-gotas de
+  verdade** — pedido do usuário em 3 partes. (1) Arrastar a ponta de uma seta perto de uma forma
+  bindável agora mostra um destaque azul arredondado ao redor dela em tempo real (porte de
+  `S.bindHint`, `whiteboard-ios.html:1239-1251`), tanto criando uma seta nova quanto arrastando
+  a ponta de uma já existente. (2) Soltar a ligação "travava" — causa raiz: `pickBindable` usava
+  o mesmo raio (10px) pra prender e pra soltar, sem histerese; porte de `movePoint()`
+  (`whiteboard-ios.html:1573-1594`): novo parâmetro opcional `currentId` faz o alvo já ligado
+  continuar valendo até o toque sair de 22px, não 10 — a faixa "morta" de 12px é o que dá a
+  sensação fluida em vez de travada. +2 testes (180 total). (3) Conta-gotas de verdade — o ícone
+  já existia mas era decorativo. `RabiscoCanvas` ganhou um handle imperativo (`ref` como prop,
+  React 19, sem `forwardRef`) com `beginColorSample()`/`sampleColorAt()`/`endColorSample()`,
+  usando `makeImageSnapshot()` + `SkImage.readPixels()` do Skia; `RabiscoScreen` guarda o
+  `canvasRef` e repassa pro `ColorPicker` (que vive num `Modal`, janela separada — só o Canvas
+  pode tirar snapshot de si mesmo). Botão fica com destaque azul quando ativo; arrastar sobre o
+  canvas mostra uma lupa circular (Skia `Image` do mesmo snapshot, com `transform` de zoom 6x
+  centrado no pixel mirado — sem recortar/recodificar nada) com mirinha no pixel exato e anel na
+  cor lida; solta aplica a cor de verdade. Scrim do picker (antes `rgba(0,0,0,.38)`) virou
+  transparente — pedido explícito do usuário: um fundo escuro tingiria o quadro atrás e o
+  conta-gotas leria uma cor mais escura que a real. Confirmado ao vivo, inclusive um retângulo
+  com borda vermelha ficando com borda preta depois de uma amostra numa área preta do canvas —
+  a cor foi mesmo aplicada, não só mostrada no picker. Ver
+  [docs/16-rabisco.md](docs/16-rabisco.md).
+- [x] **Etapa R3.4 — Rabisco: `ColorPicker` pesando — `applyLive`/`commitLive` em vez de
+  `apply()` por frame** — pedido do usuário. Causa raiz: arrastar no SV/matiz/conta-gotas
+  chamava `onChange(hex)` a cada frame (~60x/s), e isso ia direto pro `apply()` normal do
+  `useDoc` — `structuredClone` + `JSON.stringify` do doc inteiro + empilhar undo (cópia de um
+  array de até 80 entradas), tudo por pixel de arrasto. Mesma armadilha que a digitação contínua
+  já resolve há tempo (`useLiveField`/`applyLive`+`commitLive`, editor de Markdown) — o
+  `ColorPicker` (novo nesta sessão) nunca tinha adotado o padrão. Fix: 3 props novas
+  (`onBeginLive`/`onChangeLive`/`onEndLive`) espelhando `onFocus`/`onChangeText`/`onBlur` do
+  `useLiveField`; `RabiscoScreen` tira o snapshot uma vez no início (`ref`, não state), muta via
+  `applyLive` a cada frame (sem stringificar nem empilhar), fecha a sessão inteira num ÚNICO
+  passo de undo com `commitLive` no fim. Fix extra só pro conta-gotas: `SkImage.readPixels()`
+  num snapshot GPU-backed é um readback caro sozinho — throttle de 32ms (~30fps, não debounce:
+  a lupa precisa acompanhar o dedo durante o arrasto, não só no fim), com leitura sempre forçada
+  no toque inicial e final pra não perder a cor exata. Confirmado ao vivo: arrasto responde
+  liso; um único "desfazer" depois de um arrasto inteiro volta a cor de uma vez só pro valor de
+  antes do gesto (não um micro-passo do meio) — confirma que virou um passo de undo só. Ver
+  [docs/16-rabisco.md](docs/16-rabisco.md).
+- [x] **Etapa R4 — Rabisco: popover de forma fechando errado, seleção múltipla (laço +
+  aditiva), seta em cotovelo apontando pro lado errado, rotação** — pedido do usuário em 4
+  partes. (1) O popover de formas (`Dock.tsx`) ficava aberto depois de desenhar uma forma ou
+  trocar de seleção — causa raiz: `shapePopOpen` era estado só do Dock, nunca resincronizado
+  quando `tool`/seleção mudavam por FORA dele (`RabiscoScreen.shapeCreated` troca `tool` sem
+  passar pelo `pressTool` do Dock). Fix: dois `useEffect` fecham o popover sempre que `tool`
+  deixa de ser `'shape'` ou a seleção muda. (2) Seleção múltipla: apertar e segurar no fundo
+  vazio (modo seleção) agora abre um retângulo de laço (`DragState` novo, `'marquee'`) — solta
+  seleciona todo elemento cuja caixa (`bounds()`) SOBREPÕE o retângulo, não só o que está
+  inteiro dentro (igual Excalidraw); um chip novo no HUD (`multiSelect`, ícone
+  `SquareDashedMousePointer`) liga um modo "aditivo" — com ele ativo, tocar elemento por
+  elemento alterna cada um dentro/fora da seleção em vez de trocar. Elemento já dentro de um
+  grupo selecionado, ao ser arrastado, move o grupo inteiro (`DragState` novo, `'move-multi'`,
+  mutação pura `moveElements(doc, ids, dx, dy)` — um clone/um passo de undo pro grupo, não um
+  por elemento). Duplicar/excluir também operam sobre `selectedIds` inteiro. Com mais de 1
+  selecionado, as alças de resize/rotação/`StyleBar` somem (só fazem sentido pra UM elemento) —
+  fica um contorno simples por elemento (`MultiSelectOutline`, sem alças). +2 testes de mutação
+  (`moveElements`). (3) Seta em cotovelo ligada (bound) a uma forma podia apontar pro lado
+  errado (ex.: ligada no topo de uma forma, a ponta apontava pra direita) — causa raiz
+  (encontrada via teste temporário de diagnóstico, não ao vivo): o ponto de dobra do
+  `elbowRoute` é o meio-termo aritmético entre início/fim, sem noção de onde as formas realmente
+  estão; pra certas posições relativas, o último segmento se aproxima do alvo PELO LADO ERRADO
+  (atravessando a forma por dentro), arrastando a seta junto. Fix cirúrgico, não uma reescrita
+  do roteamento: `arrowHeadAngle()` nova em `geom.ts` ignora a direção do último segmento SÓ
+  pra seta em cotovelo+ligada, e aponta pro CENTRO da forma-alvo em vez disso (funciona pra
+  qualquer borda, sem saber qual é) — seta reta/curva não muda (confirmado por teste que elas
+  seguem certo o segmento real, é a única linha visível). +2 testes (`arrowHeadAngle`). (4)
+  Rotação — pedido "igual Excalidraw": alça nova (bola acima da seleção, offset generoso de 48px
+  e raio de toque de 36px pra não brigar com as alças de resize mais próximas) arrasta pra girar
+  em torno do centro, com imã suave de 15° em 15° (gruda a até 4° de distância) e um rótulo de
+  graus ao lado da alça durante o arrasto. Novo campo `rotation` em `RabiscoElement` (radianos,
+  bate direto com `transform:[{rotate}]` do Skia — extensão deliberada, sem equivalente no
+  protótipo de referência). Só formas com caixa própria giram (`ROTATABLE`: retângulo/losango/
+  elipse/texto) — linha/seta/traço ficam de fora (rotacionar uma sequência de pontos não tem
+  significado "natural", e reescreveria a lógica de binding). Resize inicialmente só funcionava
+  com rotação 0° — corte de escopo revertido na Etapa R5, mesma sessão, depois do usuário pedir
+  de volta explicitamente ("não é pra tirar o resize do tipo texto"); ver lá o que mudou. Hit-test
+  ganhou `toElementLocal()` (rotaciona o ponto de toque pro referencial da forma, não o contrário)
+  pra todas as checagens de forma girada reaproveitarem a mesma matemática não-rotacionada.
+  Binding de seta/linha continua olhando pra caixa NÃO rotacionada mesmo numa forma girada —
+  limitação conhecida, não endereçada nesta etapa. +2 testes (hit-test rotacionado). 186 testes
+  no total. Confirmado ao vivo: laço selecionando 2 formas, alternar aditivo mesclando seleção,
+  mover/duplicar/excluir em grupo, popover fechando ao trocar seleção, alça de rotação girando
+  a forma com rótulo de grau aparecendo. Ver [docs/16-rabisco.md](docs/16-rabisco.md).
+- [x] **Etapa R5 — Rabisco: rótulo preso numa forma (duplo toque), rotação em grupo, botão de
+  juntar** — pedido do usuário em 4 partes; a 1ª já estava pronta, só faltava confirmar. (1)
+  "Rotacionar texto também" — já funcionava (`text` já estava em `ROTATABLE` desde a Etapa R4);
+  confirmado ao vivo, sem mudança de código. (2) Duplo toque numa FORMA (retângulo/losango/
+  elipse, `LABELABLE`) abre o mesmo editor de texto do item de texto solto, mas o resultado é um
+  RÓTULO preso dentro dela (`el.text`/`el.labelColor`, campos que já existiam no tipo desde a
+  Etapa R1 mas nunca eram desenhados nem editáveis) — centralizado na caixa da forma, que nunca
+  muda de tamanho por causa dele (diferente de texto solto, cuja caixa É o texto). `hitTest` já
+  tratava forma com `el.text` como "preenchida" (miolo inteiro clicável) desde antes — só faltava
+  a ponta de criação/edição e o desenho (`ShapeLabel` em `Canvas.tsx`). (3) Seleção múltipla
+  ganhou alça de rotação DE GRUPO (`GroupRotateHandle`) — gira todo mundo selecionado em torno
+  do centro da SELEÇÃO (não do próprio centro de cada um), "seguindo a orientação do quadrado de
+  seleção" como pedido: forma com caixa própria (`ROTATABLE`) órbita e soma na própria
+  `rotation`; linha/seta/traço (sem uso de `rotation` no render) giram os PONTOS absolutos
+  direto — mesmo resultado visual, guardado de um jeito diferente por tipo
+  (`rotateElementAround`, novo em `geom.ts`, pura, reaproveitada no preview local e na mutação
+  `rotateGroup`). (4) Botão "Juntar" (ícone `group`) aparece com mais de um selecionado; funde o
+  grupo com um `groupId` novo compartilhado (`groupElements`, campo novo no tipo,
+  `RabiscoElement.groupId`) — a partir daí, tocar em QUALQUER membro seleciona/move/rotaciona o
+  GRUPO INTEIRO, como se fosse um elemento só (sem botão de desjuntar nesta etapa — não foi
+  pedido, undo cobre voltar atrás). `duplicateElement` virou `duplicateElements` (lote, um clone/
+  um passo de undo, igual `moveElements`/`rotateGroup`) — necessário pra grupo duplicado ganhar
+  um `groupId` NOVO consistente entre os membros, sem vazar pro grupo original nem precisar de N
+  passos de undo. +5 testes (191 total). Confirmado ao vivo: rótulo
+  "Oi" centralizado dentro de um retângulo já rotacionado (acompanhando a rotação), grupo de 4
+  formas girando junto pela alça (cada uma girando no próprio eixo E orbitando o centro do
+  grupo), botão juntar seguido de desselecionar-e-tocar-um-só reselecionando o grupo inteiro, e
+  arrastar um membro movendo todos. Ver [docs/16-rabisco.md](docs/16-rabisco.md).
+- [x] **Etapa R5.1 — Rabisco: resize voltou a funcionar com a forma girada** — usuário corrigiu
+  o corte de escopo da Etapa R4 ("não é pra tirar o resize do tipo texto"): girar um texto (ou
+  qualquer `ROTATABLE`) tirava as alças de resize até desgirar de novo, e isso incomodava
+  justamente pro caso mais comum de girar-e-ajustar-tamanho. Reversão, não invenção nova — a
+  conversão pro referencial local (`toElementLocal`) já existia pro hit-test e pra alça de
+  rotação; só faltava usar ela também no toque nas alças de resize (`selectStart`) e no delta do
+  arrasto (`selectUpdate`, convertendo início E fim do gesto pro local antes de subtrair, não o
+  delta bruto de tela) — `applyResize`/`withPreview`/commit continuam iguais, sempre trabalharam
+  em espaço local mesmo. Render: as alças agora aparecem SEMPRE (não só sem rotação) — já viviam
+  dentro do mesmo `<Group transform={rotate}>` da forma, então giram de graça, sem conta extra.
+  Sem teste novo (reaproveita a cobertura de `toElementLocal` já existente; o resto é fiação de
+  gesto, verificado ao vivo). Confirmado ao vivo: texto girado 45° mostra as 8 alças na posição
+  visual certa (rotacionadas), e arrastar uma alça estica a caixa ao longo do eixo PRÓPRIO do
+  texto (não do eixo da tela) — cresce na diagonal certa, não distorce.
+- [x] **Etapa R5.2 — Rabisco: âncora de seta/linha troca de lado quando o elemento ligado vai
+  pra posição oposta** — pedido do usuário: "se eu coloco em uma posição contra tem que trocar a
+  ancora no elemento". Causa raiz: `bindPoint` (`domain/rabisco/geom.ts`) usava o `fx/fy`
+  guardado no binding como um ponto FIXO na caixa da forma, escolhido uma vez na hora de ligar e
+  nunca mais reavaliado — se o elemento na outra ponta da seta/linha depois se movesse pro lado
+  OPOSTO da forma (ex.: texto que estava embaixo passa a ficar em cima), a âncora continuava
+  grudada no lado antigo, fazendo a linha atravessar a forma por dentro pra alcançar um ponto que
+  não faz mais sentido geometricamente pra aquela posição. Fix: antes de usar a âncora guardada,
+  compara (produto escalar) se o outro extremo (`from`) ainda está do MESMO lado dela em relação
+  ao centro da forma; se não estiver (produto negativo — foram pra lados opostos), cai pro
+  cálculo dinâmico que já existia pra quando não tem `fx/fy` salvo (busca binária ao longo do
+  segmento até a forma, sempre voltada pra `from`) — passando a escolher a borda que realmente
+  encara quem está puxando a linha, em vez de insistir na borda antiga. Quando o lado NÃO muda,
+  comportamento idêntico ao de antes (produto positivo, mantém a âncora exata escolhida pelo
+  usuário — preserva o teste já existente de âncora numa borda específica, não centralizada).
+  Um teste antigo (`arrowHeadAngle` cotovelo ancorado) testava essa mesma classe de bug numa
+  camada diferente (direção da ponta, não lado da âncora) só que através de `resolvedPoints`
+  ponta a ponta — como esse fix corrige o problema numa camada ANTES daquela, a geometria do
+  teste mudou de sentido (a âncora escolhida deixou de estar "errada", então a ponta aponta pro
+  lado oposto do que o teste antigo esperava, corretamente); reescrito pra construir `abs` à mão
+  e isolar só o bug de roteamento em cotovelo que `arrowHeadAngle` resolve, sem depender de qual
+  lado `bindPoint` escolhe. +2 testes novos direto em `resolvedPoints` (troca de lado quando o
+  outro extremo vai pra posição oposta; mantém a âncora quando não muda de lado) — 193 testes no
+  total. Verificação: só por teste automatizado dessa vez — o popover de formas do Dock não
+  respondeu a toque sintético nesta sessão (mesma categoria de flakiness de simulador já
+  documentada em etapas anteriores: alguns alvos de toque específicos falham silenciosamente sem
+  padrão óbvio), então não foi possível desenhar uma seta nova ao vivo pra confirmar visualmente;
+  a cobertura de teste, porém, exercita a EXATA geometria relatada (âncora presa, outro extremo
+  do lado oposto) de forma determinística.
+
 ---
 
 ## Checklist de entrega (final, da spec §22)

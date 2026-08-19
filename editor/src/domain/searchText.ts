@@ -14,6 +14,8 @@ export function extractSearchText(doc: Doc): string {
       return [doc.nome, doc.code].join(' ');
     case 'md':
       return [doc.nome, doc.md].join(' ');
+    case 'rabisco':
+      return [doc.nome, ...doc.elements.filter((e) => e.text).map((e) => e.text)].join(' ');
   }
 }
 

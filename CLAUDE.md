@@ -12,10 +12,11 @@ para trás do código.
 
 ## O produto, em uma frase
 
-Um editor de diagramas Mermaid e documentos Markdown para celular (Expo/React Native): toca
-num elemento do desenho — nó, aresta, tabela, coluna — e edita ali mesmo, sem abrir painel
-para o que se faz o tempo todo. Documento e diagrama são a mesma coisa: um bloco
-` ```mermaid ` num `.md` abre no canvas com todas as ferramentas e volta atualizado.
+Um editor de diagramas Mermaid, documentos Markdown e rabiscos (desenho livre) para celular
+(Expo/React Native): toca num elemento do desenho — nó, aresta, tabela, coluna, traço — e edita
+ali mesmo, sem abrir painel para o que se faz o tempo todo. Documento e diagrama são a mesma
+coisa: um bloco ` ```mermaid ` num `.md` abre no canvas com todas as ferramentas e volta
+atualizado.
 
 O app real vive em [`editor/`](editor/). A especificação funcional completa (a fonte de
 verdade para qualquer detalhe fino, código exato incluído) é
@@ -37,7 +38,7 @@ Para saber **o que já foi construído e o que falta**, o ponto de retomada é o
 
 | Arquivo | Cobre | Status |
 |---|---|---|
-| [00-visao-geral.md](docs/00-visao-geral.md) | O produto, os 4 tipos de arquivo, as 3 promessas | referência |
+| [00-visao-geral.md](docs/00-visao-geral.md) | O produto, os 5 tipos de arquivo, as 3 promessas | referência |
 | [01-decisao-arquitetura.md](docs/01-decisao-arquitetura.md) | WebView como canvas vs. 100% nativo, e por quê | referência |
 | [02-setup-e-estrutura.md](docs/02-setup-e-estrutura.md) | Comandos, configs, pastas, por que escalam | Etapa 0 ✅ |
 | [03-design-system.md](docs/03-design-system.md) | Tokens, os 9 componentes base, regras "parece nativo" | Etapa 2 ✅ |
@@ -53,6 +54,7 @@ Para saber **o que já foi construído e o que falta**, o ponto de retomada é o
 | [13-qualidade-e-testes.md](docs/13-qualidade-e-testes.md) | Acessibilidade, as 2 camadas de teste de interface | Etapa 16 ✅ |
 | [14-nativo-e-armadilhas.md](docs/14-nativo-e-armadilhas.md) | Rota 100% nativa (opcional), armadilhas conhecidas | referência |
 | [15-diagramas.md](docs/15-diagramas.md) | Os 5 fluxos em Mermaid do projeto | referência |
+| [16-rabisco.md](docs/16-rabisco.md) | Canvas Skia nativo, roadmap R1-R5 do desenho livre | Etapas R1-R2 ✅ |
 
 ## Como este projeto foi construído
 
