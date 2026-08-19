@@ -66,16 +66,35 @@ empurrava a barra pra longe à toa. Corrigido com o prop `offset` do `KeyboardSt
 (`{closed: -insets.bottom, opened: 0}`) — `insets.bottom` só entra quando fechado; aberto, a
 barra cola direto no teclado, só com a margem fixa de 2pt do `wrap`.
 
-**Bug real: a barra cobria a última linha visível do editor.** `KeyboardAvoidingView`
-(`behavior="padding"`) só sabe compensar a altura do TECLADO — não tem ideia de que
-`CodeKeyboardBar` existe flutuando por cima dele, com altura própria. Corrigido medindo a
-altura real da barra via `onLayout` (guardada em `DiagramScreen`) e passando como
-`keyboardVerticalOffset` no `KeyboardAvoidingView` do editor — matematicamente equivalente a
-somar essa altura à do teclado no cálculo de padding da lib (`relativeKeyboardHeight = keyboard
-+ keyboardVerticalOffset` quando a view vai até o fim da tela), mesmo o prop tecnicamente
-significar "distância do topo da tela" na documentação da lib. Detalhe fino: `onLayout` não
-inclui a própria `marginBottom` do elemento — sem somar isso também, a compensação ficava
-subestimada bem por pouco (a última linha aparecia cortada atrás da barra).
+**Bug real: a barra cobria as últimas linhas do editor, mesmo rolando manualmente** (reportado
+pelo usuário: "ainda tampando texto... tem que dar pra escrolar mais" — e depois "faça do jeito
+mais certo, deixando pra iOS e Android", quando a primeira correção só resolvia pela metade).
+Três tentativas até sobrar a certa:
+
+1. Medir a altura da barra via `onLayout` e passar como `keyboardVerticalOffset` no
+   `KeyboardAvoidingView` do editor. Não funcionava: `CodeKeyboardBar` já é uma irmã comum (não
+   absoluta) no mesmo container flex — reserva seu próprio espaço embaixo sozinha —, então
+   `keyboardVerticalOffset` contava essa altura DUAS vezes.
+2. Tirar o offset resolvia a conta, mas sobrava sobreposição residual: `CodeKeyboardBar` cola no
+   teclado via `KeyboardStickyView`, que é um `transform: translateY` — não reflui layout, então
+   o espaço que ela reserva como irmã comum no flex nunca bate no pixel com onde ela termina
+   depois de deslizar (confirmado testando com swipe de verdade no simulador via `cliclick`, não
+   só matemática de layout). E mais fundamental: `KeyboardAvoidingView` com `behavior="padding"`
+   é receita de iOS — o app já usa `softwareKeyboardLayoutMode: "resize"` no Android
+   (`app.json`), que redimensiona a JANELA sozinho; empilhar `behavior="padding"` por cima
+   *duplicaria* a compensação do teclado nesse SO.
+3. **Correção final**: tirar o `KeyboardAvoidingView` de vez. `CodeEditor` usa
+   `useReanimatedKeyboardAnimation` (mesma lib, já normaliza os dois SOs por baixo — força
+   `adjustResize` no Android via `useResizeMode`) pra ler a altura ANIMADA do teclado direto, e
+   aplica isso como a altura de um `<Animated.View>` "spacer" — o ÚLTIMO filho dentro do
+   `ScrollView`, depois do conteúdo real — somado a `bottomInset` (altura real da
+   `CodeKeyboardBar`, via `onLayout`). Isso não depende de nenhuma suposição de frame de tela
+   nem de `behavior` por plataforma: sempre sobra exatamente teclado+barra de espaço em branco
+   depois da última linha, em iOS e Android igual. (Tentativa intermediária: animar
+   `contentContainerStyle` direto num `Animated.ScrollView` — quebra em runtime, "attempted to
+   set the key `current`... immutable and frozen"; Reanimated não trata esse prop como trata
+   `style`. O spacer como filho é o jeito seguro.) Verificado no simulador com `scrollToEnd()`
+   forçado depois do teclado assentar: a última linha de verdade fica visível com folga.
 
 **Bug real: borda azul de foco e costura de cor entre o editor e o fundo por trás do
 teclado** (pedido do usuário: "não quero borda por volta do código" + "quero que o fundo atrás

@@ -10,7 +10,7 @@ interface Props {
   canRedo: boolean;
   onUndo: () => void;
   onRedo: () => void;
-  /** Altura real (com margens), pra DiagramScreen compensar o scroll do editor por baixo dela. */
+  /** Altura real (com margem), pra CodeEditor reservar esse tanto no fim do conteúdo rolável. */
   onLayout?: (height: number) => void;
 }
 
@@ -35,9 +35,12 @@ export function CodeKeyboardBar({ canUndo, canRedo, onUndo, onRedo, onLayout }: 
     // insets.bottom só entra fechado; aberto, cola direto (só a margem fixa de 2 do wrap).
     <KeyboardStickyView offset={{ closed: -insets.bottom, opened: 0 }}>
       <View
-        // onLayout não inclui a própria margem (marginBottom, embaixo) — soma aqui, senão
-        // DiagramScreen subcompensa exatamente por essa margem e a última linha visível do
-        // editor fica um pouco atrás da barra.
+        // A barra é um transform (translateY) por cima do teclado — não reflui layout, então o
+        // espaço que ela reserva como irmã comum (flex) não coincide exatamente com onde ela
+        // visualmente termina depois de deslizar. Reportar a altura aqui deixa CodeEditor
+        // reservar esse tanto A MAIS no fim do conteúdo rolável, garantindo que o texto sempre
+        // limpa a barra de verdade, sem depender de acertar esse cálculo de layout+transform no
+        // pixel (bug real: "ainda tampando texto... tem que dar pra escrolar mais").
         onLayout={(e: LayoutChangeEvent) => onLayout?.(e.nativeEvent.layout.height + 2)}
         style={styles.wrap}
       >

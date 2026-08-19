@@ -1,5 +1,7 @@
 import { useMemo } from 'react';
 import { Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
+import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { useTheme } from '@/design/useTheme';
 import { tokenize, type TokenType } from './highlight';
 
@@ -16,15 +18,26 @@ interface Props {
   onFocus?: () => void;
   onBlur?: () => void;
   editable?: boolean;
+  /** Altura da CodeKeyboardBar — reservada como padding extra no fim do conteúdo rolável. */
+  bottomInset?: number;
 }
 
 // Técnica de sobreposição: um <Text> colorido embaixo e um <TextInput> transparente por cima,
 // com só o cursor visível (§12). Funciona só se as duas caixas tiverem exatamente a mesma
 // métrica — por isso `metrics` é compartilhado entre as duas, nunca duplicado.
-export function CodeEditor({ code, onChangeText, onFocus, onBlur, editable = true }: Props) {
+export function CodeEditor({ code, onChangeText, onFocus, onBlur, editable = true, bottomInset = 0 }: Props) {
   const { colors, scheme } = useTheme();
   const tokens = useMemo(() => tokenize(code), [code]);
   const palette = COLORS[scheme];
+
+  // `height` é o valor animado (negativo quando o teclado está aberto) que a própria lib
+  // reporta em iOS E Android de forma normalizada (useResizeMode força adjustResize no
+  // Android por baixo dos panos) — é a MESMA fonte que qualquer outra barra colada ao teclado
+  // no app usaria, então não tem jeito de desincronizar. Ver "Bug real" abaixo.
+  const { height: keyboardHeight } = useReanimatedKeyboardAnimation();
+  const spacerAnimatedStyle = useAnimatedStyle(() => ({
+    height: -keyboardHeight.value + bottomInset,
+  }));
 
   return (
     // Sem borda e sem cartão arredondado de propósito — pedido do usuário ("não quero borda
@@ -37,7 +50,33 @@ export function CodeEditor({ code, onChangeText, onFocus, onBlur, editable = tru
           no <Text> absoluto por baixo, que sempre desenhava a partir do topo do wrap. Corrigido
           pondo os dois dentro do MESMO ScrollView (scrollEnabled=false no TextInput, ele só
           cresce com o conteúdo) — como sobem juntos como uma unidade só, nunca mais desalinham. */}
-      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="always">
+      {/* Bug real: com o teclado aberto, não dava pra rolar o bastante — as últimas linhas do
+          código ficavam presas atrás do teclado/toolbar, mesmo rolando manualmente (reportado
+          pelo usuário: "ainda tampando texto... tem que dar pra escrolar mais"). Três causas
+          empilhadas, cada uma corrigida por vez até sobrar só a certa: (1) o ScrollView não
+          tinha `style` próprio — sem `flex:1`, sua altura não acompanhava o encolhimento pelo
+          teclado; (2) `editArea` tinha `flex:1` dentro do ScrollView, o que trunca a altura na
+          do viewport em vez de abraçar o conteúdo; (3) a tentativa de compensar com
+          `KeyboardAvoidingView` (`behavior="padding"`) + `keyboardVerticalOffset` é receita de
+          iOS — no Android o app já usa `softwareKeyboardLayoutMode: "resize"` (app.json), que
+          redimensiona a JANELA sozinho; empilhar `behavior="padding"` por cima disso
+          compensaria a altura do teclado DUAS vezes nesse SO. E mesmo só no iOS, ainda sobrava
+          sobreposição residual: a CodeKeyboardBar cola no teclado via `KeyboardStickyView`, que
+          é um `transform` — não reflui layout, então a altura que ela reserva como irmã comum
+          no flex nunca bate no pixel com onde ela termina depois de deslizar.
+          Corrigido tirando o `KeyboardAvoidingView` de vez e colocando um spacer animado
+          (`Animated.View`, altura ligada direto ao valor animado de altura do teclado via
+          `useReanimatedKeyboardAnimation` — mesma lib, já normalizado pra iOS e Android por
+          baixo dos panos) como ÚLTIMO filho DENTRO do ScrollView, depois do `editArea` — mais
+          `bottomInset` (altura real da CodeKeyboardBar) por cima. Tentativa anterior animava
+          `contentContainerStyle` direto num `Animated.ScrollView`, mas isso quebra em runtime
+          ("attempted to set the key `current`... immutable and frozen") — Reanimated não trata
+          `contentContainerStyle` do jeito que trata `style`; um spacer é o jeito seguro e restrito
+          de fazer isso. Não depende de nenhuma suposição de frame/posição de tela: sempre sobra
+          exatamente teclado+barra de espaço em branco depois da última linha, nos dois sistemas.
+          Verificado no simulador iOS com scrollToEnd() forçado depois do teclado assentar: a
+          última linha de verdade ("class G,K sistema") fica visível com folga acima da barra. */}
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="always">
         <View style={styles.editArea}>
           <Text style={[StyleSheet.absoluteFill, metrics, styles.hl]} allowFontScaling={false}>
             {tokens.map((t, i) => (
@@ -62,6 +101,7 @@ export function CodeEditor({ code, onChangeText, onFocus, onBlur, editable = tru
             style={[metrics, styles.input, { color: 'transparent' }]}
           />
         </View>
+        <Animated.View style={spacerAnimatedStyle} />
       </ScrollView>
     </View>
   );
@@ -77,8 +117,9 @@ const metrics = {
 
 const styles = StyleSheet.create({
   wrap: { flex: 1 },
+  scroll: { flex: 1 },
   scrollContent: { flexGrow: 1 },
-  editArea: { flex: 1 },
+  editArea: {},
   hl: { pointerEvents: 'none' },
   input: { textAlignVertical: 'top' },
 });
