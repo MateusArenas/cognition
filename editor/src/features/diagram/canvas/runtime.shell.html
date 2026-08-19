@@ -447,6 +447,23 @@
         if (!id) id = (g.getAttribute('id') || '').replace(/^.*?flowchart-/, '').replace(/-\d+$/, '');
         if (id && !g.dataset.selKey) g.dataset.selKey = 'node:' + id;
       });
+
+      // Subgraph (§ árvore de grupos): `id` de um cluster sai como "mmd2-sgArmazem" — SÓ o
+      // prefixo de render (`mmd` + contador, o mesmo `id` que a gente passa pro
+      // `mermaid.render()`) na frente do id de verdade do subgraph, sem sufixo numérico (ao
+      // contrário de nó, confirmado inspecionando o SVG de verdade com 1 e 2 subgraphs — nunca
+      // "mmd2-sgArmazem-0"). Como o prefixo é sempre EXATAMENTE "mmd<dígitos>-" no começo da
+      // string (é `id` = 'mmd' + contador, gerado por nós mesmos, não uma convenção do Mermaid
+      // que possa variar), basta ancorar no início — não precisa do `.*?` não-guloso que o nó
+      // usa (lá o "flowchart-" pode ter outra coisa na frente que não seja só esse prefixo).
+      // `.cluster` nunca é ancestral de `g.node` (confirmado: ficam em grupos `.clusters`/
+      // `.nodes` irmãos, não aninhados) e é pintado ANTES dos nós no DOM — então um toque que
+      // cai dentro de um nó continua resolvendo pro nó via `elementFromPoint`, sem precisar de
+      // lógica extra aqui.
+      host.querySelectorAll('g.cluster').forEach(function (g) {
+        var id = (g.getAttribute('id') || '').replace(/^mmd\d+-/, '');
+        if (id && !g.dataset.selKey) g.dataset.selKey = 'group:' + id;
+      });
     }
 
     // Linhas: a ordem no DOM segue a ordem do código — o índice basta (ver a nota

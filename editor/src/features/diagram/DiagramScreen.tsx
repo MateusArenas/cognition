@@ -2,7 +2,6 @@ import * as Clipboard from 'expo-clipboard';
 import { router } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
-import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { NavBar } from '@/design/components/NavBar';
 import { Chip } from '@/design/components/Chip';
 import { Fab } from '@/design/components/Fab';
@@ -281,16 +280,13 @@ export function DiagramScreen() {
         // em vez do preto do root (bug real reportado pelo usuário: "quero que o fundo atras
         // do keyboard seja a mesma cor do fundo do código").
         <View style={[styles.canvasArea, { backgroundColor: colors.surface }]}>
-          {/* CodeEditor é um TextInput multiline flex:1 sem tela de trás nenhuma — sem isso, o
-              teclado só sobrepunha o campo (bug real: "fica sobrepondo"). KeyboardAvoidingView
-              (react-native-keyboard-controller, já usado no editor de markdown) encolhe a área
-              disponível pra caber acima do teclado — keyboardVerticalOffset soma a altura real
-              da CodeKeyboardBar (medida via onLayout, abaixo) por cima da altura do teclado,
-              senão a barra flutuante cobre a última linha visível do editor (bug real: "o
-              scroll tem que subir mais... compensar o tamanho da toolbar"). */}
-          <KeyboardAvoidingView style={styles.canvasArea} behavior="padding" keyboardVerticalOffset={codeBarHeight}>
-            <CodeEditor code={codeDraft ?? code} onChangeText={handleCodeChange} onBlur={commitCode} />
-          </KeyboardAvoidingView>
+          {/* Sem KeyboardAvoidingView de propósito — `behavior="padding"` é receita de iOS; no
+              Android o app já usa `softwareKeyboardLayoutMode: "resize"` (app.json), que
+              redimensiona a JANELA sozinho, então empilhar `behavior="padding"` por cima
+              compensaria o teclado duas vezes nesse SO. CodeEditor resolve isso sozinho, ligado
+              direto ao valor animado de altura do teclado (ver comentário lá) — funciona igual
+              nos dois sistemas, sem `behavior` nenhum pra escolher por plataforma. */}
+          <CodeEditor code={codeDraft ?? code} onChangeText={handleCodeChange} onBlur={commitCode} bottomInset={codeBarHeight} />
           <CodeKeyboardBar
             canUndo={!!history.past.length}
             canRedo={!!history.future.length}
@@ -324,20 +320,74 @@ export function DiagramScreen() {
 }
 
 function ElementsList({ rawElements }: { rawElements: { id: string; texto: string }[] }) {
-  const { space } = useTheme();
+  const { colors, space } = useTheme();
   const doc = useDoc((s) => s.doc);
   const select = useDoc((s) => s.select);
 
+  // Fluxograma vira árvore de 2 níveis (grupo -> nós), não a lista achatada dos outros tipos —
+  // pedido do usuário ("ele é um pai dos que vêm abaixo... quero isso numa árvore de
+  // elementos"). Sem aninhamento de grupo dentro de grupo (FlowGroup não tem parentId — ver
+  // docs/04-dominio.md), só essa relação de 2 níveis, que já cobre o pedido.
+  if (doc.tipo === 'flow') {
+    const emGrupo = new Set<string>();
+    doc.groups.forEach((g) => g.nodes.forEach((id) => emGrupo.add(id)));
+    const semGrupo = doc.nodes.filter((n) => !emGrupo.has(n.id));
+
+    return (
+      <ScrollView contentContainerStyle={{ padding: space.lg, gap: 20 }}>
+        {doc.groups.map((g) => (
+          <View key={g.id}>
+            <Pressable onPress={() => select({ kind: 'group', id: g.id })}>
+              <Text style={[styles.secao, { color: colors.labelSecondary }]}>{g.label.toUpperCase()}</Text>
+            </Pressable>
+            <GroupedList>
+              {g.nodes.length ? (
+                g.nodes.map((id) => {
+                  const n = doc.nodes.find((x) => x.id === id);
+                  return (
+                    <Row
+                      key={id}
+                      title={n?.label || id}
+                      subtitle={id}
+                      navigable
+                      style={styles.filho}
+                      onPress={() => select({ kind: 'node', id })}
+                    />
+                  );
+                })
+              ) : (
+                <Row title="Nenhum nó ainda" style={styles.filho} />
+              )}
+            </GroupedList>
+          </View>
+        ))}
+
+        {!doc.groups.length || semGrupo.length ? (
+          <View>
+            {doc.groups.length ? <Text style={[styles.secao, { color: colors.labelSecondary }]}>SEM GRUPO</Text> : null}
+            <GroupedList>
+              {semGrupo.length ? (
+                semGrupo.map((n) => (
+                  <Row key={n.id} title={n.label || n.id} subtitle={n.id} navigable onPress={() => select({ kind: 'node', id: n.id })} />
+                ))
+              ) : (
+                <Row title="Nenhum elemento ainda" />
+              )}
+            </GroupedList>
+          </View>
+        ) : null}
+      </ScrollView>
+    );
+  }
+
   const rows =
-    doc.tipo === 'flow'
-      ? doc.nodes.map((n) => ({ key: n.id, title: n.label || n.id, subtitle: n.id, sel: { kind: 'node' as const, id: n.id } }))
-      : doc.tipo === 'er'
-        ? doc.tables.map((t) => ({ key: t.id, title: t.id, subtitle: `${t.cols.length} colunas`, sel: { kind: 'table' as const, id: t.id } }))
-        : doc.tipo === 'raw'
-          ? [...rawElements]
-              .sort((a, b) => Number(a.id.split(':')[0]) - Number(b.id.split(':')[0]))
-              .map((el) => ({ key: el.id, title: el.texto, subtitle: undefined, sel: { kind: 'txt' as const, id: el.id } }))
-          : [];
+    doc.tipo === 'er'
+      ? doc.tables.map((t) => ({ key: t.id, title: t.id, subtitle: `${t.cols.length} colunas`, sel: { kind: 'table' as const, id: t.id } }))
+      : doc.tipo === 'raw'
+        ? [...rawElements]
+            .sort((a, b) => Number(a.id.split(':')[0]) - Number(b.id.split(':')[0]))
+            .map((el) => ({ key: el.id, title: el.texto, subtitle: undefined, sel: { kind: 'txt' as const, id: el.id } }))
+        : [];
 
   return (
     <ScrollView contentContainerStyle={{ padding: space.lg }}>
@@ -366,4 +416,6 @@ const styles = StyleSheet.create({
   linkText: { color: '#fff', fontWeight: '600' },
   linkCancel: { color: '#fff', textDecorationLine: 'underline' },
   fabs: { position: 'absolute', right: 16, gap: 12, alignItems: 'center' },
+  secao: { fontSize: 12.5, textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 8, paddingHorizontal: 4 },
+  filho: { paddingLeft: 32 },
 });

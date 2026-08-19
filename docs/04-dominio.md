@@ -63,6 +63,24 @@ Ishikawa, Gantt, linha do tempo, pizza, XY, Sankey, quadrante, radar, Venn e pac
 ZenUML e Wardley existem no Mermaid mas dependem de plugins fora da biblioteca padrão —
 **não entram na galeria** (um card que nunca renderiza é pior que a ausência dele).
 
+## Grupos (subgraph)
+
+`FlowGroup { id, label, nodes: string[], direction }` já existia desde a Etapa 1, mas ficou
+invisível pro usuário até virar seleção de verdade (ver 07-selecao.md e 08-barra-de-acoes.md).
+Mutações em `mutations/flow.ts`, seguindo o mesmo estilo das de nó (`structuredClone`, `uid()`):
+
+- `renameGroup(doc, id, label)` — só o `label` (o `id` é fixo desde a criação).
+- `addGroup(doc, label, nodeIds)` — cria com `uid('g')`; cada id em `nodeIds` sai de qualquer
+  outro grupo antes de entrar no novo (um nó só pertence a um grupo por vez).
+- `removeGroup(doc, id)` — some só a entrada do grupo; os nós continuam existindo, soltos.
+- `setNodeGroup(doc, nodeId, groupId | null)` — move um nó pra dentro de um grupo (tirando de
+  qualquer outro primeiro) ou solta de todos (`null`).
+
+Sem aninhamento (grupo dentro de grupo): `FlowGroup` não tem `parentId`, e `parse.ts` já
+achata `subgraph`s aninhados nessa estrutura plana, perdendo a hierarquia — modelar isso de
+verdade é escopo maior (parser, serializer e mutations com checagem de ciclo) e não foi pedido;
+a árvore da aba Elementos é só de 2 níveis (grupo → nós).
+
 ## O que falta (etapas seguintes)
 
 Mutações mais ricas conforme a UI passa a precisar delas (Etapa 6+), e a integração com o

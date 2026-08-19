@@ -35,6 +35,34 @@ frente). `verify-canvas-selection.mjs` ganhou uma checagem específica pra essa 
 (`sel.id` não pode carregar o prefixo `mmd<N>-`) — confirmada revertendo a correção e vendo o
 teste falhar antes de reaplicá-la.
 
+## Grupos (subgraph) — mesma Camada 1
+
+`FlowGroup` (id/label/nodes) já existia desde a Etapa 1 mas nunca virou seleção: tocar no
+retângulo/rótulo do `subgraph ... end` no canvas não selecionava nada, `Selection` não tinha
+`'group'`, e nada em `tagTargets()` marcava `g.cluster`. Pedido do usuário: "queria poder
+selecionar o elemento subgraph... porque não consigo mudar o nome dele".
+
+**Formato do id, achado inspecionando o SVG de verdade** (Playwright headless, mesma técnica
+já usada nos bugs de Camada 2/3 abaixo — nunca adivinhado): um cluster sai como
+`id="mmd2-sgArmazem"` — só o prefixo de render (`'mmd' + contador`, o mesmo `id` que a gente
+passa pro `mermaid.render()`) na frente do id de verdade do subgraph, **sem** sufixo numérico
+(diferente de nó, que ganha `-<n>`; confirmado com 1 e 2 subgraphs no mesmo render). Como esse
+prefixo é gerado por nós mesmos (não uma convenção do Mermaid que possa variar), a extração é
+uma âncora simples no começo da string — `.replace(/^mmd\d+-/, '')` — sem precisar do `.*?`
+não-guloso que o bug do nó (acima) precisou.
+
+`.cluster` nunca é ancestral de `g.node` no SVG do Mermaid — clusters e nós ficam em grupos
+`.clusters`/`.nodes` **irmãos**, não aninhados (confirmado no mesmo diagnóstico), e `.clusters`
+é pintado ANTES de `.nodes` no DOM. Então um toque que cai dentro de um nó continua resolvendo
+pro nó via `elementFromPoint` + `.closest('[data-sel-key]')`, sem precisar de nenhuma lógica
+extra em `handleTap()` — o cluster só responde quando o toque cai numa área do subgraph que
+nenhum nó cobre (a faixa de fundo, o rótulo).
+
+Verificado em `scripts/verify-canvas-selection.mjs` (novo caso "Flowchart com subgraph
+(grupo)") — o mesmo teste que já pega vazamento de prefixo `mmd<N>-` em nó agora cobre `group`
+também. Confirmado revertendo o tagueamento e vendo o caso falhar ("toque não selecionou
+nada") antes de reaplicar.
+
 ## Camada 2 — geometria (modelo relacional)
 
 A tabela do ER é uma pilha de retângulos: cabeçalho + uma faixa por coluna.

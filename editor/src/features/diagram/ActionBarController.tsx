@@ -16,11 +16,12 @@ import * as er from '@/domain/mutations/er';
 import * as raw from '@/domain/mutations/raw';
 import { NodeInspector } from './inspectors/NodeInspector';
 import { EdgeInspector } from './inspectors/EdgeInspector';
+import { GroupInspector } from './inspectors/GroupInspector';
 import { TableInspector } from './inspectors/TableInspector';
 import { ColumnInspector } from './inspectors/ColumnInspector';
 import { RelationInspector } from './inspectors/RelationInspector';
 
-type InspectorKind = 'node' | 'edge' | 'table' | 'column' | 'relation' | null;
+type InspectorKind = 'node' | 'edge' | 'group' | 'table' | 'column' | 'relation' | null;
 
 interface Props {
   onOpenCode?: () => void;
@@ -35,7 +36,7 @@ export interface ActionBarControllerHandle {
   openForCurrentSelection: () => void;
 }
 
-const KIND_FOR_SEL: Record<string, InspectorKind> = { node: 'node', edge: 'edge', table: 'table', col: 'column', rel: 'relation' };
+const KIND_FOR_SEL: Record<string, InspectorKind> = { node: 'node', edge: 'edge', group: 'group', table: 'table', col: 'column', rel: 'relation' };
 
 // A barra de ações contextual (§11) — orquestra o quê aparece e pra onde cada ação leva:
 // alerta (valor único), sheet (formulário — Forma/Cor/Colunas/Cardinalidade), ou direto no
@@ -96,6 +97,7 @@ export const ActionBarController = forwardRef<ActionBarControllerHandle, Props>(
         { key: 'conectar', icon: 'link', label: 'Conectar', onPress: () => onStartLink(sel.id) },
         { key: 'forma', icon: 'shapes', label: 'Forma', onPress: () => openInspector('node') },
         { key: 'cor', icon: 'palette', label: 'Cor', onPress: () => openInspector('node') },
+        { key: 'grupo', icon: 'columns', label: 'Grupo', onPress: () => openInspector('node') },
         { key: 'duplicar', icon: 'copy', label: 'Duplicar', onPress: () => apply((d) => flow.duplicateNode(d as FlowDoc, sel.id)) },
         { key: 'ia', icon: 'spark', label: 'IA', onPress: onOpenAi },
         {
@@ -127,6 +129,25 @@ export const ActionBarController = forwardRef<ActionBarControllerHandle, Props>(
           }),
         },
         { key: 'editar', icon: 'chevronRight', label: 'Editar', onPress: () => openInspector('edge') },
+      ];
+    }
+
+    if (sel.kind === 'group' && doc.tipo === 'flow') {
+      const g = doc.groups.find((x) => x.id === sel.id);
+      if (!g) return null;
+      return [
+        { key: 'nome', icon: 'pencil', label: 'Nome', onPress: () => openPrompt('Nome do grupo', g.label, (v) => apply((d) => flow.renameGroup(d as FlowDoc, sel.id, v))) },
+        { key: 'nos', icon: 'columns', label: 'Nós', onPress: () => openInspector('group') },
+        { key: 'ia', icon: 'spark', label: 'IA', onPress: onOpenAi },
+        {
+          key: 'excluir', icon: 'trash', label: 'Excluir', destructive: true,
+          onPress: () => askDelete('Excluir grupo?', `"${g.label}" — os nós continuam existindo, só saem do grupo.`, () => {
+            apply((d) => flow.removeGroup(d as FlowDoc, sel.id));
+            select(null);
+            show('Excluído — desfazer no botão de desfazer');
+          }),
+        },
+        { key: 'editar', icon: 'chevronRight', label: 'Editar', onPress: () => openInspector('group') },
       ];
     }
 
@@ -248,6 +269,7 @@ export const ActionBarController = forwardRef<ActionBarControllerHandle, Props>(
       <Sheet ref={inspectorRef} title={inspectorTitle(inspectorKind)}>
         {inspectorKind === 'node' && sel?.kind === 'node' ? <NodeInspector id={sel.id} /> : null}
         {inspectorKind === 'edge' && sel?.kind === 'edge' ? <EdgeInspector id={sel.id} /> : null}
+        {inspectorKind === 'group' && sel?.kind === 'group' ? <GroupInspector id={sel.id} /> : null}
         {inspectorKind === 'table' && sel?.kind === 'table' ? <TableInspector id={sel.id} /> : null}
         {inspectorKind === 'column' && sel?.kind === 'col' ? <ColumnInspector selId={sel.id} /> : null}
         {inspectorKind === 'relation' && sel?.kind === 'rel' ? <RelationInspector id={sel.id} /> : null}
@@ -261,6 +283,7 @@ function inspectorTitle(kind: InspectorKind): string {
   switch (kind) {
     case 'node': return 'Nó';
     case 'edge': return 'Ligação';
+    case 'group': return 'Grupo';
     case 'table': return 'Tabela';
     case 'column': return 'Coluna';
     case 'relation': return 'Relação';
@@ -271,6 +294,7 @@ function inspectorTitle(kind: InspectorKind): string {
 function describeSelection(doc: FlowDoc | ErDoc | RawDoc | { tipo: 'md' }, sel: NonNullable<ReturnType<typeof useDoc.getState>['sel']>): string {
   if (sel.kind === 'node' && doc.tipo === 'flow') return doc.nodes.find((n) => n.id === sel.id)?.label || sel.id;
   if (sel.kind === 'edge' && doc.tipo === 'flow') return doc.edges.find((e) => e.id === sel.id)?.label || 'ligação';
+  if (sel.kind === 'group' && doc.tipo === 'flow') return doc.groups.find((g) => g.id === sel.id)?.label || sel.id;
   if (sel.kind === 'table' && doc.tipo === 'er') return sel.id;
   if (sel.kind === 'col' && doc.tipo === 'er') { const c = colunaDe(doc, sel.id); return c ? `${c.tab.id} · ${c.col.name}` : sel.id; }
   if (sel.kind === 'rel' && doc.tipo === 'er') return relById(doc, sel.id)?.label || 'relação';

@@ -72,6 +72,19 @@ const CASOS = [
 `,
   },
   {
+    nome: 'Flowchart com subgraph (grupo)',
+    code: `flowchart TD
+    subgraph sgDoca["Doca"]
+        A[Chega] --> B[Confere]
+    end
+    subgraph sgArmazem["Armazém"]
+        C[Faz]
+        D[Não faz]
+    end
+    B --> C
+`,
+  },
+  {
     nome: 'stateDiagram-v2 (rótulo de nó em foreignObject)',
     code: `stateDiagram-v2
     [*] --> Rascunho
@@ -152,8 +165,8 @@ async function testarDiagrama(browser, caso) {
     // contra um id de verdade) mas o RN nunca achava esse id sujo em doc.nodes, então a
     // ActionBar nunca abria. Este teste não tem o Doc estruturado (só recebe `code`), então a
     // checagem é só "o id não carrega esse prefixo de render" — não "bate com doc.nodes".
-    if (tap.sel.kind === 'node' && /^mmd\d/.test(tap.sel.id)) {
-      falhas.push({ rotulo: alvo.rotulo, sel: tap.sel, motivo: 'sel.id vazou o prefixo de render do mermaid.render() — RN nunca acha isso em doc.nodes' });
+    if ((tap.sel.kind === 'node' || tap.sel.kind === 'group') && /^mmd\d/.test(tap.sel.id)) {
+      falhas.push({ rotulo: alvo.rotulo, sel: tap.sel, motivo: 'sel.id vazou o prefixo de render do mermaid.render() — RN nunca acha isso em doc.nodes/doc.groups' });
       continue;
     }
 

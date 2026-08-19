@@ -7,7 +7,7 @@ export function parseSelectionKey(chave: string): Selection | null {
   if (i < 0) return null;
   const kind = chave.slice(0, i);
   const id = chave.slice(i + 1);
-  if (kind !== 'node' && kind !== 'edge' && kind !== 'table' && kind !== 'col' && kind !== 'rel' && kind !== 'txt') {
+  if (kind !== 'node' && kind !== 'edge' && kind !== 'group' && kind !== 'table' && kind !== 'col' && kind !== 'rel' && kind !== 'txt') {
     return null;
   }
   return { kind, id } as Selection;

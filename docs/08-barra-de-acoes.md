@@ -38,16 +38,23 @@ dependem de seleção nenhuma) antes de trocar de aba.
 
 | Seleção | Ações |
 |---|---|
-| Nó | Texto · Conectar · Forma · Cor · Duplicar · IA · Excluir · Editar |
+| Nó | Texto · Conectar · Forma · Cor · Grupo · Duplicar · IA · Excluir · Editar |
 | Ligação | Rótulo · Inverter · Traço · IA · Excluir · Editar |
+| Grupo (subgraph) | Nome · Nós · IA · Excluir · Editar |
 | Tabela | Colunas · Nome · Relacionar · Duplicar · IA · Excluir · Editar |
 | Coluna | Nome · Tipo · Comentário · IA · Tabela · Excluir · Editar |
 | Relação | Verbo · Cardinalidade · Inverter · IA · Excluir · Editar |
 | Texto (raw) | Texto · Duplicar linha · IA · Código · Excluir linha · Editar |
 | Modo conexão | "saindo de X — toque no destino" + Cancelar |
 
-**Forma, Cor, Colunas e Cardinalidade abrem o painel completo já rolado até a seção certa** —
-guardar a posição de cada seção com `onLayout` e chamar `scrollTo`.
+**Forma, Cor, Grupo, Colunas e Cardinalidade abrem o painel completo já rolado até a seção
+certa** — guardar a posição de cada seção com `onLayout` e chamar `scrollTo`.
+
+**Grupo, na barra do nó, e Nós, na barra do grupo, abrem o MESMO painel do nó/grupo** — não
+existe inspetor próprio de "atribuir nó a grupo"; é só mais uma seção do `NodeInspector`
+(chips com os grupos existentes + campo pra criar um novo, que já atribui o nó selecionado
+nele) e do `GroupInspector` (lista de nós do grupo, com botão de tirar, mais chips dos nós de
+fora pra adicionar).
 
 ## Três superfícies, em peso crescente
 

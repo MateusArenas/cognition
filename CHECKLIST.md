@@ -142,12 +142,18 @@ antes de reaplicá-la.
 - [x] **Etapa 7 — Inspetores de nó e aresta** — 1,5 dias
   `NodeInspector` (forma/cor), `EdgeInspector` (traço). Ver
   [docs/08-barra-de-acoes.md](docs/08-barra-de-acoes.md).
+  **Extensão**: `NodeInspector` ganhou seção "GRUPO" (atribuir/criar grupo pro nó selecionado)
+  e novo `GroupInspector` (nós de um grupo) — pedido do usuário pra poder selecionar, renomear
+  e criar `subgraph`s do fluxograma. Ver [docs/08-barra-de-acoes.md](docs/08-barra-de-acoes.md).
 
 - [x] **Etapa 8 — Seleção: camadas 2 e 3** — 2 dias
   Implementadas direto no `runtime.shell.html` (não dependem do modelo estruturado, só do
   texto — ver a nota no topo do arquivo): `mapearER` (geométrico) e `mapearTextoGenerico`
   (os outros 23 tipos). `domain/selection.ts#resolveTapSelection` traduz o índice de
   aresta/relação pro id real do lado RN. Ver [docs/07-selecao.md](docs/07-selecao.md).
+  **Extensão**: seleção de `'group'` (subgraph do fluxograma) — `g.cluster` tagueado em
+  `tagTargets()`, ver [docs/07-selecao.md](docs/07-selecao.md). A aba Elementos também ganhou
+  árvore de 2 níveis (grupo → nós) pro tipo `flow`, em vez da lista achatada.
 
 - [x] **Etapa 9 — Inspetores de tabela, coluna e relação** — 1,5 dias
   `TableInspector` (lista de colunas editável), `ColumnInspector`, `RelationInspector`

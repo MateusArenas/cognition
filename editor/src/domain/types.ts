@@ -50,6 +50,7 @@ export type Doc = FlowDoc | ErDoc | RawDoc | MdDoc;
 export type Selection =
   | { kind: 'node'; id: string }
   | { kind: 'edge'; id: string }
+  | { kind: 'group'; id: string } // subgraph do fluxograma
   | { kind: 'table'; id: string }
   | { kind: 'col'; id: string } // "TABELA#3"
   | { kind: 'rel'; id: string }
