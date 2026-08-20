@@ -177,9 +177,11 @@ export function DataGrid({
       for (const pk of data.edicao.primaryKey) delete set[pk];
       await applyMutations(connectionId, table, [{ kind: 'update', key, set }]);
     }
+    const wasCreate = formMode === 'create';
     formSheetRef.current?.dismiss();
     setFormMode(null);
     onReload();
+    show(t(wasCreate ? 'dbclient.recordCreated' : 'dbclient.recordUpdated'));
   }
 
   function openEditValue() {
@@ -342,7 +344,6 @@ export function DataGrid({
           columns={columnsMeta}
           initial={formMode === 'edit' ? formInitial : null}
           onSubmit={submitForm}
-          onCancel={() => formSheetRef.current?.dismiss()}
         />
       ) : null}
 

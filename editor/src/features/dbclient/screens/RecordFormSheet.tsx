@@ -1,10 +1,13 @@
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { forwardRef, useEffect, useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
+import { Banner } from '@/design/components/Banner';
 import { Chip } from '@/design/components/Chip';
 import { Sheet } from '@/design/components/Sheet';
+import { TintedButton } from '@/design/components/TintedButton';
 import { useTheme } from '@/design/useTheme';
 import { useI18n } from '@/i18n/I18nProvider';
+import { isApiError } from '../api/http';
 import type { ColumnMeta } from '../types';
 import { FormField } from './FormField';
 
@@ -18,7 +21,6 @@ interface Props {
   /** Presente = editar um registro existente (campos pré-preenchidos); ausente = "Nova linha". */
   initial?: Record<string, unknown> | null;
   onSubmit: (values: Record<string, unknown>) => Promise<void> | void;
-  onCancel?: () => void;
 }
 
 function buildInitialState(columns: ColumnMeta[], initial?: Record<string, unknown> | null): Record<string, FieldState> {
@@ -34,10 +36,10 @@ function buildInitialState(columns: ColumnMeta[], initial?: Record<string, unkno
 // partir do menu da linha (DataGrid). Toda coluna mostra tipo e obrigatoriedade (DB-MOBILE.md
 // item 1 do lote de retoques) em vez de um form solto sem pista nenhuma do schema.
 export const RecordFormSheet = forwardRef<BottomSheetModal, Props>(function RecordFormSheet(
-  { columns, initial, onSubmit, onCancel },
+  { columns, initial, onSubmit },
   ref
 ) {
-  const { colors, space } = useTheme();
+  const { space } = useTheme();
   const { t } = useI18n();
   const isEdit = !!initial;
   const [values, setValues] = useState<Record<string, FieldState>>(() => buildInitialState(columns, initial));
@@ -74,7 +76,7 @@ export const RecordFormSheet = forwardRef<BottomSheetModal, Props>(function Reco
     try {
       await onSubmit(out);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(isApiError(e) ? e.message : e instanceof Error ? e.message : String(e));
     } finally {
       setSaving(false);
     }
@@ -104,10 +106,13 @@ export const RecordFormSheet = forwardRef<BottomSheetModal, Props>(function Reco
             </View>
           );
         })}
-        {error ? <Text style={{ color: colors.red, marginBottom: space.sm }}>{error}</Text> : null}
-        <View style={{ flexDirection: 'row', gap: 8, marginTop: space.sm }}>
-          <Chip label={t('common.cancel')} onPress={() => onCancel?.()} />
-          <Chip label={saving ? '…' : t('common.save')} onPress={submit} disabled={saving} />
+        {error ? (
+          <View style={{ marginBottom: space.sm }}>
+            <Banner tone="error" title={error} />
+          </View>
+        ) : null}
+        <View style={{ marginTop: space.sm }}>
+          <TintedButton icon="check" label={t('common.save')} onPress={submit} busy={saving} />
         </View>
       </ScrollView>
     </Sheet>

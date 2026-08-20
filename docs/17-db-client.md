@@ -126,7 +126,16 @@ dbclient/
     FiltersSheet             construtor de filtro por toque (coluna+operador de listas fechadas,
                             nunca texto livre — mesma regra de ouro do resto do app)
     RecordFormSheet          formulário de registro (criar E editar) com tipo/obrigatoriedade
-                            por coluna e toggle NULL por campo nullable
+                            por coluna e toggle NULL por campo nullable; ação primária é um
+                            `TintedButton` "Salvar" cheio (não `Chip`, mesmo motivo do resto do
+                            lote — `Chip` genérico não é Apple-like) e cancelar é só o X do
+                            `Sheet` (sem botão duplicado); erro de mutação (ex.: violação de
+                            UNIQUE) sai num `Banner` — bug real corrigido aqui: o catch usava
+                            `String(e)` num erro que já era um objeto `ApiErrorBody` (não
+                            `Error`), sempre virando literalmente "[object Object]" em vez do
+                            `.message` que o backend manda; sucesso dispara toast "Registro
+                            criado."/"Registro atualizado." (`DataGrid.submitForm`) — antes não
+                            havia nenhum feedback visual de que a criação deu certo
     DiagramCard              cartão de ERD COMPARTILHADO (Diagrama de DatabaseScreen e de
                             TableScreen): alternâncias "mostrar colunas"/"só chaves"/
                             profundidade (só vizinhança de tabela), "ver código Mermaid" +

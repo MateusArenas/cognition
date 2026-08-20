@@ -904,6 +904,19 @@ antes de reaplicá-la.
     polish — contra o comportamento nativo do iOS que toda sheet deveria ter). Corrigido no
     `Sheet` (`design/components/Sheet.tsx`) com `BottomSheetBackdrop` — vale pro app inteiro,
     não só o cliente de banco, já que é o MESMO componente atrás de toda sheet do app.
+  - **"Nova linha" — três problemas reportados usando de verdade**: (1) criar um registro que
+    viola UNIQUE mostrava literalmente `[object Object]` — o `catch` de `RecordFormSheet` fazia
+    `e instanceof Error ? e.message : String(e)`, mas o erro rejeitado pelo `http.ts` é sempre
+    um objeto `ApiErrorBody` (nunca `Error`), então caía direto no `String(e)` ignorando o
+    `.message` certinho que o backend já mandava; corrigido com `isApiError(e)` primeiro (mesmo
+    helper que `DataGrid` já usava nos outros catches) e o erro agora sai num `Banner`
+    vermelho, não texto solto. (2) Criar com sucesso não dava nenhum feedback — sem toast,
+    parecia que não tinha acontecido nada; `DataGrid.submitForm` agora chama `show()` com
+    "Registro criado."/"Registro atualizado." depois do `onReload()`. (3) Botões "Cancelar"/
+    "Salvar" eram dois `Chip` lado a lado — mesmo problema de design já corrigido em Consulta/
+    Diagrama (`Chip` é pra HUD sobre canvas, não botão genérico); trocado por `TintedButton`
+    "Salvar" cheio como única ação primária (cancelar já é o X do `Sheet`, botão duplicado
+    removido). `tsc --noEmit` limpo, 217 testes `vitest` verdes.
 
 ---
 
