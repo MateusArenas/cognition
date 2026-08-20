@@ -13,7 +13,7 @@ easing das sheets do iOS (`cubic-bezier(.32,.72,0,1)`, 500ms). Tudo em
 Fonte: não instale nada. `-apple-system` no iOS já é SF Pro; no Android, Roboto. Monoespaçada:
 `Platform.select({ ios:'Menlo', android:'monospace' })`.
 
-## Os nove componentes base
+## Os componentes base
 
 Cobrem o app inteiro — construir antes de qualquer tela.
 
@@ -27,7 +27,15 @@ Cobrem o app inteiro — construir antes de qualquer tela.
 | `AlertDialog` | alerta do iOS, onde acontece toda edição de valor único |
 | `Toast` | cápsula translúcida, some em 1,9s |
 | `Fab` | 56pt azul (ação primária), 48pt translúcido (secundárias) |
-| `Chip` | cápsula translúcida com blur |
+| `Chip` | cápsula translúcida com blur — pensada pra HUD flutuante SOBRE conteúdo (zoom/desfazer no canvas), não pra botão comum dentro de uma lista/formulário |
+| `RowSwitch` | `Switch` nativo encolhido/centralizado (0.8×) pra caber numa `Row` sem estourar o alvo de toque — todo toggle dentro de `GroupedList` usa este, nunca o `Switch` cru |
+| `TintedButton` | botão de largura cheia, fundo azul-do-sistema em baixa opacidade, ícone+rótulo azuis — ação primária de tela cheia (rodar consulta, compartilhar diagrama, copiar DDL) quando não é HUD sobre canvas nem alerta de valor único |
+| `Banner` | fundo/borda tingidos na cor do tom (`error`/`warning`/`info`), título cheio na cor + mensagem no label padrão — nunca texto de erro solto sem moldura |
+
+`RowSwitch`/`TintedButton`/`Banner` nasceram no cliente de banco de dados (DB-MOBILE.md/Etapa
+DB2) resolvendo um mesmo problema — `Chip` sendo usado como botão genérico em telas sem canvas
+por trás pra fazer o blur valer a pena — mas vivem em `design/components/` porque servem
+qualquer tela do app, não só ali.
 
 ## Regras que separam "parece nativo" de "parece site"
 

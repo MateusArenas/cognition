@@ -141,7 +141,13 @@ kv-store` — sem trazer `AsyncStorage` como dependência nova). i18n: chaves no
 **Reaproveitado do design system existente, não recriado**: `GroupedList`/`Row`/`Field`/
 `Segmented`/`Sheet`/`Chip`/`NavBar`/`AlertDialog`/`Fab` — o "parece Apple/iPhone" pedido já
 existe em `editor/src/design/`, DB-MOBILE.md desenhava um `theme.ts`/`ui/index.tsx` próprios
-que teriam duplicado tudo isso. O overlay do console SQL (§ abaixo) reaproveita o MESMO
+que teriam duplicado tudo isso. Três componentes NOVOS nasceram aqui e foram promovidos pro
+design system geral (`docs/03-design-system.md`) por servirem qualquer tela do app, não só o
+cliente de banco: `RowSwitch` (o `Switch` nativo nasce grande demais pra uma `Row`, encolhido
+0.8× e centralizado), `TintedButton` (botão de largura cheia, fundo azul translúcido — resolve
+onde `Chip` vinha sendo usado errado, como botão comum fora de um HUD sobre canvas: Executar
+consulta, Compartilhar diagrama, Copiar DDL) e `Banner` (erro/aviso com fundo tingido na cor do
+tom, nunca mais texto vermelho solto sem moldura). O overlay do console SQL (§ abaixo) reaproveita o MESMO
 `CodeEditor` do editor de Mermaid — o componente ganhou props opcionais `tokenizer`/`palette`
 (default Mermoid) em vez de duplicar toda a técnica de sobreposição texto colorido + TextInput
 transparente + o trabalho de teclado/scroll já resolvido lá (três bugs reais documentados no

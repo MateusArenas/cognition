@@ -60,6 +60,7 @@ import {
   Ungroup as UngroupIcon,
   FileText,
   Database,
+  Play,
 } from 'lucide-react-native';
 import { useTheme } from './useTheme';
 
@@ -132,6 +133,7 @@ const ICONS = {
   ungroup: UngroupIcon,
   document: FileText,
   database: Database,
+  play: Play,
 } as const;
 
 export type IconName = keyof typeof ICONS;
