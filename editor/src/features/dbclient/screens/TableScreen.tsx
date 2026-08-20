@@ -1,18 +1,19 @@
 import * as Clipboard from 'expo-clipboard';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Field } from '@/design/components/Field';
 import { GroupedList } from '@/design/components/GroupedList';
 import { NavBar } from '@/design/components/NavBar';
 import { Row } from '@/design/components/Row';
 import { Segmented } from '@/design/components/Segmented';
-import { Chip } from '@/design/components/Chip';
+import { TintedButton } from '@/design/components/TintedButton';
 import { useTheme } from '@/design/useTheme';
 import { useToast } from '@/design/components/Toast';
 import { useI18n } from '@/i18n/I18nProvider';
 import { isApiError } from '../api/http';
 import { rows as fetchRows, tableDdl, tableDetail, tableErd } from '../api/services';
+import { tokenizeSql, SQL_COLORS } from '../lib/sql-highlight';
 import type { FilterInput, RowsResult, TableDetail } from '../types';
 import { DataGrid } from './DataGrid';
 import { DiagramCard } from './DiagramCard';
@@ -24,7 +25,7 @@ type Tab = 'data' | 'structure' | 'ddl' | 'erd';
 // (cartão rolável + copiar), Diagrama (vizinhança, cartão com colunas/só-chaves/profundidade +
 // exportar) — DB-MOBILE.md, lote de retoques pós-uso real.
 export function TableScreen() {
-  const { colors, space } = useTheme();
+  const { colors, space, scheme } = useTheme();
   const { t } = useI18n();
   const { show } = useToast();
   const { id, table } = useLocalSearchParams<{ id: string; table: string }>();
@@ -177,20 +178,33 @@ export function TableScreen() {
       ) : null}
 
       {tab === 'ddl' ? (
-        <View style={{ flex: 1, paddingHorizontal: space.lg }}>
+        <View style={{ flex: 1, paddingHorizontal: space.lg, paddingTop: space.sm }}>
           {ddl === null ? (
             <ActivityIndicator style={{ marginTop: space.xl }} />
           ) : (
             <>
-              <View style={{ flexDirection: 'row', paddingBottom: space.sm }}>
-                <Chip label={t('dbclient.copyDdl')} onPress={copyDdl} />
-              </View>
               <View style={[styles.ddlCard, { borderColor: colors.separator, backgroundColor: colors.surface }]}>
-                <ScrollView>
-                  <Text selectable style={{ color: colors.label, fontFamily: 'Menlo', fontSize: 13, padding: space.sm }}>
-                    {ddl}
-                  </Text>
+                <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+                  <ScrollView horizontal contentContainerStyle={{ flexGrow: 1 }}>
+                    <Text selectable style={styles.ddlText} allowFontScaling={false}>
+                      {tokenizeSql(ddl).map((tok, i) => (
+                        <Text
+                          key={i}
+                          style={{
+                            color: SQL_COLORS[scheme][tok.type],
+                            fontStyle: tok.type === 'com' ? 'italic' : 'normal',
+                            fontWeight: tok.type === 'kw' ? '600' : '400',
+                          }}
+                        >
+                          {tok.text}
+                        </Text>
+                      ))}
+                    </Text>
+                  </ScrollView>
                 </ScrollView>
+              </View>
+              <View style={{ paddingVertical: space.sm }}>
+                <TintedButton label={t('dbclient.copyDdl')} icon="copy" onPress={copyDdl} />
               </View>
             </>
           )}
@@ -204,5 +218,13 @@ export function TableScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  ddlCard: { flex: 1, borderWidth: StyleSheet.hairlineWidth, borderRadius: 10, overflow: 'hidden', marginBottom: 12 },
+  // Pelo menos metade da tela (flex:1 divide o espaço restante com o botão abaixo, que é baixo)
+  // e nunca a tela inteira — rolagem vertical E horizontal por dentro, sem quebra de linha.
+  ddlCard: { flex: 1, minHeight: '50%', borderWidth: StyleSheet.hairlineWidth, borderRadius: 10, overflow: 'hidden' },
+  ddlText: {
+    fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }),
+    fontSize: 13,
+    lineHeight: 20,
+    padding: 12,
+  },
 });

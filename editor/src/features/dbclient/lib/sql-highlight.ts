@@ -1,8 +1,9 @@
-// Tokenizador do console SQL livre (Etapa DB2) — mesma técnica e mesmo formato de Token do
-// realce de Mermaid (features/code/highlight.ts): uma regex só, grupos nomeados, longest-first,
-// reaproveita o MESMO CodeEditor de sobreposição (texto colorido + TextInput transparente) em
-// vez de duplicar a lógica de teclado/scroll. TokenType tem que bater com o de lá pra poder
-// compartilhar o componente.
+// Tokenizador de SQL (Etapa DB2) — mesma técnica e mesmo formato de Token do realce de Mermaid
+// (features/code/highlight.ts): uma regex só, grupos nomeados, longest-first, reaproveita o
+// MESMO CodeEditor de sobreposição (texto colorido + TextInput transparente) em vez de
+// duplicar a lógica de teclado/scroll. TokenType tem que bater com o de lá pra poder
+// compartilhar o componente. Usado tanto no console livre (DML) quanto no visualizador de DDL
+// da aba "DDL" de TableScreen — por isso o vocabulário cobre as duas famílias de palavra-chave.
 import type { Token, TokenType } from '../../code/highlight';
 
 const PALAVRAS = [
@@ -11,7 +12,16 @@ const PALAVRAS = [
   'in', 'between', 'like', 'ilike', 'distinct', 'with', 'union', 'all', 'case', 'when', 'then',
   'else', 'end', 'asc', 'desc', 'exists', 'over', 'partition', 'coalesce', 'cast', 'count',
   'sum', 'avg', 'min', 'max', 'true', 'false',
+  // DDL (CREATE TABLE/INDEX gerado pelo backend na aba DDL — mesmo tokenizador, vocabulário
+  // maior em vez de um segundo regex quase igual só pra essa aba).
+  'create', 'table', 'alter', 'drop', 'add', 'column', 'primary', 'key', 'foreign', 'references',
+  'unique', 'default', 'constraint', 'check', 'index', 'if', 'use', 'database', 'schema',
+  'varchar', 'char', 'nvarchar', 'text', 'integer', 'int', 'bigint', 'smallint', 'tinyint',
+  'decimal', 'numeric', 'float', 'double', 'real', 'boolean', 'bool', 'date', 'datetime',
+  'timestamp', 'time', 'serial', 'bigserial', 'blob', 'json', 'jsonb', 'uuid', 'autoincrement',
+  'auto_increment', 'unsigned', 'collate', 'charset', 'engine', 'comment', 'cascade', 'restrict',
 ];
+
 
 const HL_RE = new RegExp(
   [

@@ -102,7 +102,11 @@ dbclient/
     services.ts             uma função por rota, tipada — inclui runQuery() (Etapa DB2)
   lib/
     sql-highlight.ts        tokenizador SQL (mesmo formato de Token do realce de Mermoid) +
-                            paleta — plugado no CodeEditor genérico via props (ver abaixo)
+                            paleta — plugado no CodeEditor genérico via props (ver abaixo).
+                            Vocabulário cobre DML (console livre) E DDL (`CREATE TABLE`/tipos de
+                            coluna), porque a aba DDL de TableScreen usa o MESMO tokenizador pra
+                            colorir o `CREATE TABLE ...` que o backend remonta do catálogo —
+                            texto puro (`<Text selectable>`) antes, sem realce nenhum
   drivers.ts               catálogo de dialetos + campos do knexfile (pg/mysql2/tedious/
                            better-sqlite3 nesta entrega — oracle fica de fora até o driver
                            `oracledb` ser instalado no backend)
