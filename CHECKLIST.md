@@ -922,6 +922,23 @@ antes de reaplicá-la.
     corrigido resetando os campos direto no sucesso do `submit()` quando `!isEdit` (editar não
     precisa, cada linha já manda um `initial` novo). `tsc --noEmit` limpo, 217 testes `vitest`
     verdes.
+  - **`FiltersSheet` redesenhada (pedido "mais Apple, mais UX")** — o formato antigo (uma única
+    folha com lista de filtros ativos + coluna/operador/valor construídos ali dentro) ficou
+    "não muito agradável" na avaliação do usuário. Reconferindo o `prototipo.html` (`folhaFiltro`
+    + a barra `.filtros` da aba Dados) achei que o design de referência do próprio projeto já
+    resolvia isso: os filtros ativos são pills inline na barra acima da grade, e a folha é só o
+    editor de UMA condição por vez. Redesenho: `DataGrid` ganhou uma barra horizontal rolável com
+    pill "+ Filtro" azul, um pill índigo por filtro ativo com rótulo legível ("status é igual a
+    ABERTO", não mais "coluna: operador" cru) que reabre o editor já preenchido ao tocar, e um
+    pill cinza "limpar tudo" quando há algum filtro — nenhum é `Chip` (pill plana, sem blur; ver
+    nota de design abaixo). `FiltersSheet` virou só o editor: coluna (chips), operador (chips,
+    filtrado pelo tipo real da coluna — só `contains`/`startsWith`/`endsWith` aparecem em colunas
+    de texto), valor (campo, escondido pra `isNull`/`notNull`), `TintedButton` "Aplicar" e um
+    link vermelho "Remover filtro" só ao editar um existente. O rascunho (`draft`) agora é
+    controlado pelo `DataGrid`, não estado interno do `FiltersSheet` — mesma razão do bug já
+    corrigido em "Nova linha": estado que só reseta quando a referência de uma prop muda quebra
+    num fluxo onde "+ Filtro" sempre chamaria com o mesmo `index: null`. `tsc --noEmit` limpo,
+    217 testes `vitest` verdes.
 
 ---
 

@@ -138,14 +138,15 @@
     "tabData": "Data", "tabStructure": "Structure", "tabDdl": "DDL",
     "search": "Search all columns", "prevPage": "‹ Previous", "nextPage": "Next ›",
     "columns": "COLUMNS", "indexes": "INDEXES", "referencedBy": "REFERENCED BY",
-    "filters": "Filters", "noFilters": "No filters applied.", "addFilter": "Add filter",
-    "addFilterAction": "Add", "filterValue": "Value",
+    "addFilter": "+ Filter", "filterTitle": "Filter", "filterColumn": "Column", "filterOperator": "Operator",
+    "filterValue": "Value", "applyFilterAction": "Apply", "removeFilterAction": "Remove filter",
+    "clearFilters": "clear all",
     "filterOp": {
       "eq": "equals", "neq": "not equal to", "gt": "greater than", "gte": "greater than or equal to",
       "lt": "less than", "lte": "less than or equal to", "contains": "contains", "startsWith": "starts with",
       "endsWith": "ends with", "isNull": "is null", "notNull": "is not null"
     },
-    "filterCount": "%{count} filter(s) · clear", "recordCount": "%{total} records",
+    "recordCount": "%{total} records",
     "pageOf": "page %{page} of %{totalPages}", "pageSize": "%{size}/page",
     "rowActions": "Row actions", "copyRow": "Copy row", "duplicateRow": "Duplicate", "deleteRow": "Delete",
     "editValue": "Edit value", "filterByValue": "Filter by this value", "excludeValue": "Exclude this value",

@@ -35,7 +35,11 @@ Cobrem o app inteiro — construir antes de qualquer tela.
 `RowSwitch`/`TintedButton`/`Banner` nasceram no cliente de banco de dados (DB-MOBILE.md/Etapa
 DB2) resolvendo um mesmo problema — `Chip` sendo usado como botão genérico em telas sem canvas
 por trás pra fazer o blur valer a pena — mas vivem em `design/components/` porque servem
-qualquer tela do app, não só ali.
+qualquer tela do app, não só ali. A barra de filtros ativos de `DataGrid` (Etapa DB3) tropeçou
+no mesmo problema de novo com uma pill FLAT colorida (protótipo `.pill`: fundo tingido sólido,
+borda fina, sem blur) — como só ela usa esse visual até agora, ficou um componente local
+(`FilterPill`, dentro de `DataGrid.tsx`), não um novo arquivo em `design/components/`;
+promover pra cá se aparecer um segundo uso.
 
 ## Regras que separam "parece nativo" de "parece site"
 

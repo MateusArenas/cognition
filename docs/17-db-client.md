@@ -123,8 +123,21 @@ dbclient/
                             total/página atual/total de páginas/tamanho de página, borda laranja
                             quando o resultado não é editável (views, sem PK, ou SELECT com JOIN
                             no console)
-    FiltersSheet             construtor de filtro por toque (coluna+operador de listas fechadas,
-                            nunca texto livre — mesma regra de ouro do resto do app)
+    FiltersSheet             editor de UMA condição por vez (coluna+operador de listas fechadas,
+                            nunca texto livre — mesma regra de ouro do resto do app); operador
+                            filtrado pelo tipo da coluna (só `contains`/`startsWith`/`endsWith`
+                            em colunas de texto). Redesenhado seguindo `prototipo.html`
+                            (`folhaFiltro`) — antes era uma folha só com lista de filtros
+                            ativos + construtor embutido (poluída, "pouco Apple", pedido do
+                            usuário); agora os filtros ativos viram pills planas e coloridas
+                            (não `Chip` — sem canvas atrás pra justificar o blur) inline acima
+                            da grade em `DataGrid` ("+ Filtro" azul, um pill índigo por filtro
+                            com rótulo legível tipo "status é igual a ABERTO", "limpar tudo"
+                            cinza quando há algum), cada pill tocável reabre este editor já
+                            preenchido; `draft` é controlado pelo `DataGrid` (não estado local
+                            do `FiltersSheet`), mesmo motivo do bug já corrigido em
+                            `RecordFormSheet` (estado que só reseta quando referência de prop
+                            muda quebra num fluxo "sempre `index: null`" como "+ Filtro")
     RecordFormSheet          formulário de registro (criar E editar) com tipo/obrigatoriedade
                             por coluna e toggle NULL por campo nullable; ação primária é um
                             `TintedButton` "Salvar" cheio (não `Chip`, mesmo motivo do resto do

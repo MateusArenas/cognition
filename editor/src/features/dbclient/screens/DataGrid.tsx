@@ -1,7 +1,7 @@
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import * as Clipboard from 'expo-clipboard';
 import { useRef, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { AlertDialog } from '@/design/components/AlertDialog';
 import { Chip } from '@/design/components/Chip';
 import { Fab } from '@/design/components/Fab';
@@ -14,13 +14,40 @@ import { useI18n } from '@/i18n/I18nProvider';
 import { isApiError } from '../api/http';
 import { applyMutations } from '../api/services';
 import type { ColumnMeta, FilterInput, RowsResult } from '../types';
-import { FiltersSheet } from './FiltersSheet';
+import { FiltersSheet, type FilterDraft } from './FiltersSheet';
 import { FormField } from './FormField';
 import { RecordFormSheet } from './RecordFormSheet';
 
 const ROW_NUM_WIDTH = 40;
 const CELL_WIDTH = 140;
 const PAGE_SIZES = [25, 50, 100];
+
+function filterLabel(t: (key: string, opts?: Record<string, unknown>) => string, f: FilterInput): string {
+  const opLabel = t(`dbclient.filterOp.${f.op}`);
+  if (f.op === 'isNull' || f.op === 'notNull') return `${f.column} ${opLabel}`;
+  return `${f.column} ${opLabel} ${f.value ?? ''}`;
+}
+
+// Pill plana e colorida (protótipo `.pill`) — NÃO é `Chip` de propósito: `Chip` é a cápsula com
+// blur pro HUD sobre canvas (zoom/desfazer do Rabisco), errado aqui numa barra sobre fundo
+// sólido (mesmo motivo de fundo do lote de retoques em Consulta/Diagrama/Nova linha).
+function FilterPill({ label, tone, onPress }: { label: string; tone: 'blue' | 'indigo' | 'gray'; onPress: () => void }) {
+  const { colors, radius } = useTheme();
+  const tint = tone === 'blue' ? colors.blue : tone === 'indigo' ? colors.indigo : colors.labelSecondary;
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.pill,
+        { borderColor: tint + '55', backgroundColor: tint + '1a', borderRadius: radius.control, opacity: pressed ? 0.5 : 1 },
+      ]}
+    >
+      <Text numberOfLines={1} style={{ color: tint, fontSize: 12, fontWeight: '600' }}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
 
 interface Props {
   connectionId: string;
@@ -79,6 +106,7 @@ export function DataGrid({
   const [saving, setSaving] = useState(false);
   const [formMode, setFormMode] = useState<'create' | 'edit' | null>(null);
   const [formInitial, setFormInitial] = useState<Record<string, unknown> | null>(null);
+  const [filterDraft, setFilterDraft] = useState<FilterDraft | null>(null);
 
   const table = data.edicao.table;
   const canMutate = data.edicao.editavel && !!table;
@@ -184,6 +212,41 @@ export function DataGrid({
     show(t(wasCreate ? 'dbclient.recordCreated' : 'dbclient.recordUpdated'));
   }
 
+  // `filterDraft` mora aqui (controlado), não dentro de `FiltersSheet` — evita o mesmo bug já
+  // corrigido em "Nova linha" (campo reabrindo com o valor digitado da vez anterior porque o
+  // estado local só reseta quando a referência de uma prop muda; "+ Filtro" sempre abriria com
+  // `index: null`, mesma referência conceitual toda vez).
+  function openNewFilter() {
+    setFilterDraft({ index: null, column: data.fields[0]?.name ?? '', op: 'eq', value: '' });
+    filtersSheetRef.current?.present();
+  }
+
+  function openEditFilter(i: number) {
+    const f = filters[i];
+    setFilterDraft({ index: i, column: f.column, op: f.op, value: f.value === undefined || f.value === null ? '' : String(f.value) });
+    filtersSheetRef.current?.present();
+  }
+
+  function applyFilter() {
+    if (!filterDraft) return;
+    const needsValue = filterDraft.op !== 'isNull' && filterDraft.op !== 'notNull';
+    if (needsValue && filterDraft.value.trim() === '') return;
+    const entry: FilterInput = { column: filterDraft.column, op: filterDraft.op, value: needsValue ? filterDraft.value : undefined };
+    const list = [...filters];
+    if (filterDraft.index === null) list.push(entry);
+    else list[filterDraft.index] = entry;
+    onFiltersChange(list);
+    filtersSheetRef.current?.dismiss();
+    setFilterDraft(null);
+  }
+
+  function removeFilter() {
+    if (!filterDraft || filterDraft.index === null) return;
+    onFiltersChange(filters.filter((_, i) => i !== filterDraft.index));
+    filtersSheetRef.current?.dismiss();
+    setFilterDraft(null);
+  }
+
   function openEditValue() {
     if (!selectedCell) return;
     cellSheetRef.current?.dismiss();
@@ -225,10 +288,17 @@ export function DataGrid({
   return (
     <View style={{ flex: 1 }}>
       {showFilters ? (
-        <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: space.lg, paddingBottom: space.sm }}>
-          <Chip label={t('dbclient.filters')} icon="sliders" onPress={() => filtersSheetRef.current?.present()} active={filters.length > 0} />
-          {filters.length ? <Chip label={t('dbclient.filterCount', { count: filters.length })} mono onPress={() => onFiltersChange([])} /> : null}
-        </View>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ flexDirection: 'row', gap: 6, paddingHorizontal: space.lg, paddingBottom: space.sm, alignItems: 'center' }}
+        >
+          <FilterPill label={t('dbclient.addFilter')} tone="blue" onPress={openNewFilter} />
+          {filters.map((f, i) => (
+            <FilterPill key={i} label={filterLabel(t, f)} tone="indigo" onPress={() => openEditFilter(i)} />
+          ))}
+          {filters.length ? <FilterPill label={t('dbclient.clearFilters')} tone="gray" onPress={() => onFiltersChange([])} /> : null}
+        </ScrollView>
       ) : null}
 
       <View
@@ -336,7 +406,14 @@ export function DataGrid({
         </GroupedList>
       </Sheet>
 
-      <FiltersSheet ref={filtersSheetRef} fields={data.fields.map((f) => f.name)} filters={filters} onChange={onFiltersChange} />
+      <FiltersSheet
+        ref={filtersSheetRef}
+        fields={data.fields}
+        draft={filterDraft}
+        onDraftChange={setFilterDraft}
+        onApply={applyFilter}
+        onRemove={removeFilter}
+      />
 
       {columnsMeta ? (
         <RecordFormSheet
@@ -380,4 +457,5 @@ const styles = StyleSheet.create({
   rowNumCell: { textAlign: 'center', fontFamily: 'Menlo', fontSize: 12 },
   footer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderTopWidth: StyleSheet.hairlineWidth },
   fab: { position: 'absolute', right: 20, bottom: 84 },
+  pill: { paddingVertical: 5, paddingHorizontal: 10, borderWidth: StyleSheet.hairlineWidth },
 });
