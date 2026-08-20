@@ -939,6 +939,13 @@ antes de reaplicá-la.
     corrigido em "Nova linha": estado que só reseta quando a referência de uma prop muda quebra
     num fluxo onde "+ Filtro" sempre chamaria com o mesmo `index: null`. `tsc --noEmit` limpo,
     217 testes `vitest` verdes.
+  - **Bug de layout achado testando ao vivo**: a barra de pills virou uma faixa VAZIA enorme
+    empurrando a grade inteira pra baixo — o `ScrollView horizontal` sem `style` explícito herda
+    o comportamento padrão da lib de crescer (`flexGrow`) pra preencher o espaço vertical
+    restante do pai `flex:1`, em vez de travar na altura do próprio conteúdo (uma linha de
+    pills). Corrigido com `flexGrow: 0, flexShrink: 0` no `style` do `ScrollView` (`DataGrid.tsx`,
+    `styles.filterBar`) — a barra agora ocupa a tela só horizontalmente, do jeito que uma faixa
+    de filtros deveria.
 
 ---
 

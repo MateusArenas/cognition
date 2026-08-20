@@ -291,6 +291,7 @@ export function DataGrid({
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
+          style={styles.filterBar}
           contentContainerStyle={{ flexDirection: 'row', gap: 6, paddingHorizontal: space.lg, paddingBottom: space.sm, alignItems: 'center' }}
         >
           <FilterPill label={t('dbclient.addFilter')} tone="blue" onPress={openNewFilter} />
@@ -457,5 +458,10 @@ const styles = StyleSheet.create({
   rowNumCell: { textAlign: 'center', fontFamily: 'Menlo', fontSize: 12 },
   footer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderTopWidth: StyleSheet.hairlineWidth },
   fab: { position: 'absolute', right: 20, bottom: 84 },
+  // Sem isso, o ScrollView herda o comportamento padrão da lib de crescer pra preencher o
+  // espaço vertical restante do pai `flex:1` — vira uma faixa vazia gigante empurrando a grade
+  // pra baixo (bug real reportado pelo usuário). `flexGrow: 0` trava a altura no conteúdo (uma
+  // linha de pills), do jeito que uma barra horizontal deveria se comportar.
+  filterBar: { flexGrow: 0, flexShrink: 0 },
   pill: { paddingVertical: 5, paddingHorizontal: 10, borderWidth: StyleSheet.hairlineWidth },
 });
