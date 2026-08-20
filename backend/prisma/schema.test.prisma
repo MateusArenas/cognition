@@ -1,0 +1,69 @@
+// Schema IRMÃO de schema.prisma, só para os testes automatizados (unit com mocks não precisa
+// disso; e2e precisa de um banco de verdade por trás do Prisma). Mesmos modelos, provider
+// SQLite — não tem Postgres/Docker disponível neste ambiente de teste. Gerado sob demanda
+// (`npm run pretest:e2e`, roda antes de `test:e2e` automaticamente) para um `output` separado
+// do client de produção — nunca importado pelo código de aplicação em `src/`, só por
+// `test/prisma-test-client.ts`. Ver o comentário no topo de schema.prisma.
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma-test"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id           String       @id @default(uuid())
+  email        String       @unique
+  name         String
+  passwordHash String
+  active       Boolean      @default(true)
+  roles        UserRole[]
+  connections  Connection[]
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+}
+
+model Role {
+  id          String       @id @default(uuid())
+  name        String       @unique
+  description String?
+  permissions Permission[]
+  users       UserRole[]
+  createdAt   DateTime     @default(now())
+}
+
+model Permission {
+  id         String   @id @default(uuid())
+  action     String
+  subject    String
+  fields     Json?
+  conditions Json?
+  inverted   Boolean  @default(false)
+  reason     String?
+  roleId     String
+  role       Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+}
+
+model UserRole {
+  userId String
+  roleId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+}
+
+model Connection {
+  id        String   @id @default(uuid())
+  name      String
+  color     String   @default("#8E8E93")
+  client    String
+  config    Json
+  readOnly  Boolean  @default(false)
+  ownerId   String
+  owner     User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

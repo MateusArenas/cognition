@@ -1,0 +1,81 @@
+// Dados PRÓPRIOS do backend — usuários, papéis/permissões (CASL) e o registro de conexões
+// salvas (nunca os bancos-alvo em si, que são acessados via Knex, não Prisma — ver
+// docs/17-db-client.md). Provider real = PostgreSQL (docker-compose.yml na raiz do monorepo).
+// Prisma 7: a URL de conexão não vive mais aqui — vai em `prisma.config.ts` (CLI/migrate) e é
+// passada explicitamente ao adaptador de driver em `src/prisma/prisma.service.ts` (runtime).
+//
+// Para os testes automatizados deste repositório (sem Docker disponível no ambiente de CI/dev
+// sandbox), existe um schema irmão `schema.test.prisma`, idêntico em modelos, com
+// `provider = "sqlite"` e `output` num caminho separado — o client de teste é injetado via
+// `overrideProvider(PrismaService)` no setup do e2e (test/prisma-test-client.ts), a aplicação
+// em si nunca importa esse client de teste.
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id           String     @id @default(uuid())
+  email        String     @unique
+  name         String
+  passwordHash String
+  active       Boolean    @default(true)
+  roles        UserRole[]
+  connections  Connection[]
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model Role {
+  id          String       @id @default(uuid())
+  name        String       @unique
+  description String?
+  permissions Permission[]
+  users       UserRole[]
+  createdAt   DateTime     @default(now())
+}
+
+// Uma linha == uma regra do CASL (`can`/`cannot` action+subject). Ver
+// backend/src/permissions/casl-ability.factory.ts.
+model Permission {
+  id         String   @id @default(uuid())
+  action     String
+  subject    String
+  // Json em vez de String[] de propósito: SQLite (usado nos testes e2e, ver topo do arquivo)
+  // não suporta lista escalar nativa no Prisma — Json funciona idêntico nos dois provedores.
+  fields     Json?
+  conditions Json?
+  inverted   Boolean  @default(false)
+  reason     String?
+  roleId     String
+  role       Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+}
+
+model UserRole {
+  userId String
+  roleId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+}
+
+// Conexão salva com um banco-alvo. `config` guarda o knexfile inteiro (host/porta/ssl/pool
+// etc.) — a senha dentro dele já chega cifrada (AES-256-GCM, ver connections.service.ts) antes
+// de ser persistida; nunca é devolvida em claro pela API.
+model Connection {
+  id        String   @id @default(uuid())
+  name      String
+  color     String   @default("#8E8E93")
+  client    String
+  config    Json
+  readOnly  Boolean  @default(false)
+  ownerId   String
+  owner     User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
