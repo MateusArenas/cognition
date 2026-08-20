@@ -156,6 +156,7 @@
     "showColumns": "Mostrar columnas", "keysOnly": "Solo claves", "depth": "Profundidad %{depth}",
     "viewMermaidCode": "Ver código Mermaid", "copyMermaidCode": "Copiar código Mermaid",
     "mermaidSource": "Código Mermaid", "runQuery": "Ejecutar", "runningQuery": "Ejecutando…", "copyDdl": "Copiar DDL",
+    "shareDdlFile": "Archivo SQL", "shareDdlFileDesc": "El DDL de esta tabla, listo para compartir (.sql)",
     "relationalModel": "Modelo relacional", "keysOnlyHint": "Solo PK, FK y UNIQUE.",
     "depthTitle": "Profundidad", "erdEmptyTitle": "Nada para dibujar",
     "erdEmptySubtitle": "Esta base (o esta vecindad) no tiene tablas para generar el diagrama.",

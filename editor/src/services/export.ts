@@ -32,6 +32,14 @@ export async function exportarMermaidTexto(code: string, nome: string): Promise<
   await shareFile(uri, 'text/plain');
 }
 
+// Mesma ideia de exportarMermaidTexto, pro DDL remontado do catálogo (TableScreen, aba DDL) —
+// `.sql` em vez de `.mmd`.
+export async function exportarSqlTexto(sql: string, nome: string): Promise<void> {
+  const uri = FileSystem.cacheDirectory + slugFilename(nome) + '.sql';
+  await FileSystem.writeAsStringAsync(uri, sql);
+  await shareFile(uri, 'text/plain');
+}
+
 // scale limitado a 3: um diagrama de 40 nós em 3x já dá ~2MB de base64 atravessando a ponte
 // e trava a UI por meio segundo — não vale ir além (docs/12-persistencia-e-export.md).
 export async function exportarPng(base64: string, nome: string): Promise<void> {

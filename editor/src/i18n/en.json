@@ -156,6 +156,7 @@
     "showColumns": "Show columns", "keysOnly": "Keys only", "depth": "Depth %{depth}",
     "viewMermaidCode": "View Mermaid code", "copyMermaidCode": "Copy Mermaid code",
     "mermaidSource": "Mermaid code", "runQuery": "Run", "runningQuery": "Running…", "copyDdl": "Copy DDL",
+    "shareDdlFile": "SQL file", "shareDdlFileDesc": "This table's DDL, ready to share (.sql)",
     "relationalModel": "Relational model", "keysOnlyHint": "PK, FK, and UNIQUE only.",
     "depthTitle": "Depth", "erdEmptyTitle": "Nothing to draw",
     "erdEmptySubtitle": "This database (or this neighborhood) has no tables to build a diagram from.",

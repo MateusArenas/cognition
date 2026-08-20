@@ -1,16 +1,20 @@
+import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import * as Clipboard from 'expo-clipboard';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Field } from '@/design/components/Field';
 import { GroupedList } from '@/design/components/GroupedList';
+import { Icon } from '@/design/Icon';
 import { NavBar } from '@/design/components/NavBar';
 import { Row } from '@/design/components/Row';
 import { Segmented } from '@/design/components/Segmented';
+import { Sheet } from '@/design/components/Sheet';
 import { TintedButton } from '@/design/components/TintedButton';
 import { useTheme } from '@/design/useTheme';
 import { useToast } from '@/design/components/Toast';
 import { useI18n } from '@/i18n/I18nProvider';
+import { exportarSqlTexto } from '@/services/export';
 import { isApiError } from '../api/http';
 import { rows as fetchRows, tableDdl, tableDetail, tableErd } from '../api/services';
 import { tokenizeSql, SQL_COLORS } from '../lib/sql-highlight';
@@ -41,6 +45,7 @@ export function TableScreen() {
 
   const [detail, setDetail] = useState<TableDetail | null>(null);
   const [ddl, setDdl] = useState<string | null>(null);
+  const ddlShareRef = useRef<BottomSheetModal>(null);
 
   const loadRows = useCallback(async () => {
     try {
@@ -74,9 +79,15 @@ export function TableScreen() {
   }
 
   async function copyDdl() {
+    ddlShareRef.current?.dismiss();
     if (!ddl) return;
     await Clipboard.setStringAsync(ddl);
     show(t('common.copied'));
+  }
+
+  async function shareDdlFile() {
+    ddlShareRef.current?.dismiss();
+    if (ddl) await exportarSqlTexto(ddl, table);
   }
 
   return (
@@ -210,7 +221,7 @@ export function TableScreen() {
                 </ScrollView>
               </View>
               <View style={{ paddingVertical: space.sm }}>
-                <TintedButton label={t('dbclient.copyDdl')} icon="copy" onPress={copyDdl} />
+                <TintedButton label={t('common.share')} icon="share" onPress={() => ddlShareRef.current?.present()} />
               </View>
             </>
           )}
@@ -218,6 +229,13 @@ export function TableScreen() {
       ) : null}
 
       {tab === 'erd' ? <DiagramCard nome={table} fetchMermaid={fetchTableErd} depthControl /> : null}
+
+      <Sheet ref={ddlShareRef} title={t('common.share')} snapPoints={['30%']}>
+        <GroupedList>
+          <Row title={t('dbclient.copyDdl')} subtitle={t('diagram.copyToClipboard')} left={<Icon name="copy" size={20} />} onPress={copyDdl} />
+          <Row title={t('dbclient.shareDdlFile')} subtitle={t('dbclient.shareDdlFileDesc')} left={<Icon name="document" size={20} />} navigable onPress={shareDdlFile} />
+        </GroupedList>
+      </Sheet>
     </View>
   );
 }
