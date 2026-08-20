@@ -1,0 +1,2001 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DB Mobile — protótipo com rotas falsas</title>
+
+<!--
+  ============================================================================
+  PROTÓTIPO NAVEGÁVEL — DB Mobile
+  ============================================================================
+  Este arquivo é a especificação visual e de contrato do app.
+
+  Nada aqui toca banco de dados. Toda tela chama `api(metodo, rota, params, body)`
+  (procure por "CAMADA DE API FALSA" mais abaixo), que:
+    1. registra a chamada no inspetor da direita  → você vê a rota exata que o
+       app dispara em cada toque;
+    2. responde com dados falsos no MESMO formato que o backend real devolverá.
+
+  Quando o backend NestJS existir, `api()` vira uma chamada axios e nada mais
+  muda. Os caminhos vivem em um lugar só: o objeto ROTAS.
+
+  Como ler este arquivo:
+    §1  tokens visuais (iOS)
+    §2  ROTAS — mapa único de caminhos + o que cada uma faz no backend
+    §3  banco falso (schema de um CD de peças) + geradores de DDL/ERD/linhas
+    §4  CAMADA DE API FALSA — o roteador que responde as rotas
+    §5  SQL: realce de sintaxe e linter local
+    §6  telas
+    §7  navegação e inspetor
+  ============================================================================
+-->
+
+<style>
+/* ===================== §1 TOKENS ===================== */
+:root{
+  /* iOS — dentro do telefone */
+  --bg:#F2F2F7; --card:#FFF; --card-alt:#F9F9FB;
+  --sep:#C6C6C8; --sep-soft:#E5E5EA;
+  --label:#000; --label2:#3C3C43; --label3:#8E8E93; --label4:#C7C7CC;
+  --blue:#007AFF; --green:#34C759; --red:#FF3B30; --orange:#FF9500;
+  --purple:#AF52DE; --teal:#30B0C7; --indigo:#5856D6; --pink:#FF2D55; --gray:#8E8E93;
+  /* fora do telefone */
+  --page:#191C22; --page-2:#22262E; --page-line:#2E333D; --page-text:#C9CFDA; --page-dim:#7C8494;
+  --mono:ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',Roboto,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{
+  background:var(--page); color:var(--page-text); font-family:var(--sans);
+  display:flex; gap:28px; padding:28px; align-items:flex-start; justify-content:center;
+}
+
+/* ===================== moldura do telefone ===================== */
+.stage{display:flex;flex-direction:column;align-items:center;gap:14px}
+.stage h1{font-size:15px;font-weight:600;margin:0;letter-spacing:.2px}
+.stage p{margin:0;font-size:12px;color:var(--page-dim);max-width:390px;text-align:center;line-height:1.5}
+.phone{
+  width:390px;height:844px;border-radius:52px;background:#000;padding:11px;
+  box-shadow:0 30px 70px rgba(0,0,0,.6), 0 0 0 1px #333 inset;position:relative;flex:none;
+}
+.screen{
+  width:100%;height:100%;border-radius:42px;overflow:hidden;background:var(--bg);
+  display:flex;flex-direction:column;position:relative;font-family:var(--sans);color:var(--label);
+}
+.notch{position:absolute;top:11px;left:50%;transform:translateX(-50%);width:124px;height:34px;background:#000;border-radius:20px;z-index:30}
+.statusbar{height:52px;flex:none;display:flex;align-items:flex-end;justify-content:space-between;padding:0 26px 6px;font-size:13px;font-weight:600;color:var(--label)}
+.navbar{
+  flex:none;height:46px;display:flex;align-items:center;padding:0 12px;gap:6px;
+  background:rgba(248,248,248,.94);backdrop-filter:blur(12px);border-bottom:.5px solid var(--sep);
+}
+.navbar .title{flex:1;text-align:center;font-size:17px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.navbar button{background:none;border:0;color:var(--blue);font-size:16px;font-family:inherit;cursor:pointer;padding:4px 6px;min-width:78px}
+.navbar button.right{text-align:right}
+.navbar button:disabled{opacity:0;pointer-events:none}
+.body{flex:1;overflow-y:auto;overflow-x:hidden;padding:0 16px 40px;-webkit-overflow-scrolling:touch}
+.body::-webkit-scrollbar{width:0}
+.homebar{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:#000;opacity:.25;z-index:30}
+
+/* ===================== componentes iOS ===================== */
+.gtitle{font-size:11px;font-weight:600;letter-spacing:.5px;color:var(--label3);margin:22px 0 6px 16px;text-transform:uppercase}
+.gfoot{font-size:11px;color:var(--label3);margin:6px 16px 0;line-height:1.45}
+.card{background:var(--card);border-radius:10px;overflow:hidden}
+.row{min-height:44px;display:flex;align-items:center;gap:10px;padding:9px 16px;border-bottom:.5px solid var(--sep-soft);cursor:default}
+.row:last-child{border-bottom:0}
+.row[data-act]{cursor:pointer}
+.row[data-act]:active{background:var(--card-alt)}
+.row .main{flex:1;min-width:0}
+.row .t{font-size:15px}
+.row .s{font-size:11px;color:var(--label3);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .v{font-size:15px;color:var(--label3);white-space:nowrap}
+.chev{color:var(--label4);font-size:20px;line-height:1;margin-top:-2px}
+.dot{width:10px;height:10px;border-radius:50%;flex:none}
+.seg{display:flex;background:#7676801F;border-radius:9px;padding:2px;margin-top:12px;gap:2px}
+.seg button{
+  flex:1;border:0;background:none;font-family:inherit;font-size:13px;color:var(--label2);
+  padding:7px 4px;border-radius:7px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis
+}
+.seg button.on{background:var(--card);font-weight:600;color:var(--label);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.btn{
+  width:100%;height:48px;border:0;border-radius:12px;background:var(--blue);color:#fff;
+  font-size:17px;font-weight:600;font-family:inherit;margin-top:12px;cursor:pointer
+}
+.btn.plain{background:var(--card);color:var(--blue)}
+.btn.danger{background:var(--red)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btnrow{display:flex;gap:10px}
+.pill{display:inline-block;font-size:11px;font-weight:600;padding:3px 9px;border-radius:7px;border:.5px solid;margin:6px 6px 0 0}
+.banner{border-radius:10px;border:.5px solid;padding:11px 12px;margin-top:12px;font-size:13px;line-height:1.45}
+.banner b{display:block;font-size:13px;margin-bottom:3px}
+.search{display:flex;align-items:center;gap:6px;background:#7676801F;border-radius:10px;height:36px;padding:0 10px;margin-top:12px}
+.search input{flex:1;border:0;background:none;font-size:15px;font-family:inherit;outline:none;color:var(--label)}
+.field{display:flex;align-items:center;gap:10px}
+.field label{width:130px;font-size:15px;flex:none}
+.field input,.field textarea,.field select{
+  flex:1;border:0;background:none;font-size:15px;font-family:inherit;color:var(--label2);outline:none;padding:6px 0;min-width:0
+}
+.field textarea{font-family:var(--mono);font-size:12px;height:62px;resize:none}
+.switch{width:51px;height:31px;border-radius:16px;background:var(--sep-soft);position:relative;flex:none;cursor:pointer;transition:background .18s}
+.switch.on{background:var(--green)}
+.switch i{position:absolute;top:2px;left:2px;width:27px;height:27px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:left .18s}
+.switch.on i{left:22px}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:10px 12px}
+.chips::-webkit-scrollbar{height:0}
+.chip{
+  flex:none;padding:8px 12px;border-radius:9px;background:var(--card-alt);border:.5px solid var(--sep-soft);
+  font-size:13px;cursor:pointer;white-space:nowrap
+}
+.chip.on{color:#fff;font-weight:600;border-color:transparent}
+.swatches{display:flex;gap:8px}
+.swatch{width:22px;height:22px;border-radius:50%;cursor:pointer;border:3px solid transparent}
+.swatch.on{border-color:#fff;box-shadow:0 0 0 1.5px var(--sep)}
+.empty{padding:40px 20px;text-align:center}
+.empty b{display:block;font-size:17px;color:var(--label2)}
+.empty span{font-size:13px;color:var(--label3)}
+.spin{width:20px;height:20px;border:2px solid var(--sep-soft);border-top-color:var(--label3);border-radius:50%;margin:32px auto;animation:sp .7s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+/* grade de dados */
+.grid{background:var(--card);border-radius:10px;margin-top:8px;overflow:auto;max-height:330px}
+.grid table{border-collapse:collapse;font-family:var(--mono);font-size:11px;white-space:nowrap}
+.grid th{
+  position:sticky;top:0;background:var(--card-alt);text-align:left;padding:6px 8px;
+  border-right:.5px solid var(--sep-soft);border-bottom:.5px solid var(--sep);font-size:10px;color:var(--label2)
+}
+.grid th small{display:block;font-weight:400;color:var(--label3);font-size:9px}
+.grid td{padding:6px 8px;border-right:.5px solid var(--sep-soft);border-bottom:.5px solid var(--sep-soft);max-width:150px;overflow:hidden;text-overflow:ellipsis}
+.grid tr:nth-child(even) td{background:var(--card-alt)}
+.grid td.null{color:var(--label4);font-style:italic}
+.grid td.idx{color:var(--label4);font-size:10px}
+
+/* editor SQL */
+.editor{position:relative;background:var(--card);border-radius:10px;border-left:3px solid var(--sep-soft);overflow:hidden;margin-top:12px}
+.editor.err{border-left-color:var(--red)}
+.editor.warn{border-left-color:var(--orange)}
+.editor pre,.editor textarea{
+  margin:0;padding:12px;font-family:var(--mono);font-size:13px;line-height:20px;
+  white-space:pre-wrap;word-break:break-word;border:0;
+}
+.editor pre{min-height:150px}
+.editor textarea{
+  position:absolute;inset:0;background:transparent;color:transparent;caret-color:var(--blue);
+  resize:none;outline:none;overflow:hidden
+}
+.tok-keyword{color:#AF52DE}.tok-type{color:#5856D6}.tok-string{color:#D12F1B}
+.tok-number{color:#1C00CF}.tok-comment{color:#8E8E93}.tok-func{color:#0F68A0}
+.tok-param{color:#FF9500}.tok-ident{color:#000}.tok-punct{color:#3C3C43}
+.keys{display:flex;gap:6px;overflow-x:auto;margin-top:8px;padding-bottom:2px}
+.keys::-webkit-scrollbar{height:0}
+.keys button{
+  flex:none;background:var(--card);border:.5px solid var(--sep-soft);border-radius:7px;
+  padding:8px 11px;font-family:var(--mono);font-size:12px;color:var(--label2);cursor:pointer
+}
+.status{display:flex;gap:12px;align-items:center;padding:8px 4px 0;font-family:var(--mono);font-size:11px;color:var(--label3)}
+.status .sp{flex:1}
+.diag{display:flex;gap:8px;align-items:center;padding:0 4px;margin-top:6px;font-size:11px;color:var(--label2)}
+.diag i{width:6px;height:6px;border-radius:50%;flex:none}
+.ddl{background:var(--card);border-radius:10px;padding:12px;margin-top:12px;font-family:var(--mono);font-size:11.5px;line-height:1.6;white-space:pre;overflow-x:auto}
+.mer{background:var(--card);border-radius:10px;margin-top:10px;padding:10px;overflow:auto;max-height:430px;text-align:center}
+.mer svg{max-width:none;height:auto}
+.mersrc{background:var(--card);border-radius:10px;padding:12px;margin-top:10px;font-family:var(--mono);font-size:11px;line-height:1.5;white-space:pre;overflow-x:auto;color:var(--label2)}
+
+/* ===================== filtros da grade ===================== */
+.filtros{display:flex;flex-wrap:wrap;align-items:center;margin-top:6px}
+.pill.click{cursor:pointer;user-select:none}
+.pill.click:active{opacity:.6}
+.whereprev{background:var(--card);border-radius:8px;padding:10px;margin-top:8px;font-family:var(--mono);font-size:11px;color:var(--label2);line-height:1.5;word-break:break-word}
+.grid th.ord{cursor:pointer}
+.grid th.ord.on{color:var(--blue)}
+.grid td{cursor:pointer}
+.grid td.edit{background:#FF95002E!important;color:var(--orange);font-weight:600}
+.grid tr.r-sel  td{background:#007AFF1A!important}
+.grid tr.r-del  td{background:#FF3B301A!important;text-decoration:line-through;color:var(--label3)}
+.grid tr.r-novo td{background:#34C7591A!important}
+.grid td.idx[data-act]{cursor:pointer;font-weight:700}
+.sqlprev{background:var(--card);border-radius:10px;overflow:hidden;margin-top:10px}
+.sqlprev div{padding:11px 12px;border-bottom:.5px solid var(--sep-soft);font-family:var(--mono);font-size:11px;line-height:1.6;word-break:break-word}
+.sqlprev div:last-child{border-bottom:0}
+
+/* folha deslizante, presa dentro da moldura do telefone */
+.sheet{position:absolute;inset:0;z-index:40;display:flex;flex-direction:column;justify-content:flex-end;background:rgba(0,0,0,.35)}
+.sheet .inner{background:var(--bg);border-radius:16px 16px 0 0;padding:14px 16px 28px;max-height:78%;overflow-y:auto}
+.sheet h3{margin:0 0 2px;font-size:17px;font-weight:600;text-align:center}
+.sheet .sub{margin:0 0 4px;font-size:11px;color:var(--label3);text-align:center;line-height:1.5}
+.acts{background:var(--card);border-radius:12px;overflow:hidden;margin-top:10px}
+.acts button{
+  width:100%;border:0;background:var(--card);padding:14px;font-size:17px;color:var(--blue);
+  font-family:inherit;border-bottom:.5px solid var(--sep-soft);cursor:pointer;text-align:center
+}
+.acts button:last-child{border-bottom:0}
+.acts button.danger{color:var(--red)}
+.acts button.dim{color:var(--label2)}
+
+/* ===================== inspetor (fora do telefone) ===================== */
+.panel{width:420px;max-width:44vw;height:844px;display:flex;flex-direction:column;background:var(--page-2);border:1px solid var(--page-line);border-radius:16px;overflow:hidden}
+.panel header{padding:14px 16px;border-bottom:1px solid var(--page-line)}
+.panel header h2{margin:0;font-size:13px;font-weight:600;letter-spacing:.3px}
+.panel header p{margin:4px 0 0;font-size:11px;color:var(--page-dim);line-height:1.5}
+.tabs{display:flex;gap:2px;padding:8px 10px 0}
+.tabs button{
+  flex:1;background:none;border:0;border-bottom:2px solid transparent;color:var(--page-dim);
+  font-family:inherit;font-size:12px;padding:8px;cursor:pointer
+}
+.tabs button.on{color:#fff;border-bottom-color:var(--blue)}
+.panel .content{flex:1;overflow-y:auto;padding:10px 12px 20px}
+.panel .content::-webkit-scrollbar{width:8px}
+.panel .content::-webkit-scrollbar-thumb{background:#3A404B;border-radius:4px}
+.log{border:1px solid var(--page-line);border-radius:9px;margin-bottom:8px;overflow:hidden;background:#1B1F26}
+.log .head{display:flex;gap:8px;align-items:center;padding:8px 10px;cursor:pointer;font-family:var(--mono);font-size:11px}
+.log .head:hover{background:#232830}
+.m{font-weight:700;padding:1px 6px;border-radius:4px;font-size:10px}
+.m.GET{background:#12331F;color:#5CD68A}.m.POST{background:#12283F;color:#5FA8F5}
+.m.PATCH{background:#3A2F10;color:#E3B341}.m.DELETE{background:#3A1717;color:#F87171}
+.log .path{flex:1;overflow:hidden;text-overflow:ellipsis;color:#DDE3EC}
+.log .ms{color:var(--page-dim)}
+.log .st{color:#5CD68A}.log .st.bad{color:#F87171}
+.log pre{margin:0;padding:10px;border-top:1px solid var(--page-line);font-family:var(--mono);font-size:10.5px;line-height:1.5;color:#AEB9C9;white-space:pre-wrap;word-break:break-word;max-height:230px;overflow:auto;background:#15181E}
+.log .why{padding:8px 10px;border-top:1px solid var(--page-line);font-size:11px;color:#93A3B8;line-height:1.5;background:#191D24}
+.route{border-bottom:1px solid var(--page-line);padding:10px 2px}
+.route:last-child{border-bottom:0}
+.route .l1{display:flex;gap:8px;align-items:center;font-family:var(--mono);font-size:11px;color:#DDE3EC}
+.route p{margin:5px 0 0 0;font-size:11px;color:var(--page-dim);line-height:1.55}
+.route code{font-family:var(--mono);color:#9DB7D8}
+.rgroup{font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:#6B7484;margin:16px 0 4px}
+.rgroup:first-child{margin-top:0}
+.clear{background:none;border:1px solid var(--page-line);color:var(--page-dim);border-radius:7px;font-family:inherit;font-size:11px;padding:5px 10px;cursor:pointer}
+.clear:hover{color:#fff}
+@media (max-width:1000px){ body{flex-direction:column;align-items:center} .panel{width:390px;max-width:100%;height:520px} }
+</style>
+</head>
+<body>
+
+<div class="stage">
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="screen">
+      <div class="statusbar"><span>9:41</span><span>􀙇 􀖀 􀛨</span></div>
+      <div class="navbar">
+        <button id="nav-back">‹ Voltar</button>
+        <div class="title" id="nav-title">Bancos</div>
+        <button class="right" id="nav-action"></button>
+      </div>
+      <div class="body" id="app"></div>
+      <div id="folha"></div>
+      <div class="homebar"></div>
+    </div>
+  </div>
+  <h1>DB Mobile — protótipo navegável</h1>
+  <p>Dados falsos. Cada toque dispara uma rota; o painel ao lado mostra qual, com o JSON de resposta e o que o backend faria com knex.</p>
+</div>
+
+<div class="panel">
+  <header>
+    <h2>Inspetor de rotas</h2>
+    <p>É este contrato que o backend NestJS precisa cumprir. Enquanto ele não existe, quem responde é a função <code>api()</code> deste arquivo.</p>
+  </header>
+  <div class="tabs">
+    <button class="on" data-tab="rede">Rede</button>
+    <button data-tab="rotas">Catálogo de rotas</button>
+  </div>
+  <div class="content" id="panel-rede"></div>
+  <div class="content" id="panel-rotas" style="display:none"></div>
+</div>
+
+<script type="module">
+import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+mermaid.initialize({
+  startOnLoad:false, theme:'base', securityLevel:'loose',
+  themeVariables:{ primaryColor:'#F2F2F7', primaryTextColor:'#000', primaryBorderColor:'#007AFF',
+    lineColor:'#8E8E93', fontFamily:'-apple-system,system-ui', fontSize:'12px' },
+  er:{ diagramPadding:8, entityPadding:8, useMaxWidth:false }
+});
+
+/* ==========================================================================
+   §2 ROTAS — mapa único de caminhos
+   --------------------------------------------------------------------------
+   Nenhuma tela monta URL na mão. No app React Native este objeto vive em
+   src/api/routes.ts; aqui ele vive no protótipo. Mudou o backend, mudou aqui.
+   O campo `doc` alimenta a aba "Catálogo de rotas" do inspetor e descreve o
+   que o backend faz com knex em cada uma.
+   ========================================================================== */
+const e = encodeURIComponent;
+
+const ROTAS = {
+  drivers:      { m:'GET',    p:()=>`/drivers`, grupo:'Catálogo',
+    doc:'Lista os dialetos suportados e diz quais pacotes npm (pg, mysql2, sqlite3, tedious, oracledb) estão instalados no servidor. O app já tem os campos de configuração localmente; esta rota serve para avisar "o servidor não tem esse driver".' },
+
+  connections:  { m:'GET',    p:()=>`/connections`, grupo:'Conexões',
+    doc:'Devolve as conexões salvas, sem senha em claro. No NestJS é o ConnectionsService lendo o repositório (memória, arquivo cifrado ou uma tabela de metadados).' },
+  create:       { m:'POST',   p:()=>`/connections`, grupo:'Conexões',
+    doc:'Salva a conexão. A senha é cifrada (AES-256-GCM) antes de persistir. Não abre pool nenhum.' },
+  connection:   { m:'GET',    p:id=>`/connections/${e(id)}`, grupo:'Conexões', doc:'Lê uma conexão para edição.' },
+  update:       { m:'PATCH',  p:id=>`/connections/${e(id)}`, grupo:'Conexões', doc:'Atualiza campos da conexão. Se algo do bloco `connection` mudar, o pool existente é destruído para não ficar servindo config velha.' },
+  remove:       { m:'DELETE', p:id=>`/connections/${e(id)}`, grupo:'Conexões', doc:'Remove a conexão. Antes chama knex.destroy() se houver pool aberto.' },
+  test:         { m:'POST',   p:()=>`/connections/test`, grupo:'Conexões',
+    doc:'Monta um knex temporário com pool {min:0,max:1}, roda a query de versão do dialeto e destrói o pool. Consulta fixa nossa, sem nada do usuário — knex.raw resolve. Não salva nada.' },
+  connect:      { m:'POST',   p:id=>`/connections/${e(id)}/connect`, grupo:'Conexões',
+    doc:'Knex(config) + "select 1" para falhar cedo. A instância fica num Map<id, Knex> dentro de um provider singleton e é reusada pelas rotas seguintes.' },
+  disconnect:   { m:'POST',   p:id=>`/connections/${e(id)}/disconnect`, grupo:'Conexões', doc:'knex.destroy() e remove do Map.' },
+  status:       { m:'GET',    p:id=>`/connections/${e(id)}/status`, grupo:'Conexões', doc:'Diz se há pool vivo e quantas conexões estão em uso/livres (knex.client.pool.numUsed/numFree).' },
+
+  databases:    { m:'GET',    p:id=>`/connections/${e(id)}/databases`, grupo:'Catálogo',
+    doc:'pg: pg_database. mysql: SHOW DATABASES. mssql: sys.databases. SQLite não tem — devolve lista vazia.' },
+  schemas:      { m:'GET',    p:id=>`/connections/${e(id)}/schemas`, grupo:'Catálogo',
+    doc:'pg: pg_namespace sem os schemas de sistema. mysql: information_schema.schemata. mssql: sys.schemas. oracle: all_users.' },
+  tables:       { m:'GET',    p:id=>`/connections/${e(id)}/tables`, grupo:'Catálogo',
+    doc:'Tabelas e views com comentário, estimativa de linhas e tamanho. pg: pg_class + pg_namespace (reltuples, pg_total_relation_size). mysql: information_schema.tables. sqlite: sqlite_master. Estimativa é de propósito: contagem exata é cara.' },
+  table:        { m:'GET',    p:(id,t)=>`/connections/${e(id)}/tables/${e(t)}`, grupo:'Catálogo',
+    doc:'Detalhe completo: colunas, índices, FKs que saem e FKs que entram (referencedBy). isPrimary/isUnique NÃO vêm de information_schema.columns — são derivados dos índices. É isso que faz a cardinalidade do ERD sair certa.' },
+  ddl:          { m:'GET',    p:(id,t)=>`/connections/${e(id)}/tables/${e(t)}/ddl`, grupo:'Catálogo',
+    doc:'mysql: SHOW CREATE TABLE. sqlite: sqlite_master.sql. pg/mssql/oracle: remontado a partir do catálogo. O texto resultante é para exibição — o app não oferece caminho para executá-lo de volta.' },
+  rows:         { m:'GET',    p:(id,t)=>`/connections/${e(id)}/tables/${e(t)}/rows`, grupo:'Dados',
+    doc:'Linhas paginadas com FILTRO, BUSCA e ORDENAÇÃO. Parâmetros: columns (lista de colunas a projetar), limit, offset, orderBy, dir, filters (JSON com [{column,op,value,value2}]) e q + qMode. É esta rota que atende tanto a aba Dados quanto o construtor de consultas — não existe rota de SQL livre. Tudo vira query builder: where/whereNot/whereIn/whereBetween/whereNull/whereILike — coluna conferida contra o catálogo, valor sempre como binding. A busca vira um OR agrupado em where(builder => …); sem o agrupamento o OR anula os outros filtros. Devolve total (com recorte), totalSemFiltro e colunasBuscadas. Resposta em MATRIZ (fields + rows), não em objetos: preserva ordem e não perde colunas de nome repetido.' },
+  count:        { m:'GET',    p:(id,t)=>`/connections/${e(id)}/tables/${e(t)}/count`, grupo:'Dados', doc:'count(*) exato, sob demanda.' },
+  tableErd:     { m:'GET',    p:(id,t)=>`/connections/${e(id)}/tables/${e(t)}/erd`, grupo:'Diagrama',
+    doc:'Recorta o grafo de FKs em volta da tabela (BFS nas duas direções, ?depth=1..3) e devolve o erDiagram do Mermaid. É o "ver diagrama desta tabela" do DBeaver.' },
+  erd:          { m:'GET',    p:id=>`/connections/${e(id)}/erd`, grupo:'Diagrama',
+    doc:'Mesmo gerador, schema inteiro. Aceita ?columns=false e ?keysOnly=true para caber na tela do celular.' },
+
+  mutationsPreview: { m:'POST', p:(id,t)=>`/connections/${e(id)}/tables/${e(t)}/mutations/preview`, grupo:'Edição',
+    doc:'Devolve o SQL exato que seria executado, sem executar nada. É a tela de confirmação: você lê o UPDATE/DELETE antes de autorizar. No backend é o mesmo builder do knex chamando .toString() — que interpola os bindings só para exibição; a execução real usa bindings.' },
+  mutations:    { m:'POST',   p:(id,t)=>`/connections/${e(id)}/tables/${e(t)}/mutations`, grupo:'Edição',
+    doc:'Aplica insert/update/delete em UMA transação (knex.transaction): ou vai tudo, ou nada. Exige chave primária para update/delete. Usa trava otimista: o WHERE leva a PK MAIS o valor original das colunas alteradas, e cada operação precisa afetar exatamente 1 linha — 0 significa que outra pessoa mexeu na linha, e aí a transação inteira volta atrás (409 CONFLICT) em vez de sobrescrever em silêncio.' },
+
+};
+
+/* ==========================================================================
+   §3 BANCO FALSO — schema de um centro de distribuição de peças
+   Serve para exercitar 1:N, N:N, FK opcional, duas FKs para a mesma tabela e
+   auto-relacionamento: tudo que costuma quebrar um gerador de ERD.
+   ========================================================================== */
+const col = (name, type, o={}) => ({ name, type, nullable:false, default:null, isPrimary:false,
+  isUnique:false, isAutoIncrement:false, comment:null, ...o });
+const pk = { isPrimary:true, isUnique:true, isAutoIncrement:true };
+const fk = (name, cols, refTable, refCols, onDelete='RESTRICT') =>
+  ({ name, columns:cols, refSchema:'public', refTable, refColumns:refCols, onDelete, onUpdate:'CASCADE' });
+
+const SCHEMA = [
+  { name:'clientes', type:'table', comment:'Cadastro de clientes', rows:1420,
+    columns:[col('id','bigserial',pk), col('nome','varchar(120)'), col('documento','varchar(20)',{isUnique:true}),
+             col('email','varchar(160)',{nullable:true}), col('ativo','boolean',{default:'true'}),
+             col('criado_em','timestamptz',{default:'now()'})],
+    foreignKeys:[],
+    indexes:[{name:'clientes_pkey',columns:['id'],unique:true,primary:true,method:'btree'},
+             {name:'clientes_documento_key',columns:['documento'],unique:true,primary:false,method:'btree'}] },
+
+  { name:'unidades', type:'table', comment:'Unidades de medida', rows:8,
+    columns:[col('id','serial',pk), col('sigla','varchar(6)',{isUnique:true}), col('descricao','varchar(60)')],
+    foreignKeys:[], indexes:[{name:'unidades_pkey',columns:['id'],unique:true,primary:true,method:'btree'}] },
+
+  { name:'produtos', type:'table', comment:'SKUs ativos no CD', rows:9860,
+    columns:[col('id','bigserial',pk), col('sku','varchar(30)',{isUnique:true}), col('descricao','varchar(200)'),
+             col('unidade_id','integer'), col('peso_g','numeric(12,3)',{nullable:true}),
+             col('curva','char(1)',{nullable:true,comment:'ABC'}), col('criado_em','timestamptz',{default:'now()'})],
+    foreignKeys:[fk('produtos_unidade_id_fkey',['unidade_id'],'unidades',['id'])],
+    indexes:[{name:'produtos_pkey',columns:['id'],unique:true,primary:true,method:'btree'},
+             {name:'produtos_sku_key',columns:['sku'],unique:true,primary:false,method:'btree'},
+             {name:'produtos_curva_idx',columns:['curva'],unique:false,primary:false,method:'btree',predicate:'curva IS NOT NULL'}] },
+
+  { name:'enderecos', type:'table', comment:'Posições do armazém', rows:12400,
+    columns:[col('id','bigserial',pk), col('codigo','varchar(24)',{isUnique:true}), col('rua','smallint'),
+             col('coluna','smallint'), col('nivel','smallint'), col('tipo','varchar(12)',{default:"'PICKING'"}),
+             col('bloqueado','boolean',{default:'false'})],
+    foreignKeys:[],
+    indexes:[{name:'enderecos_pkey',columns:['id'],unique:true,primary:true,method:'btree'},
+             {name:'enderecos_codigo_key',columns:['codigo'],unique:true,primary:false,method:'btree'},
+             {name:'enderecos_rua_coluna_nivel_idx',columns:['rua','coluna','nivel'],unique:false,primary:false,method:'btree'}] },
+
+  { name:'estoque', type:'table', comment:'Saldo por produto e posição', rows:33150,
+    columns:[col('id','bigserial',pk), col('produto_id','bigint'), col('endereco_id','bigint'),
+             col('lote','varchar(24)',{nullable:true}), col('saldo','numeric(14,3)',{default:'0'}),
+             col('atualizado_em','timestamptz',{default:'now()'})],
+    foreignKeys:[fk('estoque_produto_id_fkey',['produto_id'],'produtos',['id'],'CASCADE'),
+                 fk('estoque_endereco_id_fkey',['endereco_id'],'enderecos',['id'])],
+    indexes:[{name:'estoque_pkey',columns:['id'],unique:true,primary:true,method:'btree'},
+             {name:'estoque_produto_endereco_lote_key',columns:['produto_id','endereco_id','lote'],unique:true,primary:false,method:'btree'}] },
+
+  { name:'pedidos', type:'table', comment:'Pedidos de saída', rows:5210,
+    columns:[col('id','bigserial',pk), col('numero','varchar(20)',{isUnique:true}), col('cliente_id','bigint'),
+             col('status','varchar(16)',{default:"'ABERTO'"}), col('total','numeric(14,2)',{default:'0'}),
+             col('criado_em','timestamptz',{default:'now()'}), col('faturado_em','timestamptz',{nullable:true})],
+    foreignKeys:[fk('pedidos_cliente_id_fkey',['cliente_id'],'clientes',['id'])],
+    indexes:[{name:'pedidos_pkey',columns:['id'],unique:true,primary:true,method:'btree'},
+             {name:'pedidos_status_criado_em_idx',columns:['status','criado_em'],unique:false,primary:false,method:'btree'}] },
+
+  { name:'pedido_itens', type:'table', comment:'Itens do pedido', rows:24870,
+    columns:[col('id','bigserial',pk), col('pedido_id','bigint'), col('produto_id','bigint'),
+             col('quantidade','numeric(14,3)'), col('preco','numeric(14,2)'), col('separado','boolean',{default:'false'})],
+    foreignKeys:[fk('pedido_itens_pedido_id_fkey',['pedido_id'],'pedidos',['id'],'CASCADE'),
+                 fk('pedido_itens_produto_id_fkey',['produto_id'],'produtos',['id'])],
+    indexes:[{name:'pedido_itens_pkey',columns:['id'],unique:true,primary:true,method:'btree'},
+             {name:'pedido_itens_pedido_id_idx',columns:['pedido_id'],unique:false,primary:false,method:'btree'}] },
+
+  { name:'movimentacoes', type:'table', comment:'Ledger imutável de movimentação', rows:184300,
+    columns:[col('id','bigserial',pk), col('produto_id','bigint'), col('origem_id','bigint',{nullable:true}),
+             col('destino_id','bigint',{nullable:true}), col('pedido_item_id','bigint',{nullable:true}),
+             col('tipo','varchar(16)'), col('quantidade','numeric(14,3)'), col('usuario_id','bigint',{nullable:true}),
+             col('criado_em','timestamptz',{default:'now()'})],
+    foreignKeys:[fk('movimentacoes_produto_id_fkey',['produto_id'],'produtos',['id']),
+                 fk('movimentacoes_origem_id_fkey',['origem_id'],'enderecos',['id']),
+                 fk('movimentacoes_destino_id_fkey',['destino_id'],'enderecos',['id']),
+                 fk('movimentacoes_pedido_item_id_fkey',['pedido_item_id'],'pedido_itens',['id']),
+                 fk('movimentacoes_usuario_id_fkey',['usuario_id'],'usuarios',['id'])],
+    indexes:[{name:'movimentacoes_pkey',columns:['id'],unique:true,primary:true,method:'btree'},
+             {name:'movimentacoes_criado_em_idx',columns:['criado_em'],unique:false,primary:false,method:'brin'}] },
+
+  { name:'usuarios', type:'table', comment:'Operadores', rows:74,
+    columns:[col('id','bigserial',pk), col('login','varchar(40)',{isUnique:true}), col('nome','varchar(120)'),
+             col('supervisor_id','bigint',{nullable:true,comment:'auto-relacionamento'}), col('ativo','boolean',{default:'true'})],
+    foreignKeys:[fk('usuarios_supervisor_id_fkey',['supervisor_id'],'usuarios',['id'],'SET NULL')],
+    indexes:[{name:'usuarios_pkey',columns:['id'],unique:true,primary:true,method:'btree'}] },
+
+  { name:'vw_saldo_curva', type:'view', comment:'Saldo agregado por curva', rows:3,
+    columns:[col('curva','char(1)',{nullable:true}), col('skus','bigint'), col('saldo','numeric')],
+    foreignKeys:[], indexes:[] },
+];
+SCHEMA.forEach(t => t.columns.forEach((c,i) => c.position = i+1));
+const acha = n => SCHEMA.find(t => t.name === n);
+const tabelasReais = () => SCHEMA.filter(t => t.type === 'table');
+
+/* ---- DDL: remontado a partir do catálogo, igual em todos os dialetos ---- */
+function ddlDe(t){
+  if(t.type === 'view')
+    return `CREATE OR REPLACE VIEW public.${t.name} AS\n SELECT p.curva,\n    count(*) AS skus,\n    sum(e.saldo) AS saldo\n   FROM produtos p\n   JOIN estoque e ON e.produto_id = p.id\n  GROUP BY p.curva;`;
+  const linhas = t.columns.map(c =>
+    `  ${c.name} ${c.type}${c.nullable?'':' NOT NULL'}${c.default?` DEFAULT ${c.default}`:''}`);
+  const chaves = t.columns.filter(c=>c.isPrimary).map(c=>c.name);
+  if(chaves.length) linhas.push(`  CONSTRAINT ${t.name}_pkey PRIMARY KEY (${chaves.join(', ')})`);
+  t.foreignKeys.forEach(f => linhas.push(
+    `  CONSTRAINT ${f.name} FOREIGN KEY (${f.columns.join(', ')}) REFERENCES public.${f.refTable} (${f.refColumns.join(', ')}) ON UPDATE ${f.onUpdate} ON DELETE ${f.onDelete}`));
+  const idx = t.indexes.filter(i=>!i.primary).map(i =>
+    `CREATE ${i.unique?'UNIQUE ':''}INDEX ${i.name} ON public.${t.name} USING ${i.method||'btree'} (${i.columns.join(', ')})${i.predicate?` WHERE ${i.predicate}`:''};`);
+  const com = [`COMMENT ON TABLE public.${t.name} IS '${t.comment}';`,
+    ...t.columns.filter(c=>c.comment).map(c=>`COMMENT ON COLUMN public.${t.name}.${c.name} IS '${c.comment}';`)];
+  return [`CREATE TABLE public.${t.name} (`, linhas.join(',\n'), ');', '', ...idx, '', ...com].join('\n').trim();
+}
+
+/* ---- Mermaid: metadados → erDiagram ----------------------------------------
+   Cardinalidade deduzida como o DBeaver faz:
+     lado "um"     = sempre a tabela referenciada (PK/UNIQUE)
+     lado "muitos" = quem tem a FK, salvo se a coluna da FK também for única (1:1)
+     opcional (o)  = coluna da FK aceita NULL;  obrigatório (|) = NOT NULL       */
+const seguro = s => String(s).replace(/[^A-Za-z0-9_]/g,'_').toUpperCase();
+const mtipo  = s => String(s).replace(/\s+/g,'_').replace(/[()]/g,'_').replace(/,/g,'_').replace(/_+$/,'');
+
+function montaMermaid(tabelas, {comColunas=true, soChaves=false}={}){
+  const nomes = new Set(tabelas.map(t=>t.name));
+  const out = ['erDiagram'];
+  for(const t of tabelas){
+    for(const f of t.foreignKeys){
+      if(!nomes.has(f.refTable)) continue;               // não desenha caixa fantasma
+      const cols = f.columns.map(c => t.columns.find(x=>x.name===c)).filter(Boolean);
+      const nulo = cols.some(c=>c.nullable);
+      const umPraUm = cols.length>0 && cols.every(c=>c.isUnique||c.isPrimary);
+      const dir = umPraUm ? (nulo?'o|':'||') : (nulo?'o{':'|{');
+      out.push(`  ${seguro(f.refTable)} ||--${dir} ${seguro(t.name)} : "${f.columns.join(', ')}"`);
+    }
+  }
+  if(comColunas) for(const t of tabelas){
+    const fkc = new Set(t.foreignKeys.flatMap(f=>f.columns));
+    out.push(`  ${seguro(t.name)} {`);
+    t.columns.filter(c=>!soChaves||c.isPrimary||c.isUnique||fkc.has(c.name)).forEach(c=>{
+      const k = c.isPrimary?' PK' : fkc.has(c.name)?' FK' : c.isUnique?' UK' : '';
+      out.push(`    ${mtipo(c.type)} ${c.name}${k}`);
+    });
+    out.push('  }');
+  }
+  return out.join('\n');
+}
+
+/** BFS nas duas direções do grafo de FKs — o recorte "tabela + vizinhas". */
+function vizinhanca(todas, alvo, profundidade=1){
+  const porNome = new Map(todas.map(t=>[t.name,t]));
+  const manter = new Set([alvo]); let borda = [alvo];
+  for(let d=0; d<profundidade; d++){
+    const prox = [];
+    for(const nome of borda){
+      const t = porNome.get(nome); if(!t) continue;
+      t.foreignKeys.forEach(f=>{ if(!manter.has(f.refTable)){ manter.add(f.refTable); prox.push(f.refTable); }});
+      todas.forEach(o => o.foreignKeys.forEach(f=>{
+        if(f.refTable===nome && !manter.has(o.name)){ manter.add(o.name); prox.push(o.name); }
+      }));
+    }
+    borda = prox;
+  }
+  return todas.filter(t=>manter.has(t.name));
+}
+
+/* ---- linhas falsas determinísticas ---- */
+const rnd = seed => { let s=seed; return () => (s = (s*1103515245 + 12345) % 2147483648) / 2147483648; };
+function linhasFalsas(t, limite, deslocamento){
+  const r = rnd(t.name.length*7919 + 13), out=[];
+  const fim = Math.min(t.rows, deslocamento+limite);
+  for(let i=deslocamento;i<fim;i++){
+    out.push(t.columns.map(c=>{
+      if(c.isPrimary) return i+1;
+      // coluna anulável precisa produzir NULL de verdade: é o que exercita o
+      // filtro "é nulo" e a célula em itálico na grade
+      if(c.nullable && r()>0.7) return null;
+      if(c.type.startsWith('bool')) return r()>0.3;
+      if(c.name==='sku') return 'SKU-'+(10000+i);
+      if(c.name==='codigo') return `R${String(i%40+1).padStart(2,'0')}-C${String(i%12+1).padStart(2,'0')}-N${i%5+1}`;
+      if(c.name==='numero') return 'PED'+(100000+i);
+      if(c.name==='status') return ['ABERTO','SEPARANDO','FATURADO','CANCELADO'][i%4];
+      if(c.name==='tipo') return ['ENTRADA','TRANSFERENCIA','PICKING','AJUSTE'][i%4];
+      if(c.name==='documento') return String(10000000000+i*7);
+      if(c.name==='login') return 'op'+String(i+1).padStart(3,'0');
+      if(c.name==='nome'||c.name==='descricao') return `${t.name.slice(0,3).toUpperCase()} exemplo ${i+1}`;
+      if(/timestamp|date/.test(c.type)) return new Date(Date.UTC(2026,5,1+i%28,8+i%12,30)).toISOString().slice(0,19).replace('T',' ');
+      if(/numeric|decimal/.test(c.type)) return Number((r()*500).toFixed(2));
+      if(/int|serial/.test(c.type)) return c.nullable && r()>0.8 ? null : Math.floor(r()*900)+1;
+      if(c.nullable && r()>0.75) return null;
+      return `${c.name}_${i+1}`;
+    }));
+  }
+  return out;
+}
+
+/* ---- edição da grade: validação e SQL de exibição ----------------------------
+   O protótipo não persiste (o universo é gerado por semente), mas valida tudo o
+   que o backend valida — PK obrigatória, coluna existente, conexão somente
+   leitura, trava otimista — para a tela aprender o comportamento certo.        */
+const EH_TEXTO = /char|text|uuid|json|enum|clob/i;
+
+const pkDe = t => ({
+  pk: t.columns.filter(c=>c.isPrimary).map(c=>c.name),
+  auto: t.columns.filter(c=>c.isAutoIncrement).map(c=>c.name),
+});
+const literal = v => v===null||v===undefined ? 'NULL'
+  : (typeof v==='number'||typeof v==='boolean') ? String(v)
+  : `'${String(v).replace(/'/g,"''")}'`;
+
+function sqlDaMudanca(tabela, c, otimista){
+  if(c.kind==='insert'){
+    const cols = Object.keys(c.values||{});
+    return `insert into "${tabela}" (${cols.map(x=>`"${x}"`).join(', ')}) values (${cols.map(x=>literal(c.values[x])).join(', ')})`;
+  }
+  const onde = Object.entries(c.key||{}).map(([k,v])=>`"${k}" = ${literal(v)}`);
+  /* Trava otimista só no UPDATE, e só nas colunas alteradas. Comparar a linha
+     inteira no DELETE parece mais seguro, mas float e timestamp voltam
+     formatados de outro jeito e viram conflito falso; a checagem de "afetou
+     exatamente 1" já cobre a linha ter sumido. */
+  if(otimista && c.kind==='update'){
+    Object.keys(c.set||{}).forEach(k=>{
+      if(k in (c.key||{})) return;
+      const v=(c.was||{})[k];
+      onde.push(v==null ? `"${k}" is null` : `"${k}" = ${literal(v)}`);
+    });
+  }
+  if(c.kind==='delete') return `delete from "${tabela}" where ${onde.join(' and ')}`;
+  return `update "${tabela}" set ${Object.entries(c.set||{}).map(([k,v])=>`"${k}" = ${literal(v)}`).join(', ')} where ${onde.join(' and ')}`;
+}
+
+function validaMudancas(t, conn, changes){
+  if(conn.readOnly) erro(403,'Conexão marcada como somente leitura. Nada foi enviado ao banco.',{code:'READ_ONLY'});
+  if(!Array.isArray(changes) || !changes.length) erro(400,'Nenhuma alteração enviada.',{code:'BAD_REQUEST'});
+  const { pk, auto } = pkDe(t);
+  const nomes = t.columns.map(c=>c.name);
+  for(const c of changes){
+    if(c.kind!=='insert' && !pk.length)
+      erro(400, `A tabela ${t.name} não tem chave primária. Sem ela não dá para identificar a linha com segurança.`, {code:'NO_PK'});
+    for(const col of [...Object.keys(c.set||{}), ...Object.keys(c.values||{}), ...Object.keys(c.key||{})])
+      if(!nomes.includes(col)) erro(400, `Coluna "${col}" não existe em ${t.name}.`, {code:'42703'});
+    if(c.kind==='insert'){
+      const falta = pk.filter(x=>!auto.includes(x) && (c.values?.[x]==null || c.values?.[x]===''));
+      if(falta.length) erro(400, `Preencha a chave primária: ${falta.join(', ')}.`, {code:'NULL_PK'});
+    }
+  }
+  return { pk, auto };
+}
+
+function aplicaMudancas(t, conn, body){
+  validaMudancas(t, conn, body.changes);
+  const results = body.changes.map((c,i)=>{
+    // conflito simulado: valor original contendo "CONFLITO" derruba a transação inteira
+    if(c.kind!=='insert' && Object.values(c.was||{}).some(v=>String(v).includes('CONFLITO')))
+      erro(409,'A linha foi alterada por outra pessoa desde que você a carregou. Nada foi gravado — recarregue e refaça a edição.',{code:'CONFLICT',index:i,affected:0});
+    return c.kind==='insert' ? {kind:'insert',affected:1,returned:{id:t.rows+1}} : {kind:c.kind,affected:1};
+  });
+  return { ok:true, applied:results.length, results, durationMs: 11 + Math.floor(Math.random()*30) };
+}
+
+/* ---- conexões salvas (falsas) ---- */
+let CONEXOES = [
+  { id:'c1', name:'Velox — HML', driver:'pg', tag:'laranja', readOnly:false,
+    connection:{host:'hml-db.interno',port:5432,user:'velox',database:'velox_hml'}, pool:{min:0,max:5} },
+  { id:'c2', name:'Velox — PROD (leitura)', driver:'pg', tag:'vermelho', readOnly:true,
+    connection:{host:'prod-db.interno',port:5432,user:'leitura',database:'velox'}, pool:{min:0,max:3} },
+  { id:'c3', name:'Local SQLite', driver:'sqlite3', tag:'cinza', readOnly:false,
+    connection:{filename:'./scratch.sqlite'}, useNullAsDefault:true },
+];
+
+/* ==========================================================================
+   §4 CAMADA DE API FALSA
+   --------------------------------------------------------------------------
+   Assinatura idêntica à do app real. No React Native isto vira:
+
+       const { data } = await http.get(R.tables(id), { params });
+
+   Aqui, `api()` casa o caminho, espera um tempinho e devolve o mesmo JSON.
+   Erros são lançados no formato { status, body:{ message, code, position, hint } },
+   que é exatamente o que o ExceptionFilter do NestJS vai emitir.
+   ========================================================================== */
+function api(metodo, caminho, params={}, body={}){
+  const t0 = performance.now();
+  return new Promise((ok, falha) => setTimeout(() => {
+    let resposta, status = 200;
+    try {
+      resposta = roteia(metodo.toUpperCase(), caminho.split('?')[0], params, body);
+    } catch (err) {
+      status = err.status || 500;
+      registra(metodo, caminho, params, body, status, err.body, Math.round(performance.now()-t0));
+      return falha(err);
+    }
+    registra(metodo, caminho, params, body, status, resposta, Math.round(performance.now()-t0));
+    ok(resposta);
+  }, 90 + Math.random()*180));
+}
+const erro = (status, message, extra={}) => { throw { status, body:{ message, ...extra } }; };
+const bool = (v, d=false) => v===undefined ? d : (v===true || v==='true');
+
+function roteia(m, caminho, params, body){
+  const p = caminho.split('/').filter(Boolean);
+
+  if(caminho === '/drivers' && m === 'GET')
+    return { drivers: DIALETOS.map(d => ({ id:d.id, label:d.label, npm:d.npm, installed:d.id!=='oracledb' })) };
+
+  if(caminho === '/connections' && m === 'GET') return { connections: CONEXOES };
+  if(caminho === '/connections' && m === 'POST'){
+    const nova = { ...body, id:'c'+(Date.now().toString(36)) };
+    CONEXOES.push(nova); return { connection: nova };
+  }
+  if(caminho === '/connections/test' && m === 'POST'){
+    const alvo = body?.connection?.host ?? body?.connection?.filename ?? '';
+    if(!alvo) erro(400, 'Informe o servidor (ou o arquivo, no SQLite).', { code:'EINVAL' });
+    if(String(alvo).includes('erro')) erro(400, 'getaddrinfo ENOTFOUND '+alvo, { code:'ENOTFOUND' });
+    return { ok:true, serverVersion:'PostgreSQL 15.6 on x86_64-pc-linux-gnu', latencyMs:42 };
+  }
+
+  if(p[0] !== 'connections' || !p[1]) erro(404, `rota não implementada no protótipo: ${m} ${caminho}`);
+  const id = p[1], resto = p.slice(2).join('/');
+  const conn = CONEXOES.find(c => c.id === id);
+  if(!conn) erro(404, `conexão ${id} não encontrada`);
+
+  if(!resto && m === 'GET')    return { connection: conn };
+  if(!resto && m === 'PATCH'){ Object.assign(conn, body); return { connection: conn }; }
+  if(!resto && m === 'DELETE'){ CONEXOES = CONEXOES.filter(c=>c.id!==id); return { ok:true }; }
+
+  if(resto === 'connect')    return { ok:true, serverVersion:'PostgreSQL 15.6', database: conn.connection.database ?? conn.connection.filename };
+  if(resto === 'disconnect') return { ok:true };
+  if(resto === 'status')     return { connected:true, pool:{ used:1, free:4 } };
+  if(resto === 'databases')  return { databases:['velox','velox_hml','postgres'] };
+  if(resto === 'schemas')    return { schemas:['public','auditoria','integracao'] };
+
+  if(resto === 'tables'){
+    const q = String(params.search ?? '').toLowerCase();
+    return { tables: SCHEMA.filter(t=>!q||t.name.includes(q)).map(t=>({
+      schema:'public', name:t.name, type:t.type, comment:t.comment, rows:t.rows, sizeBytes:t.rows*180 })) };
+  }
+
+  if(resto === 'erd'){
+    const tt = tabelasReais();
+    return { mermaid: montaMermaid(tt, { comColunas: bool(params.columns,true), soChaves: bool(params.keysOnly) }),
+             tables: tt.map(t=>t.name), relations: tt.reduce((a,t)=>a+t.foreignKeys.length,0) };
+  }
+
+  if(p[2] === 'tables' && p[3]){
+    const t = acha(decodeURIComponent(p[3]));
+    if(!t) erro(404, `tabela ${p[3]} não encontrada`);
+    const sub = p.slice(4).join('/');
+
+    if(!sub) return {
+      table:{ schema:'public', name:t.name, type:t.type, comment:t.comment, rows:t.rows, sizeBytes:t.rows*180 },
+      columns:t.columns, indexes:t.indexes, foreignKeys:t.foreignKeys,
+      referencedBy: SCHEMA.flatMap(o => o.foreignKeys.filter(f=>f.refTable===t.name)
+        .map(f => ({ ...f, name:f.name, table:o.name }))),
+      checks:[] };
+
+    if(sub === 'ddl')   return { ddl: ddlDe(t), dialect: conn.driver };
+    if(sub === 'count') return { count: t.rows, exact:true };
+    if(sub === 'rows'){
+      const limite = Number(params.limit ?? 50), desloc = Number(params.offset ?? 0);
+      const nomes = t.columns.map(c=>c.name);
+
+      /* Projeção: `columns` é a lista que o construtor de consultas escolheu.
+         Vira .select([...]) no builder — nunca uma lista concatenada em texto. */
+      const pedidas = String(params.columns ?? '').split(',').map(x=>x.trim()).filter(Boolean);
+      pedidas.forEach(c => { if(!nomes.includes(c))
+        erro(400, `Coluna "${c}" não existe em ${t.name}.`, {code:'42703'}); });
+      const projetadas = pedidas.length ? t.columns.filter(c=>pedidas.includes(c.name)) : t.columns;
+
+      let filtros = [];
+      if(params.filters){
+        try { filtros = JSON.parse(params.filters); }
+        catch { erro(400,'Parâmetro `filters` não é um JSON válido.',{code:'BAD_FILTER'}); }
+      }
+      // mesma validação do backend: nome de coluna nunca é aceito de olhos fechados
+      filtros.forEach(f => { if(!nomes.includes(f.column))
+        erro(400, `Coluna "${f.column}" não existe em ${t.name}.`, {code:'42703'}); });
+      if(params.orderBy && !nomes.includes(params.orderBy))
+        erro(400, `Não dá para ordenar por "${params.orderBy}": coluna inexistente.`, {code:'42703'});
+
+      // WHERE → ORDER BY → LIMIT/OFFSET, na mesma ordem do banco: filtrar depois
+      // de paginar daria contagem errada e ensinaria o comportamento errado ao app
+      const universo = Math.min(t.rows, 2000);
+      let linhas = linhasFalsas(t, universo, 0);
+      if(filtros.length) linhas = linhas.filter(l => filtros.every(f => passa(l[nomes.indexOf(f.column)], f)));
+
+      /* Busca rápida: um termo, várias colunas, OR entre elas e AND com o resto.
+         `tudo` faz cast de qualquer coluna para texto — fragmento fixo nosso,
+         `orWhereRaw('cast(?? as text) ilike ?', [coluna, padrao])`, com o nome vindo
+         do catálogo e o termo do usuário como binding. É varredura: nenhum índice
+         entra. `texto` limita às colunas textuais e continua indexável. */
+      const termo = String(params.q ?? '').trim().toLowerCase();
+      let colunasBuscadas = 0;
+      if(termo){
+        const alvo = params.qMode === 'texto'
+          ? t.columns.filter(c => EH_TEXTO.test(c.type))
+          : t.columns;
+        if(!alvo.length) erro(400, 'Nenhuma coluna de texto nesta tabela. Use a busca em todas as colunas.', {code:'NO_TEXT_COLUMN'});
+        colunasBuscadas = alvo.length;
+        const idx = alvo.map(c => nomes.indexOf(c.name));
+        linhas = linhas.filter(l => idx.some(i => l[i]!==null && String(l[i]).toLowerCase().includes(termo)));
+      }
+
+      const total = (filtros.length || termo) ? linhas.length : t.rows;
+      const idxProj = projetadas.map(c => nomes.indexOf(c.name));
+      const proj = l => idxProj.map(i => l[i]);
+      const pkNaProjecao = pkDe(t).pk.every(c => projetadas.some(x=>x.name===c));
+
+      return { fields: projetadas.map(c=>({name:c.name,type:c.type})),
+               rows: linhas.slice(desloc, desloc+limite).map(proj),
+               rowCount: Math.min(limite, Math.max(0,total-desloc)),
+               total, totalSemFiltro: t.rows, offset:desloc, limit:limite,
+               colunasBuscadas: termo ? colunasBuscadas : undefined,
+               whereAplicado: params.where ?? null,
+               // o que a tela precisa para decidir se libera a edição
+               primaryKey: pkDe(t).pk, autoIncrement: pkDe(t).auto,
+               editavel: t.type==='table' && pkDe(t).pk.length>0 && pkNaProjecao && !conn.readOnly,
+               motivoBloqueio: t.type!=='table' ? 'Views não são editáveis.'
+                 : !pkDe(t).pk.length ? 'Tabela sem chave primária: não dá para identificar a linha com segurança.'
+                 : !pkNaProjecao ? `Inclua a chave primária (${pkDe(t).pk.join(', ')}) nas colunas para poder editar.`
+                 : conn.readOnly ? 'Conexão marcada como somente leitura.' : undefined };
+    }
+    if(sub === 'mutations/preview'){
+      const { pk } = validaMudancas(t, conn, body.changes);
+      return { statements: body.changes.map(c=>sqlDaMudanca(t.name, c, body.optimistic !== false)), primaryKey: pk };
+    }
+    if(sub === 'mutations') return aplicaMudancas(t, conn, body);
+
+    if(sub === 'erd'){
+      const sel = vizinhanca(tabelasReais(), t.name, Number(params.depth ?? 1));
+      return { mermaid: montaMermaid(sel, { comColunas:bool(params.columns,true), soChaves:bool(params.keysOnly) }),
+               tables: sel.map(x=>x.name), relations: sel.reduce((a,x)=>a+x.foreignKeys.length,0) };
+    }
+  }
+  erro(404, `rota não implementada no protótipo: ${m} ${caminho}`);
+}
+
+/* ==========================================================================
+   DIALETOS — catálogo que gera o formulário de conexão.
+   Cada campo declara o caminho EXATO dentro do knexfile. Campo novo = uma
+   linha nova aqui; a tela não muda.
+   ========================================================================== */
+const f = (key,label,type,extra={}) => ({ key, label, type, secao:'geral', ...extra });
+const tcp = porta => [
+  f('connection.host','Servidor','text',{ph:'localhost'}),
+  f('connection.port','Porta','number',{ph:String(porta),def:porta}),
+  f('connection.user','Usuário','text'),
+  f('connection.password','Senha','password'),
+  f('connection.database','Banco','text'),
+];
+const poolCampos = [
+  f('pool.min','Pool mínimo','number',{secao:'pool',def:0}),
+  f('pool.max','Pool máximo','number',{secao:'pool',def:5}),
+  f('pool.acquireTimeoutMillis','Obter conexão (ms)','number',{secao:'pool',def:60000}),
+  f('pool.createTimeoutMillis','Criar conexão (ms)','number',{secao:'pool',def:30000}),
+  f('pool.idleTimeoutMillis','Ocioso até destruir (ms)','number',{secao:'pool',def:30000}),
+  f('pool.reapIntervalMillis','Varredura de ociosas (ms)','number',{secao:'pool',def:1000}),
+  f('pool.createRetryIntervalMillis','Intervalo de retry (ms)','number',{secao:'pool',def:200}),
+  f('pool.propagateCreateError','Propagar erro de criação','switch',{secao:'pool',def:false}),
+];
+const sslCampos = [
+  f('connection.ssl.enabled','Usar SSL/TLS','switch',{secao:'ssl',def:false}),
+  f('connection.ssl.rejectUnauthorized','Validar certificado','switch',{secao:'ssl',def:true}),
+  f('connection.ssl.ca','CA (PEM)','textarea',{secao:'ssl'}),
+  f('connection.ssl.cert','Certificado do cliente','textarea',{secao:'ssl'}),
+  f('connection.ssl.key','Chave do cliente','textarea',{secao:'ssl'}),
+  f('connection.ssl.servername','SNI servername','text',{secao:'ssl'}),
+];
+const comuns = [
+  f('acquireConnectionTimeout','Timeout do knex (ms)','number',{secao:'avancado',def:60000}),
+  f('connection.connectionString','Connection string','text',{secao:'avancado',ph:'postgres://user:senha@host:5432/db',
+    help:'Se preenchida, ignora servidor/porta/usuário.'}),
+  f('debug','Log de SQL (debug)','switch',{secao:'avancado',def:false}),
+  f('asyncStackTraces','Stack traces assíncronos','switch',{secao:'avancado',def:false}),
+];
+const camposPg = () => [ ...tcp(5432),
+  f('searchPath','search_path','text',{secao:'avancado',ph:'public, integracao'}),
+  f('connection.application_name','application_name','text',{secao:'avancado',def:'dbmobile'}),
+  f('connection.statement_timeout','statement_timeout (ms)','number',{secao:'avancado'}),
+  f('connection.query_timeout','query_timeout (ms)','number',{secao:'avancado'}),
+  f('connection.keepAlive','TCP keep-alive','switch',{secao:'avancado',def:true}),
+  f('version','Versão forçada do servidor','text',{secao:'avancado',ph:'13.2',help:'Necessário atrás de pgbouncer.'}),
+  ...sslCampos, ...comuns, ...poolCampos ];
+const camposMysql = () => [ ...tcp(3306),
+  f('connection.socketPath','Socket unix','text',{secao:'avancado',ph:'/var/run/mysqld/mysqld.sock'}),
+  f('connection.charset','Charset','select',{secao:'avancado',def:'UTF8MB4_GENERAL_CI',
+    options:['UTF8MB4_GENERAL_CI','UTF8MB4_UNICODE_CI','UTF8_GENERAL_CI','LATIN1_SWEDISH_CI']}),
+  f('connection.timezone','Timezone','text',{secao:'avancado',ph:'local | Z | -03:00'}),
+  f('connection.flags','Flags do driver','text',{secao:'avancado',ph:'-FOUND_ROWS,+MULTI_STATEMENTS'}),
+  f('connection.multipleStatements','Múltiplos statements','switch',{secao:'avancado',def:false}),
+  f('connection.dateStrings','Datas como texto','switch',{secao:'avancado',def:false}),
+  f('connection.supportBigNumbers','Suportar BIGINT','switch',{secao:'avancado',def:true}),
+  f('connection.bigNumberStrings','BIGINT como texto','switch',{secao:'avancado',def:true}),
+  ...sslCampos, ...comuns, ...poolCampos ];
+const camposSqlite = () => [
+  f('connection.filename','Arquivo do banco','text',{ph:'./dados.sqlite',help:'Caminho no servidor. :memory: também vale.'}),
+  f('useNullAsDefault','useNullAsDefault','switch',{def:true,help:'Obrigatório no SQLite.'}),
+  f('connection.flags','Flags de abertura','text',{secao:'avancado',ph:'OPEN_READONLY'}),
+  f('debug','Log de SQL (debug)','switch',{secao:'avancado',def:false}),
+  f('pool.min','Pool mínimo','number',{secao:'pool',def:0}),
+  f('pool.max','Pool máximo','number',{secao:'pool',def:1,help:'SQLite não gosta de escrita concorrente.'}),
+];
+const camposOracle = () => [
+  f('connection.user','Usuário','text'), f('connection.password','Senha','password'),
+  f('connection.connectString','Connect string','text',{ph:'host:1521/ORCLPDB1',help:'EZConnect ou alias do tnsnames.'}),
+  f('connection.externalAuth','Autenticação externa','switch',{secao:'avancado',def:false}),
+  f('connection.stmtCacheSize','Cache de statements','number',{secao:'avancado',def:30}),
+  f('fetchAsString','CLOB/NUMBER como texto','switch',{secao:'avancado',def:true}),
+  ...comuns, ...poolCampos ];
+const camposMssql = () => [ ...tcp(1433),
+  f('connection.options.encrypt','Criptografar conexão','switch',{secao:'ssl',def:true}),
+  f('connection.options.trustServerCertificate','Confiar no certificado','switch',{secao:'ssl',def:false}),
+  f('connection.options.instanceName','Instância nomeada','text',{secao:'avancado',ph:'SQLEXPRESS'}),
+  f('connection.domain','Domínio (NTLM)','text',{secao:'avancado'}),
+  f('connection.options.enableArithAbort','enableArithAbort','switch',{secao:'avancado',def:true}),
+  f('connection.options.requestTimeout','Timeout de request (ms)','number',{secao:'avancado',def:15000}),
+  f('connection.options.appName','Nome da aplicação','text',{secao:'avancado',def:'dbmobile'}),
+  f('connection.options.readOnlyIntent','Intenção somente leitura','switch',{secao:'avancado',def:false}),
+  ...comuns, ...poolCampos ];
+
+const DIALETOS = [
+  { id:'pg',             label:'PostgreSQL',        npm:'pg',             cor:'var(--blue)',   campos:camposPg() },
+  { id:'pgnative',       label:'PostgreSQL nativo', npm:'pg-native',      cor:'var(--blue)',   campos:camposPg() },
+  { id:'cockroachdb',    label:'CockroachDB',       npm:'pg',             cor:'var(--teal)',   campos:camposPg() },
+  { id:'redshift',       label:'Redshift',          npm:'pg',             cor:'var(--indigo)', campos:camposPg() },
+  { id:'mysql2',         label:'MySQL / MariaDB',   npm:'mysql2',         cor:'var(--orange)', campos:camposMysql() },
+  { id:'mysql',          label:'MySQL (legado)',    npm:'mysql',          cor:'var(--orange)', campos:camposMysql() },
+  { id:'sqlite3',        label:'SQLite',            npm:'sqlite3',        cor:'var(--gray)',   campos:camposSqlite() },
+  { id:'better-sqlite3', label:'better-sqlite3',    npm:'better-sqlite3', cor:'var(--gray)',   campos:camposSqlite() },
+  { id:'oracledb',       label:'Oracle',            npm:'oracledb',       cor:'var(--red)',    campos:camposOracle() },
+  { id:'mssql',          label:'SQL Server',        npm:'tedious',        cor:'var(--purple)', campos:camposMssql() },
+];
+const dialeto = id => DIALETOS.find(d=>d.id===id) || DIALETOS[0];
+const CORES = { cinza:'var(--gray)', azul:'var(--blue)', verde:'var(--green)', laranja:'var(--orange)',
+                vermelho:'var(--red)', roxo:'var(--purple)', rosa:'var(--pink)', indigo:'var(--indigo)' };
+
+const pega = (o,c) => c.split('.').reduce((a,k)=>a==null?undefined:a[k], o);
+const poe = (o,c,v) => { const ks=c.split('.'); let cur=o;
+  ks.forEach((k,i)=>{ if(i===ks.length-1) cur[k]=v; else cur = cur[k] = cur[k] ?? {}; }); return o; };
+
+/* ==========================================================================
+   §5 Realce de SQL — só para LEITURA (DDL e prévia da consulta).
+   Não existe editor de SQL livre neste app: nada é digitado como SQL e nada é
+   executado a partir de texto. O tokenizador serve para deixar legível o que o
+   servidor vai montar com o query builder e o DDL remontado do catálogo.
+   ========================================================================== */
+const PALAVRAS = new Set(`select from where group by having order limit offset join inner left right full outer cross on
+as and or not in exists between like ilike is null distinct union all except intersect insert into values update set
+delete create table view index unique drop alter add column constraint primary foreign key references default
+with recursive case when then else end asc desc returning conflict do nothing truncate begin commit rollback
+explain analyze using lateral over partition window filter cast fetch next rows only`.split(/\s+/));
+const TIPOS = new Set(`int integer bigint smallint serial bigserial numeric decimal real double precision boolean bool
+varchar char text uuid json jsonb date time timestamp timestamptz interval bytea money array`.split(/\s+/));
+const FUNCOES = new Set(`count sum avg min max coalesce nullif now current_date current_timestamp lower upper trim
+substring length round floor ceil abs concat string_agg array_agg json_agg to_char to_date extract date_trunc
+row_number rank dense_rank lag lead greatest least`.split(/\s+/));
+
+function tokeniza(sql){
+  const out=[]; let i=0;
+  const add=(t,k)=>{ if(t) out.push({t,k}); };
+  while(i<sql.length){
+    const c = sql[i];
+    if(c==='-'&&sql[i+1]==='-'){ const j=sql.indexOf('\n',i); const fim=j<0?sql.length:j; add(sql.slice(i,fim),'comment'); i=fim; continue; }
+    if(c==='/'&&sql[i+1]==='*'){ const j=sql.indexOf('*/',i+2); const fim=j<0?sql.length:j+2; add(sql.slice(i,fim),'comment'); i=fim; continue; }
+    if(c==="'"){ let j=i+1;
+      while(j<sql.length){ if(sql[j]==="'"&&sql[j+1]==="'") j+=2; else if(sql[j]==="'"){ j++; break; } else j++; }
+      add(sql.slice(i,j),'string'); i=j; continue; }
+    if(c==='"'||c==='`'){ const j=sql.indexOf(c,i+1); const fim=j<0?sql.length:j+1; add(sql.slice(i,fim),'ident'); i=fim; continue; }
+    if(c==='?'||(c==='$'&&/\d/.test(sql[i+1]||''))||(c===':'&&/[a-zA-Z_]/.test(sql[i+1]||''))){
+      const m = sql.slice(i).match(/^(\?|\$\d+|:[a-zA-Z_]\w*)/); add(m[0],'param'); i+=m[0].length; continue; }
+    if(/\d/.test(c)){ const m=sql.slice(i).match(/^\d+(\.\d+)?([eE][+-]?\d+)?/); add(m[0],'number'); i+=m[0].length; continue; }
+    if(/[A-Za-z_]/.test(c)){
+      const m = sql.slice(i).match(/^[A-Za-z_]\w*/), w = m[0].toLowerCase();
+      const abre = sql.slice(i+m[0].length).match(/^\s*\(/);
+      add(m[0], PALAVRAS.has(w)?'keyword' : TIPOS.has(w)?'type' : (FUNCOES.has(w)||abre)?'func' : 'ident');
+      i += m[0].length; continue; }
+    const m = sql.slice(i).match(/^[^A-Za-z_0-9'"`?$:\-\/]+/);
+    if(m){ add(m[0],'punct'); i+=m[0].length; } else { add(c,'punct'); i++; }
+  }
+  return out;
+}
+const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const realce = sql => tokeniza(sql).map(x=>`<span class="tok-${x.k}">${esc(x.t)}</span>`).join('');
+
+/* ==========================================================================
+   §5b FILTROS DA GRADE — o painel de filtro do DBeaver
+   --------------------------------------------------------------------------
+   Só filtros estruturados {coluna, operador, valor}: o backend traduz cada um
+   com o query builder do knex, então o valor vira binding e o nome da coluna é
+   conferido contra o catálogo. Nada que o usuário digita vira fragmento de SQL —
+   essa é a fronteira do projeto. O SQL que o backend escreve (catálogo, cast da
+   busca) pode usar raw à vontade; o que vem do teclado, nunca.
+   Na URL: ?filters=<json>&q=<termo>&qMode=texto|tudo&orderBy=<col>&dir=asc|desc
+   ========================================================================== */
+const OPERADORES = [
+  { op:'eq',         rot:'igual a',      sql:'=',           args:1 },
+  { op:'neq',        rot:'diferente de', sql:'<>',          args:1 },
+  { op:'gt',         rot:'maior que',    sql:'>',           args:1 },
+  { op:'gte',        rot:'maior ou =',   sql:'>=',          args:1 },
+  { op:'lt',         rot:'menor que',    sql:'<',           args:1 },
+  { op:'lte',        rot:'menor ou =',   sql:'<=',          args:1 },
+  { op:'contains',   rot:'contém',       sql:'ILIKE',       args:1, texto:true },
+  { op:'startsWith', rot:'começa com',   sql:'ILIKE',       args:1, texto:true },
+  { op:'endsWith',   rot:'termina com',  sql:'ILIKE',       args:1, texto:true },
+  { op:'in',         rot:'está em',      sql:'IN',          args:1 },
+  { op:'between',    rot:'entre',        sql:'BETWEEN',     args:2 },
+  { op:'isNull',     rot:'é nulo',       sql:'IS NULL',     args:0 },
+  { op:'notNull',    rot:'não é nulo',   sql:'IS NOT NULL', args:0 },
+];
+const meta = op => OPERADORES.find(o=>o.op===op) || OPERADORES[0];
+const opsPara = tipo => OPERADORES.filter(o => !o.texto || /char|text|uuid|json|enum/i.test(tipo));
+const completo = f => { const n = meta(f.op).args;
+  return n===0 || (n===1 ? (f.value??'')!=='' : (f.value??'')!=='' && (f.value2??'')!==''); };
+const aspa = v => /^-?\d+(\.\d+)?$/.test(v) ? v : `'${String(v).replace(/'/g,"''")}'`;
+
+const previaBusca = (q, modo) => !q || !q.trim() ? ''
+  : `${modo==='texto' ? 'colunas de texto' : 'qualquer coluna'} contém '${q.trim()}'`;
+
+function previaWhere(filtros, q, modo){
+  const partes = filtros.filter(completo).map(f => {
+    switch(f.op){
+      case 'isNull': case 'notNull': return `${f.column} ${meta(f.op).sql}`;
+      case 'contains':   return `${f.column} ILIKE '%${f.value}%'`;
+      case 'startsWith': return `${f.column} ILIKE '${f.value}%'`;
+      case 'endsWith':   return `${f.column} ILIKE '%${f.value}'`;
+      case 'in':         return `${f.column} IN (${String(f.value).split(',').map(s=>aspa(s.trim())).join(', ')})`;
+      case 'between':    return `${f.column} BETWEEN ${aspa(f.value)} AND ${aspa(f.value2)}`;
+      default:           return `${f.column} ${meta(f.op).sql} ${aspa(f.value)}`;
+    }
+  });
+  if(q && q.trim()) partes.push(`(${previaBusca(q, modo)})`);
+  return partes.join(' AND ');
+}
+const rotuloChip = f => {
+  const m = meta(f.op);
+  if(m.args===0) return `${f.column} ${m.rot}`;
+  if(m.args===2) return `${f.column} ${f.value}–${f.value2}`;
+  return `${f.column} ${m.sql==='ILIKE'?m.rot:m.sql} ${f.value}`;
+};
+
+/** Motor local: no backend real quem faz isso é o knex (where/whereIn/whereBetween/whereNull). */
+function passa(valor, f){
+  if(f.op==='isNull')  return valor===null;
+  if(f.op==='notNull') return valor!==null;
+  if(valor===null) return false;
+  const txt=String(valor).toLowerCase(), a=String(f.value??'').toLowerCase();
+  const num = !isNaN(Number(valor)) && !isNaN(Number(f.value));
+  const n=Number(valor), na=Number(f.value);
+  switch(f.op){
+    case 'eq':  return num ? n===na : txt===a;
+    case 'neq': return num ? n!==na : txt!==a;
+    case 'gt':  return num ? n>na : txt>a;
+    case 'gte': return num ? n>=na : txt>=a;
+    case 'lt':  return num ? n<na : txt<a;
+    case 'lte': return num ? n<=na : txt<=a;
+    case 'contains':   return txt.includes(a);
+    case 'startsWith': return txt.startsWith(a);
+    case 'endsWith':   return txt.endsWith(a);
+    case 'in':         return String(f.value).split(',').map(s=>s.trim().toLowerCase()).includes(txt);
+    case 'between': {
+      const nb=Number(f.value2);
+      return !isNaN(n)&&!isNaN(na)&&!isNaN(nb) ? n>=na&&n<=nb
+        : txt>=a && txt<=String(f.value2??'').toLowerCase();
+    }
+    default: return true;
+  }
+}
+
+/* ==========================================================================
+   §5c BUFFER DE EDIÇÃO
+   --------------------------------------------------------------------------
+   Nada vai ao banco enquanto se edita. Alterar célula, marcar linha para
+   exclusão e duplicar registro só mexem neste buffer; Salvar manda tudo de uma
+   vez, dentro de uma transação.
+
+   Duas travas que valem entender:
+   1. SEM CHAVE PRIMÁRIA, SEM EDIÇÃO — sem PK não dá para apontar a linha sem
+      ambiguidade. Um WHERE com todas as colunas parece resolver, mas em tabela
+      com linhas repetidas atinge mais de uma, e aí o estrago já aconteceu.
+   2. TRAVA OTIMISTA — o UPDATE leva no WHERE, além da PK, o valor ORIGINAL das
+      colunas mexidas. Se alguém alterou a linha nesse meio-tempo, zero linhas
+      são afetadas e a transação inteira volta atrás.
+   ========================================================================== */
+const bufVazio = () => ({ updates:{}, deletes:{}, inserts:[] });
+const idxCol = (campos, nome) => campos.findIndex(f=>f.name===nome);
+const chaveLinha = (linha, campos, pk) => pk.map(c=>String(linha[idxCol(campos,c)])).join('\u0001');
+const objChave   = (linha, campos, pk) => Object.fromEntries(pk.map(c=>[c, linha[idxCol(campos,c)]]));
+const linhaObj   = (linha, campos) => Object.fromEntries(campos.map((f,i)=>[f.name, linha[i]]));
+const totalPend  = b => Object.keys(b.updates).length + Object.keys(b.deletes).length + b.inserts.length;
+
+function resumoPend(b){
+  const p=[], u=Object.keys(b.updates).length, d=Object.keys(b.deletes).length, i=b.inserts.length;
+  const cel = Object.values(b.updates).reduce((a,x)=>a+Object.keys(x.set).length,0);
+  if(u) p.push(`${u} linha(s) alterada(s) · ${cel} célula(s)`);
+  if(i) p.push(`${i} inserção(ões)`);
+  if(d) p.push(`${d} exclusão(ões)`);
+  return p.join(' · ');
+}
+
+/** insert → update → delete: evita colidir com chave única recém-liberada. */
+const paraChanges = b => [
+  ...b.inserts.map(i=>({kind:'insert', values:i.values})),
+  ...Object.values(b.updates).map(u=>({kind:'update', key:u.key, set:u.set, was:u.was})),
+  ...Object.values(b.deletes).map(d=>({kind:'delete', key:d.key, was:d.was})),
+];
+
+/** Guarda o valor original só na primeira edição; voltar ao original apaga a pendência. */
+function editaCelula(b, chave, key, coluna, novo, original){
+  const atual = b.updates[chave] ?? { key, set:{}, was:{} };
+  const set = { ...atual.set, [coluna]: novo };
+  const was = (coluna in atual.was) ? atual.was : { ...atual.was, [coluna]: original };
+  if(String(novo) === String(was[coluna])){ delete set[coluna]; delete was[coluna]; }
+  const updates = { ...b.updates };
+  if(Object.keys(set).length) updates[chave] = { key, set, was }; else delete updates[chave];
+  return { ...b, updates };
+}
+
+/* ==========================================================================
+   §6 TELAS
+   ========================================================================== */
+const app = document.getElementById('app');
+const nBack = document.getElementById('nav-back');
+const nTitle = document.getElementById('nav-title');
+const nAction = document.getElementById('nav-action');
+
+let pilha = [{ tela:'conexoes' }];
+const topo = () => pilha[pilha.length-1];
+const empurra = s => { pilha.push(s); render(); };
+const volta   = () => { if(pilha.length>1){ pilha.pop(); render(); } };
+
+const num = n => n==null ? '' : n.toLocaleString('pt-BR');
+const tam = b => b==null ? '' : b>1e6 ? (b/1e6).toFixed(1)+' MB' : Math.round(b/1024)+' KB';
+const carregando = () => `<div class="spin"></div>`;
+
+const grupo = (titulo, html, rodape) =>
+  `${titulo?`<div class="gtitle">${titulo}</div>`:''}<div class="card">${html}</div>${rodape?`<div class="gfoot">${rodape}</div>`:''}`;
+const linha = ({t,s,v,act,arg,esq,dir,chev=true}) =>
+  `<div class="row" ${act?`data-act="${act}" data-arg="${arg??''}"`:''}>${esq||''}
+     <div class="main"><div class="t">${t}</div>${s?`<div class="s">${s}</div>`:''}</div>
+     ${v?`<div class="v">${v}</div>`:''}${dir||''}${act&&chev?'<div class="chev">›</div>':''}</div>`;
+const seg = (itens, ativo, act) =>
+  `<div class="seg">${itens.map((x,i)=>`<button class="${i===ativo?'on':''}" data-act="${act}" data-arg="${i}">${x}</button>`).join('')}</div>`;
+const pill = (txt,cor) => `<span class="pill" style="color:${cor};border-color:${cor}55;background:${cor}1a">${txt}</span>`;
+const banner = (tipo,titulo,detalhe) => {
+  const cor = tipo==='error'?'var(--red)':tipo==='warning'?'var(--orange)':'var(--blue)';
+  return `<div class="banner" style="border-color:${cor}44;background:${cor}14"><b style="color:${cor}">${titulo}</b>${detalhe?esc(detalhe).replace(/\n/g,'<br>'):''}</div>`;
+};
+const chave = (on) => `<div class="switch ${on?'on':''}"><i></i></div>`;
+
+/* ---------- tela: lista de conexões ---------- */
+async function telaConexoes(){
+  nTitle.textContent = 'Bancos'; nBack.disabled = true; nAction.textContent = '';
+  app.innerHTML = carregando();
+  const { connections } = await api(ROTAS.connections.m, ROTAS.connections.p());   // GET /connections
+
+  app.innerHTML =
+    grupo('Conexões',
+      connections.map(c => {
+        const d = dialeto(c.driver);
+        const alvo = c.connection.host
+          ? `${c.connection.host}:${c.connection.port ?? ''}/${c.connection.database ?? ''}`
+          : c.connection.filename ?? c.connection.connectString ?? '';
+        return linha({ t:c.name, s:`${d.label} · ${alvo}`, v:c.readOnly?'leitura':'',
+          act:'abrir', arg:c.id, esq:`<div class="dot" style="background:${CORES[c.tag]}"></div>` });
+      }).join(''),
+      'Vermelho é produção. Você vê isso antes de digitar qualquer coisa.') +
+    `<button class="btn" data-act="nova">Nova conexão</button>` +
+    grupo('Backend',
+      linha({ t:'Endereço', v:'192.168.0.10:3333', chev:false }) +
+      linha({ t:'Dados falsos', dir:chave(true), chev:false }),
+      'Neste protótipo o interruptor está travado em falso. No app, virar essa chave troca o adapter do axios pelo servidor real — as telas não mudam.');
+}
+
+/* ---------- tela: formulário de conexão ---------- */
+async function telaFormulario(st){
+  nTitle.textContent = 'Nova conexão'; nBack.disabled = false; nAction.textContent = 'Salvar';
+  st.modelo ??= { name:'', driver:'pg', tag:'azul', readOnly:false, connection:{host:'',port:5432}, pool:{} };
+  st.secao ??= 0;
+  const d = dialeto(st.modelo.driver);
+  const secoes = [['geral','Conexão'],['ssl','SSL/TLS'],['avancado','Avançado'],['pool','Pool']]
+    .filter(([k]) => d.campos.some(c=>c.secao===k));
+  const atual = secoes[Math.min(st.secao, secoes.length-1)][0];
+
+  const campo = c => {
+    const v = pega(st.modelo, c.key) ?? c.def ?? '';
+    if(c.type === 'switch')
+      return `<div class="row" data-act="tog" data-arg="${c.key}"><div class="main"><div class="t">${c.label}</div>
+        ${c.help?`<div class="s">${c.help}</div>`:''}</div>${chave(!!v)}</div>`;
+    if(c.type === 'select')
+      return `<div class="row"><div class="field" style="flex:1"><label>${c.label}</label>
+        <select data-field="${c.key}">${c.options.map(o=>`<option ${o===v?'selected':''}>${o}</option>`).join('')}</select></div></div>`;
+    if(c.type === 'textarea')
+      return `<div class="row" style="align-items:flex-start"><div class="field" style="flex:1;align-items:flex-start">
+        <label>${c.label}</label><textarea data-field="${c.key}" placeholder="-----BEGIN CERTIFICATE-----">${esc(String(v))}</textarea></div></div>`;
+    return `<div class="row"><div class="field" style="flex:1"><label>${c.label}</label>
+      <input data-field="${c.key}" type="${c.type==='password'?'password':c.type==='number'?'number':'text'}"
+             value="${esc(String(v))}" placeholder="${c.ph??''}"></div></div>`;
+  };
+
+  app.innerHTML =
+    grupo('Identificação',
+      `<div class="row"><div class="field" style="flex:1"><label>Nome</label>
+        <input data-field="name" value="${esc(st.modelo.name)}" placeholder="Velox — HML"></div></div>` +
+      `<div class="row"><div class="main"><div class="t">Cor</div></div><div class="swatches">
+        ${Object.entries(CORES).map(([k,c])=>`<div class="swatch ${st.modelo.tag===k?'on':''}" style="background:${c}" data-act="cor" data-arg="${k}"></div>`).join('')}
+      </div></div>` +
+      `<div class="row" data-act="tog" data-arg="readOnly"><div class="main"><div class="t">Somente leitura</div>
+        <div class="s">Bloqueia INSERT/UPDATE/DELETE/DDL no servidor.</div></div>${chave(st.modelo.readOnly)}</div>`) +
+
+    grupo('Banco',
+      `<div class="chips">${DIALETOS.map(x=>`<div class="chip ${x.id===d.id?'on':''}"
+         style="${x.id===d.id?`background:${x.cor}`:''}" data-act="drv" data-arg="${x.id}">${x.label}</div>`).join('')}</div>`,
+      `O backend usará o cliente knex <b>${d.id}</b> (pacote ${d.npm}). Os campos abaixo são os do knexfile deste dialeto.`) +
+
+    seg(secoes.map(s=>s[1]), Math.min(st.secao,secoes.length-1), 'secao') +
+    grupo('', d.campos.filter(c=>c.secao===atual).map(campo).join(''),
+      atual==='pool' ? 'Mesmos nomes do knex: pool.min, pool.max e os timeouts do tarn, em milissegundos.'
+      : atual==='ssl' ? 'Vira o objeto connection.ssl do knex. O switch "Usar SSL" desligado remove a chave inteira.'
+      : atual==='avancado' ? 'Connection string preenchida sobrepõe servidor/porta/usuário.' : '') +
+
+    (st.resultado ? banner(st.resultado.ok?'info':'error',
+        st.resultado.ok?'Conexão bem-sucedida':'Falha ao conectar', st.resultado.texto) : '') +
+    `<button class="btn plain" data-act="testar">Testar conexão</button>
+     <button class="btn" data-act="salvar">Salvar conexão</button>`;
+}
+
+/* ---------- tela: banco (Tabelas | SQL | Diagrama) ---------- */
+async function telaBanco(st){
+  const conn = CONEXOES.find(c=>c.id===st.id);
+  nTitle.textContent = conn.name; nBack.disabled = false; nAction.textContent = 'Desconectar';
+  st.aba ??= 0;
+
+  if(!st.tabelas){
+    app.innerHTML = seg(['Tabelas','Consulta','Diagrama'], st.aba, 'aba') + carregando();
+    const r = await api(ROTAS.tables.m, ROTAS.tables.p(st.id));                    // GET .../tables
+    st.tabelas = r.tables;
+  }
+  const cabecalho = seg(['Tabelas','Consulta','Diagrama'], st.aba, 'aba');
+
+  if(st.aba === 0){
+    const q = (st.busca||'').toLowerCase();
+    const lista = st.tabelas.filter(t=>t.name.includes(q));
+    const bloco = (titulo, itens) => itens.length ? grupo(`${titulo} (${itens.length})`,
+      itens.map(t=>linha({ t:t.name, s:t.comment, v:`${num(t.rows)} linhas`, act:'tabela', arg:t.name })).join('')) : '';
+    app.innerHTML = cabecalho +
+      `<div class="search"><span style="color:var(--label3)">⌕</span>
+        <input data-field="busca" value="${esc(st.busca||'')}" placeholder="Buscar tabela"></div>` +
+      bloco('Tabelas', lista.filter(t=>t.type==='table')) +
+      bloco('Views', lista.filter(t=>t.type!=='table')) +
+      `<div class="gfoot" style="text-align:center">${num(lista.reduce((a,t)=>a+t.rows,0))} linhas · ${tam(lista.reduce((a,t)=>a+(t.sizeBytes||0),0))}</div>`;
+    return;
+  }
+
+  if(st.aba === 1){
+    /* ------------------------------------------------------------------
+       CONSTRUTOR DE CONSULTAS
+       Substitui o editor de SQL livre. Aqui você escolhe tabela, colunas,
+       condições, ordem e limite; o servidor monta isso com o query builder
+       do knex e devolve pela MESMA rota /rows que a aba Dados usa. O SQL
+       exibido é prévia de leitura — ninguém digita SQL e nada é executado
+       a partir de texto.
+       ------------------------------------------------------------------ */
+    st.cTabela ??= (st.tabelas.find(t=>t.type==='table')||{}).name;
+    st.cCols ??= [];          // vazio = todas
+    st.filtros ??= [];        // reaproveita a folha de filtro da aba Dados
+    st.cOrdem ??= null;
+    st.cLimite ??= 50;
+
+    // carrega as colunas da tabela escolhida (uma vez por tabela)
+    if(st.cTabela && st.cDetalheDe !== st.cTabela){
+      app.innerHTML = cabecalho + carregando();
+      const det = await api(ROTAS.table.m, ROTAS.table.p(st.id, st.cTabela));   // GET .../tables/:t
+      st.cDetalhe = det; st.cDetalheDe = st.cTabela;
+      st.cCols = []; st.filtros = []; st.cOrdem = null; st.cResultado = null;
+    }
+    const cols = st.cDetalhe ? st.cDetalhe.columns : [];
+    const escolhidas = st.cCols.length ? st.cCols : cols.map(c=>c.name);
+    const pk = cols.filter(c=>c.isPrimary).map(c=>c.name);
+    st.colunas = cols.map(c=>({name:c.name,type:c.type}));   // a folha de filtro usa isto
+
+    // prévia legível do que o builder vai montar no servidor
+    const previaSql =
+      `select ${st.cCols.length ? st.cCols.map(c=>`"${c}"`).join(', ') : '*'}\n` +
+      `  from "${st.cTabela}"` +
+      (previaWhere(st.filtros) ? `\n where ${previaWhere(st.filtros)}` : '') +
+      (st.cOrdem ? `\n order by "${st.cOrdem.col}" ${st.cOrdem.dir}` : '') +
+      `\n limit ${st.cLimite}`;
+
+    const chip = (txt, on, act, arg, cor='var(--blue)') =>
+      `<div class="chip ${on?'on':''}" style="${on?`background:${cor}`:''}" data-act="${act}" data-arg="${arg}">${esc(txt)}</div>`;
+
+    app.innerHTML = cabecalho +
+      `<div class="gtitle">Tabela</div>
+       <div class="card"><div class="chips">
+         ${st.tabelas.filter(t=>t.type==='table').map(t=>chip(t.name, t.name===st.cTabela,'ctab',t.name)).join('')}
+       </div></div>
+
+       <div class="gtitle">Colunas</div>
+       <div class="card"><div class="chips">
+         ${chip('todas', st.cCols.length===0, 'ccolall','')}
+         ${cols.map(c=>chip(c.name, st.cCols.includes(c.name), 'ccol', c.name, 'var(--purple)')).join('')}
+       </div></div>
+       <div class="gfoot">${pk.length && !pk.every(c=>escolhidas.includes(c))
+          ? `Sem ${pk.join(', ')} na projeção o resultado não fica editável.` : 'Vazio = todas as colunas.'}</div>
+
+       <div class="gtitle">Condições</div>
+       <div class="filtros">
+         <span class="pill click" style="color:var(--blue);border-color:#007AFF55;background:#007AFF1a"
+               data-act="novofiltro">+ Condição</span>
+         ${st.filtros.map((f,i)=>`<span class="pill click" style="color:var(--purple);border-color:#AF52DE55;background:#AF52DE1a"
+               data-act="editafiltro" data-arg="${i}">${esc(rotuloChip(f))} ✕</span>`).join('')}
+       </div>
+
+       <div class="gtitle">Ordenação</div>
+       <div class="card"><div class="chips">
+         ${chip('nenhuma', !st.cOrdem, 'cordem','')}
+         ${cols.map(c=>chip(c.name + (st.cOrdem && st.cOrdem.col===c.name ? (st.cOrdem.dir==='desc'?' ↓':' ↑') : ''),
+             !!st.cOrdem && st.cOrdem.col===c.name, 'cordem', c.name, 'var(--teal)')).join('')}
+       </div></div>
+
+       <div class="gtitle">Limite</div>
+       ${seg(['50','200','500'], [50,200,500].indexOf(st.cLimite), 'clim')}
+
+       <div class="gtitle">Consulta que o servidor vai montar</div>
+       <div class="mersrc">${realce(previaSql)}</div>
+       <div class="gfoot">Prévia de leitura. No servidor isto vira
+         <code>knex('${esc(st.cTabela||'')}').select(...).where(...)</code> — nada do que você
+         escolheu aqui vira texto de SQL.</div>
+
+       <button class="btn" data-act="crodar">Executar</button>` +
+      (st.cErro ? banner('error', st.cErro.code?`Erro ${st.cErro.code}`:'Falha na consulta', st.cErro.message) : '') +
+      (st.cResultado ? blocoResultado(st, st.cResultado) : '');
+    st.cErro = null;
+    return;
+  }
+
+
+  /* aba diagrama */
+  st.colunas ??= true; st.soChaves ??= true; st.fonte ??= false;
+  app.innerHTML = cabecalho +
+    grupo('Modelo relacional',
+      `<div class="row" data-act="tog2" data-arg="colunas"><div class="main"><div class="t">Mostrar colunas</div></div>${chave(st.colunas)}</div>
+       <div class="row" data-act="tog2" data-arg="soChaves"><div class="main"><div class="t">Só chaves</div>
+         <div class="s">PK, FK e UNIQUE apenas.</div></div>${chave(st.soChaves)}</div>
+       <div class="row" data-act="tog2" data-arg="fonte"><div class="main"><div class="t">Ver código Mermaid</div></div>${chave(st.fonte)}</div>`,
+      'Gerado a partir das constraints. A cardinalidade sai da nulidade e da unicidade das colunas da FK.') +
+    `<div id="erd">${carregando()}</div>`;
+
+  const dados = await api(ROTAS.erd.m, ROTAS.erd.p(st.id),                        // GET .../erd
+                          { columns:String(st.colunas), keysOnly:String(st.soChaves) });
+  document.getElementById('erd').innerHTML =
+    `<div style="margin-top:10px">${pill(`${dados.tables.length} tabelas`,'var(--blue)')}${pill(`${dados.relations} relações`,'var(--purple)')}</div>` +
+    (st.fonte ? `<div class="mersrc">${esc(dados.mermaid)}</div>` : `<div class="mer" id="mer">${carregando()}</div>`);
+  if(!st.fonte) desenha('mer', dados.mermaid);
+}
+
+/**
+ * Resultado do SQL. Se o backend disse que é editável, a grade usa exatamente a
+ * mesma máquina da aba Dados: mesmo buffer, mesmas folhas, mesma rota /mutations
+ * — só que apontando para a tabela que a análise identificou.
+ */
+function blocoResultado(st, r){
+  const ed0 = { editavel: r.editavel, tabela: st.cTabela, primaryKey: r.primaryKey,
+                autoIncrement: r.autoIncrement, motivoBloqueio: r.motivoBloqueio };
+  st.buf ??= bufVazio(); st.sel ??= [];
+  st.colunas = r.fields;
+  st.meta = { ...ed0, rows: r.rows, primaryKey: ed0.primaryKey ?? [], autoIncrement: ed0.autoIncrement ?? [] };
+
+  const novas = st.buf.inserts.map(i => r.fields.map(f => i.values[f.name] ?? null));
+  const visiveis = [...novas, ...r.rows];
+  st.linhas = visiveis;
+  const ehNova = i => i < novas.length;
+  const chave = i => ehNova(i) ? null : chaveLinha(r.rows[i-novas.length], r.fields, st.meta.primaryKey);
+
+  const ed = ed0.editavel ? {
+    linha: i => ehNova(i) ? 'novo'
+      : st.buf.deletes[chave(i)] ? 'del'
+      : st.sel.includes(chave(i)) ? 'sel' : undefined,
+    celula: (i,j) => {
+      if(ehNova(i)) return undefined;
+      const u = st.buf.updates[chave(i)], col = r.fields[j].name;
+      return (u && col in u.set) ? { valor:u.set[col], editado:true } : undefined;
+    },
+  } : undefined;
+
+  const pend = totalPend(st.buf);
+  return `<div style="margin-top:12px">
+      ${pill(`${r.rows.length} de ${num(r.total)}`,'var(--green)')}
+      ${ed0.editavel ? pill(`editável · ${ed0.tabela}`,'var(--purple)') : pill('somente leitura','var(--gray)')}
+    </div>` +
+    tabelaHtml(r.fields, visiveis, {col:null,dir:'asc'}, ed) +
+    (!ed0.editavel ? `<div class="gfoot">Somente leitura: ${esc(ed0.motivoBloqueio||'')}</div>`
+      : `<div class="gfoot">Grade editável: a consulta sai de <b>${esc(ed0.tabela)}</b> e trouxe a chave primária.</div>`) +
+    (ed0.editavel && st.sel.length ? `<div class="filtros">
+        ${pill(`${st.sel.length} selecionada(s)`,'var(--blue)')}
+        <span class="pill click" style="color:var(--red);border-color:#FF3B3055;background:#FF3B301a" data-act="marcaexcluir">Marcar para excluir</span>
+        ${st.sel.length===1?`<span class="pill click" style="color:var(--green);border-color:#34C75955;background:#34C7591a" data-act="duplicar">Duplicar</span>`:''}
+        <span class="pill click" style="color:var(--gray);border-color:#8E8E9355;background:#8E8E931a" data-act="limpasel">limpar seleção</span>
+      </div>` : '') +
+    (pend ? banner('warning', `${pend} alteração(ões) não gravada(s) em ${ed0.tabela}`, resumoPend(st.buf)) +
+      `<div class="btnrow">
+         <button class="btn" style="flex:2" data-act="revisar">Revisar e salvar</button>
+         <button class="btn plain" style="flex:1" data-act="descartar">Descartar</button>
+       </div>` : '');
+}
+
+/* ------------------------------ Diagrama ------------------------------ */
+async function telaTabela(st){
+  nTitle.textContent = st.tabela; nBack.disabled = false; nAction.textContent = '';
+  st.aba ??= 0;
+  const cabecalho = seg(['Dados','Estrutura','DDL','Diagrama'], st.aba, 'aba');
+  app.innerHTML = cabecalho + carregando();
+
+  if(st.aba === 0){
+    st.offset ??= 0; st.filtros ??= []; st.ordem ??= null;
+    st.q ??= ''; st.qModo ??= 'tudo';
+    st.buf ??= bufVazio(); st.sel ??= [];
+
+    // monta a query string exatamente como o app faz (src/lib/filters.ts)
+    const params = { limit:50, offset:st.offset };
+    const validos = st.filtros.filter(completo);
+    if(validos.length) params.filters = JSON.stringify(validos);
+    if(st.q.trim()){ params.q = st.q.trim(); params.qMode = st.qModo; }
+    if(st.ordem){ params.orderBy = st.ordem.col; params.dir = st.ordem.dir; }
+
+    let d, falhou = null;
+    try { d = await api(ROTAS.rows.m, ROTAS.rows.p(st.id, st.tabela), params); }   // GET .../rows?filters=…
+    catch(err){ falhou = err.body; }
+
+    const previa = previaWhere(st.filtros, st.q, st.qModo);
+    const barra =
+      `<div class="search"><span style="color:var(--label3)">⌕</span>
+         <input data-field="buscagrade" value="${esc(st.q)}" placeholder="Buscar em ${esc(st.tabela)}"></div>
+       <div class="filtros">
+         <span class="pill click" style="color:var(--blue);border-color:#007AFF55;background:#007AFF1a"
+               data-act="novofiltro">+ Filtro</span>
+         ${st.q.trim()?`<span class="pill click" style="color:var(--green);border-color:#34C75955;background:#34C7591a"
+               data-act="modobusca">${st.qModo==='tudo'?'todas as colunas':'só colunas de texto'}</span>`:''}
+         ${st.filtros.map((f,i)=>`<span class="pill click" style="color:var(--purple);border-color:#AF52DE55;background:#AF52DE1a"
+               data-act="editafiltro" data-arg="${i}">${esc(rotuloChip(f))} ✕</span>`).join('')}
+         ${st.ordem?`<span class="pill click" style="color:var(--teal);border-color:#30B0C755;background:#30B0C71a"
+               data-act="limpaordem">ordem: ${st.ordem.col} ${st.ordem.dir==='desc'?'↓':'↑'}</span>`:''}
+         ${(st.filtros.length||st.q.trim())?`<span class="pill click" style="color:var(--gray);border-color:#8E8E9355;background:#8E8E931a"
+               data-act="limpafiltros">limpar tudo</span>`:''}
+       </div>
+       ${previa?`<div class="whereprev">WHERE ${esc(previa)}</div>`:''}`;
+
+    if(falhou){
+      app.innerHTML = cabecalho + barra +
+        banner('error', falhou.code?`Erro ${falhou.code}`:'Falha ao ler os dados', falhou.message);
+      return;
+    }
+
+    const ate = Math.min(st.offset+50, d.total);
+
+    // linhas novas entram no topo da grade, como no DBeaver
+    const novas = st.buf.inserts.map(i => d.fields.map(f => i.values[f.name] ?? null));
+    const visiveis = [...novas, ...d.rows];
+    const ehNova = i => i < novas.length;
+    const real   = i => d.rows[i - novas.length];
+    const chave  = i => ehNova(i) ? null : chaveLinha(real(i), d.fields, d.primaryKey);
+
+    st.colunas = d.fields; st.linhas = visiveis; st.meta = d;
+
+    const ed = d.editavel ? {
+      linha: i => ehNova(i) ? 'novo'
+        : st.buf.deletes[chave(i)] ? 'del'
+        : st.sel.includes(chave(i)) ? 'sel' : undefined,
+      celula: (i,j) => {
+        if(ehNova(i)) return undefined;
+        const u = st.buf.updates[chave(i)], col = d.fields[j].name;
+        return (u && col in u.set) ? { valor: u.set[col], editado:true } : undefined;
+      },
+    } : undefined;
+
+    const pend = totalPend(st.buf);
+    const barraSel = (d.editavel && st.sel.length) ? `<div class="filtros">
+        ${pill(`${st.sel.length} selecionada(s)`,'var(--blue)')}
+        <span class="pill click" style="color:var(--red);border-color:#FF3B3055;background:#FF3B301a"
+              data-act="marcaexcluir">Marcar para excluir</span>
+        ${st.sel.length===1?`<span class="pill click" style="color:var(--green);border-color:#34C75955;background:#34C7591a"
+              data-act="duplicar">Duplicar</span>`:''}
+        <span class="pill click" style="color:var(--gray);border-color:#8E8E9355;background:#8E8E931a"
+              data-act="limpasel">limpar seleção</span>
+      </div>` : '';
+
+    const barraPend = pend ? banner('warning', `${pend} alteração(ões) não gravada(s)`, resumoPend(st.buf)) +
+      `<div class="btnrow">
+         <button class="btn" style="flex:2" data-act="revisar">Revisar e salvar</button>
+         <button class="btn plain" style="flex:1" data-act="descartar">Descartar</button>
+       </div>` : '';
+
+    const aviso =
+      (st.gravou ? banner('info','Gravado', st.gravou) : '') +
+      (st.erroGravar ? banner('error',
+        st.erroGravar.code==='CONFLICT' ? 'Conflito — nada foi gravado'
+          : st.erroGravar.code ? `Erro ${st.erroGravar.code}` : 'Falha ao gravar',
+        st.erroGravar.message) : '');
+    st.gravou = null; st.erroGravar = null;
+
+    app.innerHTML = cabecalho + barra + aviso +
+      `<div style="margin-top:10px">
+         ${pill(`${d.total?st.offset+1:0}–${ate} de ${num(d.total)}`,'var(--blue)')}
+         ${d.totalSemFiltro!=null && d.total!==d.totalSemFiltro ? pill(`de ${num(d.totalSemFiltro)} sem filtro`,'var(--gray)') : ''}
+         ${d.colunasBuscadas!=null ? pill(`${d.colunasBuscadas} colunas varridas`,'var(--green)') : ''}
+       </div>` +
+      tabelaHtml(d.fields, visiveis, st.ordem, ed) +
+      (!d.editavel ? `<div class="gfoot">Somente leitura: ${esc(d.motivoBloqueio||'')}</div>` : '') +
+      barraSel + barraPend +
+      (d.rows.length===0 ? `<div class="empty"><b>Nenhuma linha</b><span>${st.q.trim()
+          ? `Nada com "${esc(st.q.trim())}" nesta tabela.${st.qModo==='texto'?' Experimente buscar em todas as colunas.':''}`
+          : 'O filtro atual não devolveu resultado.'}</span></div>` : '') +
+      `<div class="btnrow">
+         <button class="btn plain" data-act="pag" data-arg="-50" ${st.offset===0?'disabled':''}>Anterior</button>
+         <button class="btn plain" data-act="pag" data-arg="50" ${ate>=d.total?'disabled':''}>Próxima</button>
+       </div>
+       ${d.editavel?`<button class="btn plain" data-act="novalinha">Nova linha</button>`:''}
+       <div class="gfoot">Toque no número da linha para selecionar. Toque no cabeçalho para ordenar (crescente → decrescente → sem ordem). Toque numa célula para filtrar por aquele valor.</div>`;
+    return;
+  }
+
+  if(st.aba === 1){
+    const d = await api(ROTAS.table.m, ROTAS.table.p(st.id, st.tabela));           // GET .../tables/:t
+    const fkc = new Set(d.foreignKeys.flatMap(f=>f.columns));
+    app.innerHTML = cabecalho +
+      grupo(`Colunas (${d.columns.length})`, d.columns.map(c => linha({
+        t:c.name,
+        s:[c.type, c.nullable?'nulo permitido':'NOT NULL', c.default?`default ${c.default}`:null].filter(Boolean).join(' · '),
+        dir:`${c.isPrimary?pill('PK','var(--orange)'):''}${fkc.has(c.name)?pill('FK','var(--blue)'):''}${c.isUnique&&!c.isPrimary?pill('UK','var(--purple)'):''}`,
+        chev:false })).join(''), d.table.comment) +
+      grupo(`Índices (${d.indexes.length})`, d.indexes.map(i => linha({
+        t:i.name, s:`${i.columns.join(', ')}${i.predicate?` · WHERE ${i.predicate}`:''}`,
+        v:[i.primary?'PK':null, i.unique?'único':null, i.method].filter(Boolean).join(' · '), chev:false })).join('')
+        || linha({t:'Nenhum',chev:false})) +
+      grupo(`Chaves estrangeiras (${d.foreignKeys.length})`, d.foreignKeys.map(f => linha({
+        t:`${f.columns.join(', ')} → ${f.refTable}.${f.refColumns.join(', ')}`,
+        s:`${f.name} · ON DELETE ${f.onDelete}`, chev:false })).join('') || linha({t:'Nenhuma',chev:false})) +
+      grupo(`Referenciada por (${d.referencedBy.length})`, d.referencedBy.map(f => linha({
+        t:f.table, s:`${f.columns.join(', ')} → ${f.refColumns.join(', ')}`, chev:false })).join('')
+        || linha({t:'Ninguém',chev:false}),
+        'Quem aponta para esta tabela. É o que define o lado "muitos" no diagrama.');
+    return;
+  }
+
+  if(st.aba === 2){
+    const d = await api(ROTAS.ddl.m, ROTAS.ddl.p(st.id, st.tabela));               // GET .../ddl
+    app.innerHTML = cabecalho + `<div class="ddl">${esc(d.ddl)}</div>` +
+      `<button class="btn plain" data-act="copiar-ddl">Copiar DDL</button>` +
+      `<div class="gfoot">No MySQL vem de SHOW CREATE TABLE; no SQLite, de sqlite_master; nos demais é remontado do catálogo. Texto para leitura e cópia: o app não executa isto.</div>`;
+    return;
+  }
+
+  st.prof ??= 1; st.soChaves ??= true;
+  app.innerHTML = cabecalho +
+    grupo('Vizinhança',
+      `<div class="row"><div class="main"><div class="t">Profundidade</div></div>
+        <div style="width:120px">${seg(['1','2','3'], st.prof-1, 'prof')}</div></div>
+       <div class="row" data-act="tog2" data-arg="soChaves"><div class="main"><div class="t">Só chaves</div></div>${chave(st.soChaves)}</div>`,
+      'Profundidade 1 = tabelas ligadas diretamente. É o "ver diagrama desta tabela" do DBeaver.') +
+    `<div id="erd">${carregando()}</div>`;
+
+  const dados = await api(ROTAS.tableErd.m, ROTAS.tableErd.p(st.id, st.tabela),    // GET .../tables/:t/erd
+                          { depth:st.prof, keysOnly:String(st.soChaves), columns:'true' });
+  document.getElementById('erd').innerHTML =
+    `<div style="margin-top:10px">${pill(`${dados.tables.length} tabelas`,'var(--blue)')}${pill(`${dados.relations} relações`,'var(--purple)')}</div>
+     <div class="mer" id="mer">${carregando()}</div>`;
+  desenha('mer', dados.mermaid);
+}
+
+/* ---------- auxiliares de render ---------- */
+/**
+ * `ordem` presente = cabeçalho ordena e célula abre menu.
+ * `ed` presente    = grade editável: número da linha seleciona, célula alterada
+ *                    fica âmbar, linha marcada para exclusão fica riscada.
+ */
+function tabelaHtml(campos, linhas, ordem, ed){
+  const ordenavel = ordem !== undefined;
+  const th = campos.map(c => {
+    const on = ordem && ordem.col === c.name;
+    return `<th class="${ordenavel?'ord':''} ${on?'on':''}" ${ordenavel?`data-act="ordenar" data-arg="${esc(c.name)}"`:''}>
+      ${esc(c.name)}${on?(ordem.dir==='desc'?' ↓':' ↑'):''}<small>${esc(c.type)}</small></th>`;
+  }).join('');
+
+  const linha = (r,i) => {
+    const est = ed ? ed.linha(i) : undefined;                 // 'sel' | 'del' | 'novo'
+    const marca = est==='del' ? '✕' : est==='novo' ? '+' : est==='sel' ? '◉' : (i+1);
+    const tds = r.map((v,j) => {
+      const alt = ed ? ed.celula(i,j) : undefined;            // {valor, editado}
+      const val = alt ? alt.valor : v;
+      const cls = [val===null?'null':'', alt&&alt.editado?'edit':''].filter(Boolean).join(' ');
+      return `<td class="${cls}" ${ordenavel?`data-act="celula" data-arg="${i}:${j}"`:''}>${val===null?'NULL':esc(String(val))}</td>`;
+    }).join('');
+    return `<tr class="${est?'r-'+est:''}">
+      <td class="idx" ${ed?`data-act="selinha" data-arg="${i}"`:''}>${marca}</td>${tds}</tr>`;
+  };
+
+  return `<div class="grid"><table>
+    <thead><tr><th>#</th>${th}</tr></thead>
+    <tbody>${linhas.map(linha).join('')}</tbody>
+  </table></div>`;
+}
+async function desenha(elId, codigo){
+  const alvo = document.getElementById(elId); if(!alvo) return;
+  try{
+    const { svg } = await mermaid.render('m'+Math.random().toString(36).slice(2), codigo);
+    alvo.innerHTML = svg;
+  }catch(err){
+    alvo.innerHTML = `<div class="mersrc" style="text-align:left">Mermaid não conseguiu desenhar (sem internet?).
+Código gerado:\n\n${esc(codigo)}</div>`;
+  }
+}
+
+/* ==========================================================================
+   §6b FOLHAS (action sheets) — presas dentro da moldura do telefone
+   ========================================================================== */
+const folha = document.getElementById('folha');
+const fechaFolha = () => { folha.innerHTML = ''; };
+const abreFolha = html => {
+  folha.innerHTML = `<div class="sheet"><div style="flex:1" data-act="fecharfolha"></div>
+    <div class="inner">${html}</div></div>`;
+};
+
+/** Menu de uma célula: copiar, filtrar por, excluir — o clique-direito do DBeaver. */
+function folhaCelula(st, i, j){
+  const coluna = st.colunas[j].name;
+  const novas = st.buf.inserts.length;
+  const chave = i<novas ? null : chaveLinha(st.meta.rows[i-novas], st.colunas, st.meta.primaryKey);
+  const u = chave ? st.buf.updates[chave] : null;
+  const valor = (u && coluna in u.set) ? u.set[coluna] : st.linhas[i][j];
+  abreFolha(
+    `<h3>${esc(coluna)}</h3>
+     <p class="sub">${valor===null?'NULL':esc(String(valor))}${u && coluna in u.set ? ' · alterado, ainda não gravado' : ''}</p>
+     <div class="acts">
+       ${st.meta.editavel?`<button data-act="editavalor" data-arg="${i}:${j}">Editar valor</button>`:''}
+       ${st.tela==='tabela'?`<button data-act="filtrarvalor" data-arg="${i}:${j}:eq">Filtrar por este valor</button>
+       <button data-act="filtrarvalor" data-arg="${i}:${j}:neq">Excluir este valor</button>`:''}
+       <button class="dim" data-act="copiarvalor" data-arg="${i}:${j}">Copiar</button>
+     </div>
+     <div class="acts"><button class="dim" data-act="fecharfolha">Cancelar</button></div>`);
+}
+
+/** Editar o valor de uma célula. Nada é gravado aqui — vai para o buffer. */
+function folhaValor(st, i, j){
+  const coluna = st.colunas[j].name;
+  const novas = st.buf.inserts.length;
+  const chave = i<novas ? null : chaveLinha(st.meta.rows[i-novas], st.colunas, st.meta.primaryKey);
+  const u = chave ? st.buf.updates[chave] : null;
+  const atual = (u && coluna in u.set) ? u.set[coluna] : st.linhas[i][j];
+  const original = i<novas ? null : st.meta.rows[i-novas][j];
+  st.rascunhoValor = { i, j, coluna, texto: atual===null?'':String(atual), nulo: atual===null };
+  abreFolha(
+    `<h3>${esc(coluna)}</h3>
+     <p class="sub">Valor no banco: ${original===null?'NULL':esc(String(original))}<br>${esc(st.colunas[j].type)}</p>
+     <div class="card">
+       <div class="row"><div class="field" style="flex:1"><label>Novo valor</label>
+         <input data-field="valorcel" value="${esc(st.rascunhoValor.texto)}"></div></div>
+       <div class="row" data-act="togglenulo"><div class="main"><div class="t">Definir como NULL</div></div>
+         ${chave2(st.rascunhoValor.nulo)}</div>
+     </div>
+     <button class="btn" data-act="aplicavalor">Aplicar</button>
+     <button class="btn plain" data-act="fecharfolha">Cancelar</button>`);
+}
+const chave2 = on => `<div class="switch ${on?'on':''}"><i></i></div>`;
+
+/** Duplicar / nova linha: edita tudo ANTES de virar INSERT. */
+function folhaLinha(st, valores){
+  st.rascunhoLinha = { ...valores };
+  const { primaryKey:pk, autoIncrement:auto } = st.meta;
+  const campos = st.colunas.filter(f => !(pk.includes(f.name) && auto.includes(f.name)));
+  abreFolha(
+    `<h3>Nova linha</h3>
+     <p class="sub">Chaves automáticas (${auto.join(', ')||'nenhuma'}) ficam de fora: o banco gera.</p>
+     <div class="card">
+       ${campos.map(f=>`<div class="row"><div class="field" style="flex:1"><label>${esc(f.name)}</label>
+         <input data-field="lin:${esc(f.name)}" value="${esc(st.rascunhoLinha[f.name]==null?'':String(st.rascunhoLinha[f.name]))}"
+                placeholder="${esc(f.type)}"></div></div>`).join('')}
+     </div>
+     <button class="btn" data-act="aplicalinha">Adicionar às pendências</button>
+     <button class="btn plain" data-act="fecharfolha">Cancelar</button>`);
+}
+
+/** Confirmação: o SQL exato, vindo da rota de preview, antes de autorizar. */
+function folhaConfirma(st, statements){
+  abreFolha(
+    `<h3>Confirmar gravação</h3>
+     <p class="sub">${statements.length} comando(s), tudo em uma transação.<br>Se um falhar, nada é gravado.</p>
+     <div class="sqlprev">${statements.map(x=>`<div>${esc(x)}</div>`).join('')}</div>
+     <button class="btn" style="background:var(--red)" data-act="gravar">Gravar</button>
+     <button class="btn plain" data-act="fecharfolha">Cancelar</button>`);
+}
+
+/** Editor de um filtro: coluna → operador → valor.
+ *  `rascunho` opcional permite redesenhar sem perder o que já foi digitado. */
+function folhaFiltro(st, indice, rascunho){
+  const f = rascunho ?? (indice==null
+    ? { column: st.colunas[0].name, op:'eq', value:'' }
+    : { ...st.filtros[indice] });
+  st.rascunho = f;
+  st.filtroEditando = indice;
+  const tipo = (st.colunas.find(c=>c.name===f.column)||{}).type || '';
+  const args = meta(f.op).args;
+  abreFolha(
+    `<h3>Filtro</h3>
+     <div class="gtitle">Coluna</div>
+     <div class="card"><div class="chips">${st.colunas.map(c=>`<div class="chip ${c.name===f.column?'on':''}"
+        style="${c.name===f.column?'background:var(--blue)':''}" data-act="fcol" data-arg="${esc(c.name)}">${esc(c.name)}</div>`).join('')}</div></div>
+     <div class="gtitle">Operador</div>
+     <div class="card"><div class="chips">${opsPara(tipo).map(o=>`<div class="chip ${o.op===f.op?'on':''}"
+        style="${o.op===f.op?'background:var(--purple)':''}" data-act="fop" data-arg="${o.op}">${o.rot}</div>`).join('')}</div></div>
+     ${tipo?`<div class="gfoot">Coluna do tipo ${esc(tipo)}.</div>`:''}
+     ${args>0 ? `<div class="gtitle">Valor</div><div class="card">
+        <div class="row"><div class="field" style="flex:1"><label>${args===2?'De':'Valor'}</label>
+          <input data-field="fvalue" value="${esc(String(f.value??''))}"
+                 placeholder="${f.op==='in'?'ABERTO, FATURADO':''}"></div></div>
+        ${args===2?`<div class="row"><div class="field" style="flex:1"><label>Até</label>
+          <input data-field="fvalue2" value="${esc(String(f.value2??''))}"></div></div>`:''}
+       </div>${f.op==='in'?'<div class="gfoot">Separe por vírgula.</div>':''}` : ''}
+     <button class="btn" data-act="aplicafiltro" data-arg="${indice ?? ''}">Aplicar</button>
+     ${indice!=null?`<button class="btn danger" data-act="removefiltro" data-arg="${indice}">Remover filtro</button>`:''}
+     <button class="btn plain" data-act="fecharfolha">Cancelar</button>`);
+}
+
+folha.addEventListener('click', async ev => {
+  const alvo = ev.target.closest('[data-act]'); if(!alvo) return;
+  const act = alvo.dataset.act, arg = alvo.dataset.arg, st = topo();
+
+  if(act === 'fecharfolha'){ fechaFolha(); return; }
+
+  if(act === 'fcol'){ st.rascunho.column = arg;
+    // operador de texto deixa de valer se a coluna nova não for texto
+    const tipo = (st.colunas.find(c=>c.name===arg)||{}).type || '';
+    if(!opsPara(tipo).some(o=>o.op===st.rascunho.op)) st.rascunho.op = 'eq';
+    reabreFiltro(st); return; }
+  if(act === 'fop'){ st.rascunho.op = arg; reabreFiltro(st); return; }
+
+  if(act === 'aplicafiltro'){
+    const f = st.rascunho;
+    if(!completo(f)) return;
+    if(arg === '') st.filtros.push(f); else st.filtros[Number(arg)] = f;
+    st.offset = 0; fechaFolha(); render(); return;
+  }
+  if(act === 'removefiltro'){ st.filtros.splice(Number(arg),1); st.offset=0; fechaFolha(); render(); return; }
+
+  if(act === 'filtrarvalor'){
+    const [i,j,modo] = arg.split(':');
+    const valor = st.linhas[Number(i)][Number(j)], coluna = st.colunas[Number(j)].name;
+    st.filtros.push(valor===null
+      ? { column:coluna, op: modo==='eq' ? 'isNull' : 'notNull' }
+      : { column:coluna, op: modo, value:String(valor) });
+    st.offset = 0; fechaFolha(); render(); return;
+  }
+  if(act === 'copiarvalor'){
+    const [i,j] = arg.split(':');
+    navigator.clipboard?.writeText(String(st.linhas[Number(i)][Number(j)]));
+    fechaFolha(); return;
+  }
+
+  /* --- edição --- */
+  if(act === 'editavalor'){ const [i,j]=arg.split(':'); folhaValor(st, Number(i), Number(j)); return; }
+  if(act === 'togglenulo'){
+    st.rascunhoValor.nulo = !st.rascunhoValor.nulo;
+    folhaValor.__manter = true;
+    const sw = folha.querySelector('.switch'); sw.classList.toggle('on', st.rascunhoValor.nulo);
+    return;
+  }
+  if(act === 'aplicavalor'){
+    const rv = st.rascunhoValor, novo = rv.nulo ? null : rv.texto;
+    const novas = st.buf.inserts.length;
+    if(rv.i < novas){
+      st.buf.inserts[rv.i].values[rv.coluna] = novo;                 // editando uma linha nova
+    } else {
+      const linha = st.meta.rows[rv.i-novas];
+      st.buf = editaCelula(st.buf, chaveLinha(linha, st.colunas, st.meta.primaryKey),
+        objChave(linha, st.colunas, st.meta.primaryKey), rv.coluna, novo, linha[rv.j]);
+    }
+    fechaFolha(); render(); return;
+  }
+  if(act === 'aplicalinha'){
+    const vals = st.rascunhoLinha;
+    const { primaryKey:pk, autoIncrement:auto } = st.meta;
+    const falta = pk.filter(c=>!auto.includes(c) && (vals[c]==null || vals[c]===''));
+    if(falta.length){ alert(`Preencha a chave primária: ${falta.join(', ')}.`); return; }
+    st.buf.inserts.push({ tmpId:String(Date.now()), values: vals });
+    st.sel = []; fechaFolha(); render(); return;
+  }
+  if(act === 'gravar'){
+    try {
+      const r = await api(ROTAS.mutations.m, ROTAS.mutations.p(st.id, st.meta.tabela ?? st.tabela), {},   // POST .../mutations
+        { changes: paraChanges(st.buf), optimistic:true });
+      st.buf = bufVazio(); st.sel = []; st.gravou = `${r.applied} operação(ões) em ${r.durationMs} ms.`;
+      fechaFolha(); render();
+    } catch(err){
+      fechaFolha();
+      st.erroGravar = err.body; render();
+    }
+    return;
+  }
+
+});
+
+folha.addEventListener('input', ev => {
+  const campo = ev.target.dataset.field, st = topo();
+  if(!campo) return;
+  if(campo === 'fvalue')  st.rascunho.value  = ev.target.value;
+  if(campo === 'fvalue2') st.rascunho.value2 = ev.target.value;
+  if(campo === 'valorcel'){ st.rascunhoValor.texto = ev.target.value; st.rascunhoValor.nulo = false;
+    folha.querySelector('.switch')?.classList.remove('on'); }
+  if(campo.startsWith('lin:')) st.rascunhoLinha[campo.slice(4)] = ev.target.value === '' ? null : ev.target.value;
+});
+
+/** Redesenha a folha com o rascunho atual: trocar coluna ou operador não apaga o valor. */
+const reabreFiltro = st => folhaFiltro(st, st.filtroEditando, st.rascunho);
+
+/* ==========================================================================
+   §7 NAVEGAÇÃO + INSPETOR
+   ========================================================================== */
+function render(){
+  const st = topo();
+  return ({ conexoes:telaConexoes, formulario:telaFormulario, banco:telaBanco, tabela:telaTabela })[st.tela](st);
+}
+
+app.addEventListener('click', async ev => {
+  const alvo = ev.target.closest('[data-act]'); if(!alvo) return;
+  const act = alvo.dataset.act, arg = alvo.dataset.arg, st = topo();
+
+  switch(act){
+    case 'abrir': {
+      await api(ROTAS.connect.m, ROTAS.connect.p(arg));                            // POST .../connect
+      empurra({ tela:'banco', id:arg }); break;
+    }
+    case 'nova':   empurra({ tela:'formulario' }); break;
+    case 'drv':    st.modelo.driver = arg; st.secao = 0;
+                   dialeto(arg).campos.forEach(c => { if(c.def!==undefined && pega(st.modelo,c.key)===undefined) poe(st.modelo,c.key,c.def); });
+                   render(); break;
+    case 'cor':    st.modelo.tag = arg; render(); break;
+    case 'secao':  st.secao = Number(arg); render(); break;
+    case 'tog':    poe(st.modelo, arg, !pega(st.modelo, arg)); render(); break;
+    case 'tog2':   st[arg] = !st[arg]; render(); break;
+    case 'testar': {
+      try {
+        const r = await api(ROTAS.test.m, ROTAS.test.p(), {}, st.modelo);          // POST /connections/test
+        st.resultado = { ok:true, texto:`${r.serverVersion} · ${r.latencyMs} ms` };
+      } catch(err){ st.resultado = { ok:false, texto: err.body.message }; }
+      render(); break;
+    }
+    case 'salvar': {
+      await api(ROTAS.create.m, ROTAS.create.p(), {}, st.modelo);                  // POST /connections
+      volta(); break;
+    }
+    case 'aba':    st.aba = Number(arg); st.resultado = null; st.erroSql = null; render(); break;
+    case 'tabela': empurra({ tela:'tabela', id:st.id, tabela:arg }); break;
+    case 'pag':    st.offset = Math.max(0, (st.offset||0) + Number(arg)); render(); break;
+
+    /* --- filtros da grade --- */
+    case 'novofiltro':   folhaFiltro(st, null); break;
+    case 'editafiltro':  folhaFiltro(st, Number(arg)); break;
+    case 'celula':       { const [i,j] = arg.split(':'); folhaCelula(st, Number(i), Number(j)); break; }
+    case 'limpaordem':   st.ordem = null; st.offset = 0; render(); break;
+
+    /* --- construtor de consultas --- */
+    case 'ctab':    st.cTabela = arg; st.cResultado = null; render(); break;
+    case 'ccolall': st.cCols = []; render(); break;
+    case 'ccol':
+      st.cCols = st.cCols.includes(arg) ? st.cCols.filter(x=>x!==arg) : [...st.cCols, arg];
+      render(); break;
+    case 'cordem':
+      if(!arg) st.cOrdem = null;
+      else if(st.cOrdem && st.cOrdem.col === arg)
+        st.cOrdem = st.cOrdem.dir === 'asc' ? { col:arg, dir:'desc' } : null;
+      else st.cOrdem = { col:arg, dir:'asc' };
+      render(); break;
+    case 'clim':    st.cLimite = [50,200,500][Number(arg)]; render(); break;
+    case 'crodar': {
+      st.buf = bufVazio(); st.sel = [];
+      const params = { limit: st.cLimite, offset: 0 };
+      if(st.cCols.length) params.columns = st.cCols.join(',');
+      const validos = st.filtros.filter(completo);
+      if(validos.length) params.filters = JSON.stringify(validos);
+      if(st.cOrdem){ params.orderBy = st.cOrdem.col; params.dir = st.cOrdem.dir; }
+      try { st.cResultado = await api(ROTAS.rows.m, ROTAS.rows.p(st.id, st.cTabela), params); }  // GET .../rows
+      catch(err){ st.cErro = err.body; st.cResultado = null; }
+      render(); break;
+    }
+
+    /* --- edição da grade --- */
+    case 'selinha': {
+      const i = Number(arg), novas = st.buf.inserts.length;
+      if(i < novas) break;                                   // linha nova não se seleciona
+      const k = chaveLinha(st.meta.rows[i-novas], st.colunas, st.meta.primaryKey);
+      st.sel = st.sel.includes(k) ? st.sel.filter(x=>x!==k) : [...st.sel, k];
+      render(); break;
+    }
+    case 'limpasel':  st.sel = []; render(); break;
+    case 'marcaexcluir': {
+      st.meta.rows.forEach(linha => {
+        const k = chaveLinha(linha, st.colunas, st.meta.primaryKey);
+        if(st.sel.includes(k))
+          st.buf.deletes[k] = { key: objChave(linha, st.colunas, st.meta.primaryKey), was: linhaObj(linha, st.colunas) };
+      });
+      st.sel = []; render(); break;
+    }
+    case 'duplicar': {
+      const linha = st.meta.rows.find(l => st.sel.includes(chaveLinha(l, st.colunas, st.meta.primaryKey)));
+      const vals = linhaObj(linha, st.colunas);
+      // PK automática sai: quem gera é o banco
+      st.meta.primaryKey.forEach(c => { if(st.meta.autoIncrement.includes(c)) delete vals[c]; });
+      folhaLinha(st, vals); break;
+    }
+    case 'novalinha':
+      folhaLinha(st, Object.fromEntries(st.colunas.map(f=>[f.name, null]))); break;
+    case 'descartar':
+      if(confirm(`Descartar ${totalPend(st.buf)} alteração(ões)?`)){ st.buf = bufVazio(); render(); }
+      break;
+    case 'revisar': {
+      try {
+        const r = await api(ROTAS.mutationsPreview.m, ROTAS.mutationsPreview.p(st.id, st.meta.tabela ?? st.tabela), {},  // POST .../mutations/preview
+          { changes: paraChanges(st.buf), optimistic:true });
+        folhaConfirma(st, r.statements);
+      } catch(err){ st.erroGravar = err.body; render(); }
+      break;
+    }
+    case 'limpafiltros': st.filtros = []; st.q = ''; st.offset = 0; render(); break;
+    case 'modobusca':    st.qModo = st.qModo === 'tudo' ? 'texto' : 'tudo'; st.offset = 0; render(); break;
+    case 'ordenar': {
+      if(st.tela === 'banco') break;              // no resultado do SQL quem ordena é a query
+      // asc → desc → sem ordem, igual ao DBeaver
+      if(!st.ordem || st.ordem.col !== arg) st.ordem = { col:arg, dir:'asc' };
+      else if(st.ordem.dir === 'asc')       st.ordem = { col:arg, dir:'desc' };
+      else                                   st.ordem = null;
+      st.offset = 0; render(); break;
+    }
+    case 'prof':   st.prof = Number(arg)+1; render(); break;
+    case 'copiar-ddl': navigator.clipboard?.writeText(document.querySelector('.ddl').textContent); break;
+  }
+});
+
+app.addEventListener('input', ev => {
+  const campo = ev.target.dataset.field; if(!campo) return;
+  const st = topo();
+
+  /* Busca da grade: espera 350 ms de silêncio antes de bater na rota, e devolve
+     o foco ao campo depois do render — senão o teclado fecha a cada tecla. */
+  if(campo === 'buscagrade'){
+    st.q = ev.target.value;
+    const cursor = ev.target.selectionStart;
+    clearTimeout(st.timerBusca);
+    st.timerBusca = setTimeout(async () => {
+      st.offset = 0;
+      await render();
+      const novo = app.querySelector('[data-field="buscagrade"]');
+      if(novo){ novo.focus(); novo.setSelectionRange(cursor, cursor); }
+    }, 350);
+    return;
+  }
+
+  if(campo === 'busca'){ st.busca = ev.target.value;
+    const q = st.busca.toLowerCase();
+    // rerender só da lista para não perder o foco do input
+    const lista = st.tabelas.filter(t=>t.name.includes(q));
+    const alvo = ev.target.closest('.body');
+    [...alvo.querySelectorAll('.gtitle, .card, .gfoot')].forEach(x=>x.remove());
+    alvo.insertAdjacentHTML('beforeend',
+      (lista.filter(t=>t.type==='table').length ? grupo(`Tabelas (${lista.filter(t=>t.type==='table').length})`,
+        lista.filter(t=>t.type==='table').map(t=>linha({t:t.name,s:t.comment,v:`${num(t.rows)} linhas`,act:'tabela',arg:t.name})).join('')) : '') +
+      (lista.filter(t=>t.type!=='table').length ? grupo(`Views (${lista.filter(t=>t.type!=='table').length})`,
+        lista.filter(t=>t.type!=='table').map(t=>linha({t:t.name,s:t.comment,v:`${num(t.rows)} linhas`,act:'tabela',arg:t.name})).join('')) : ''));
+    return;
+  }
+  if(st.tela === 'formulario'){
+    const v = ev.target.type === 'number' ? (ev.target.value===''?undefined:Number(ev.target.value)) : ev.target.value;
+    poe(st.modelo, campo, v);
+  }
+});
+app.addEventListener('change', ev => {
+  const campo = ev.target.dataset.field;
+  if(campo && ev.target.tagName === 'SELECT') poe(topo().modelo, campo, ev.target.value);
+});
+
+nBack.addEventListener('click', volta);
+nAction.addEventListener('click', () => {
+  const st = topo();
+  if(st.tela === 'banco'){ api(ROTAS.disconnect.m, ROTAS.disconnect.p(st.id)); volta(); }   // POST .../disconnect
+  if(st.tela === 'formulario') app.querySelector('[data-act="salvar"]').click();
+});
+
+/* ---------- inspetor: aba Rede ---------- */
+const painelRede = document.getElementById('panel-rede');
+const painelRotas = document.getElementById('panel-rotas');
+let contador = 0;
+
+function porque(caminho, metodo){
+  // monta um molde trocando os parâmetros por [^/]+ — os marcadores precisam
+  // sobreviver ao encodeURIComponent que as rotas aplicam
+  const achou = Object.values(ROTAS).find(r => {
+    const molde = r.p('zzida','zztab').replace(/zzida|zztab/g,'[^/]+');
+    return r.m === metodo.toUpperCase() && new RegExp('^'+molde+'$').test(caminho.split('?')[0]);
+  });
+  return achou?.doc ?? 'Rota fora do catálogo — se você chegou aqui, falta documentar.';
+}
+
+function registra(metodo, caminho, params, body, status, dados, ms){
+  const M = metodo.toUpperCase();
+  const qs = Object.keys(params||{}).length ? '?'+new URLSearchParams(params).toString() : '';
+  const id = 'log'+(++contador);
+  const corpo = M==='GET' ? null : body;
+  const el = document.createElement('div');
+  el.className = 'log';
+  el.innerHTML =
+    `<div class="head"><span class="m ${M}">${M}</span><span class="path">${esc(caminho+qs)}</span>
+       <span class="ms">${ms}ms</span><span class="st ${status>=400?'bad':''}">${status}</span></div>
+     <div id="${id}" style="display:none">
+       <div class="why">${esc(porque(caminho, M))}</div>
+       ${corpo?`<pre>// corpo enviado\n${esc(JSON.stringify(corpo,null,2))}</pre>`:''}
+       <pre>${esc(recorta(dados))}</pre>
+     </div>`;
+  el.querySelector('.head').addEventListener('click', () => {
+    const c = el.querySelector('#'+id); c.style.display = c.style.display==='none' ? 'block' : 'none';
+  });
+  painelRede.prepend(el);
+  while(painelRede.children.length > 40) painelRede.lastChild.remove();
+}
+/** Resposta grande vira resumo — o painel é para entender o contrato, não para ler 50 linhas. */
+function recorta(d){
+  const clone = JSON.parse(JSON.stringify(d ?? {}));
+  if(Array.isArray(clone.rows) && clone.rows.length > 3)
+    clone.rows = [...clone.rows.slice(0,3), `… +${clone.rows.length-3} linhas`];
+  if(Array.isArray(clone.columns) && clone.columns.length > 4)
+    clone.columns = [...clone.columns.slice(0,4), `… +${clone.columns.length-4} colunas`];
+  if(typeof clone.mermaid === 'string' && clone.mermaid.length > 400)
+    clone.mermaid = clone.mermaid.slice(0,400)+'\n… (cortado)';
+  if(typeof clone.ddl === 'string' && clone.ddl.length > 400)
+    clone.ddl = clone.ddl.slice(0,400)+'\n… (cortado)';
+  return JSON.stringify(clone, null, 2);
+}
+
+/* ---------- inspetor: aba Catálogo ---------- */
+(function catalogo(){
+  const grupos = {};
+  for(const [chave,r] of Object.entries(ROTAS)) (grupos[r.grupo] ??= []).push([chave,r]);
+  painelRotas.innerHTML = Object.entries(grupos).map(([g,itens]) =>
+    `<div class="rgroup">${g}</div>` + itens.map(([chave,r]) => {
+      const exemplo = r.p('c1','pedidos');
+      return `<div class="route"><div class="l1"><span class="m ${r.m}">${r.m}</span><code>${esc(exemplo)}</code></div>
+        <p>${esc(r.doc)}</p></div>`;
+    }).join('')).join('');
+})();
+
+document.querySelectorAll('.tabs button').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('.tabs button').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');
+  painelRede.style.display  = b.dataset.tab==='rede'  ? 'block' : 'none';
+  painelRotas.style.display = b.dataset.tab==='rotas' ? 'block' : 'none';
+}));
+
+render();
+</script>
+</body>
+</html>
