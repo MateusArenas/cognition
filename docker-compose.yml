@@ -1,0 +1,23 @@
+# Postgres dos dados PRÓPRIOS do backend (usuários, roles, permissões CASL, conexões salvas) —
+# ver docs/17-db-client.md. NÃO é um banco de exemplo pra testar o cliente de banco em si (o
+# app conecta em QUALQUER banco pela tela de Conexão, isso aqui não tem nada a ver com aquilo).
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: dbmobile
+      POSTGRES_PASSWORD: dbmobile
+      POSTGRES_DB: dbmobile
+    ports:
+      - '5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U dbmobile']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:

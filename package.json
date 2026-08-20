@@ -1,0 +1,8 @@
+{
+  "name": "cognition",
+  "private": true,
+  "workspaces": [
+    "editor",
+    "backend"
+  ]
+}
