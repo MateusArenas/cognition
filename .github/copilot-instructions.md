@@ -10,9 +10,13 @@ mudar. Não deixe os docs ficarem para trás do código que você está gerando.
 ## O que é este projeto
 
 Editor de diagramas Mermaid e documentos Markdown para celular (Expo + React Native +
-TypeScript, expo-router). O app fica em `editor/`. Documentação completa: `CLAUDE.md` na raiz
-(comece por lá), `docs/*.md` por assunto, `CHECKLIST.md` para o que já foi feito, e
-`ESPECIFICACAO-APP-RN-EXPO.md` como fonte de verdade detalhada (código exato).
+TypeScript, expo-router), com uma tab separada pra um **cliente de banco de dados** estilo
+DBeaver/TablePlus. `cognition/` é um **monorepo** (workspaces do npm): o app fica em
+`editor/`, e o backend do cliente de banco (NestJS) fica em `backend/`. Documentação completa:
+`CLAUDE.md` na raiz (comece por lá), `docs/*.md` por assunto, `CHECKLIST.md` para o que já foi
+feito, `ESPECIFICACAO-APP-RN-EXPO.md` (fonte de verdade dos documentos Mermaid/Markdown/
+Rabisco) e `DB-MOBILE.md` (fonte de verdade do cliente de banco, com `prototipo.html` como
+gabarito visual) — ver `docs/17-db-client.md` pro resumo operacional dos dois últimos.
 
 ## Regras não-negociáveis
 
@@ -32,6 +36,13 @@ TypeScript, expo-router). O app fica em `editor/`. Documentação completa: `CLA
   Ver `docs/11-assistente-ia.md`.
 - **Mutações do domínio são puras**: recebem um `Doc` e devolvem outro, nunca mutam o
   original (`structuredClone` + retorno). Facilita undo e testa sem side effect.
+- **`backend/` (cliente de banco): nada que o usuário digita vira SQL.** Filtro, ordenação e
+  projeção sempre viram `knex(tabela).where(...)` com identificador validado contra o catálogo
+  real (nunca aceito direto do cliente) e valor sempre por bind — nunca concatenação de string.
+  Ver `DB-MOBILE.md`, seção "REGRA DE PROJETO", e `backend/src/catalog/filters.service.ts`.
+- **`backend/`: Knex é só pros bancos-ALVO, Prisma é só pros dados PRÓPRIOS do backend**
+  (usuários/roles/permissões CASL/conexões salvas). Não misture os dois propósitos — ver
+  `docs/17-db-client.md`.
 
 ## Como o projeto é construído
 

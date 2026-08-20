@@ -45,6 +45,14 @@ npm i zustand @gorhom/bottom-sheet react-native-keyboard-controller i18n-js
 npm i -D mermaid vitest @testing-library/react-native jest-expo jest react-test-renderer
 ```
 
+**Monorepo (Etapa DB1, docs/17-db-client.md).** `cognition/` virou workspace do npm
+(`package.json` na raiz, `"workspaces": ["editor", "backend"]`) quando o `backend/` (API do
+cliente de banco) entrou. `editor/` não mudou de lugar, comando nem comportamento — só o
+lockfile consolidou: `npm install` a partir da raiz gerencia um `package-lock.json` só (raiz),
+o `editor/package-lock.json` antigo foi removido por ficar órfão/desatualizado. Rodar
+`npm install -w editor` (ou `-w backend`) instala só as deps daquele workspace; `npm install`
+sem `-w` na raiz instala os dois.
+
 ## Estrutura de pastas
 
 Organização por feature, com o domínio isolado no centro. **A regra que mantém o projeto

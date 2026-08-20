@@ -22,14 +22,24 @@ Um editor de diagramas Mermaid, documentos Markdown e rabiscos (desenho livre) p
 (Expo/React Native): toca num elemento do desenho — nó, aresta, tabela, coluna, traço — e edita
 ali mesmo, sem abrir painel para o que se faz o tempo todo. Documento e diagrama são a mesma
 coisa: um bloco ` ```mermaid ` num `.md` abre no canvas com todas as ferramentas e volta
-atualizado.
+atualizado. Uma segunda tab, separada dos documentos, é um **cliente de banco de dados**
+(estilo DBeaver/TablePlus) — conecta em bancos de verdade (Postgres/MySQL/SQLite/SQL Server),
+explora tabelas, edita linhas e desenha o diagrama entidade-relacionamento, tudo pelo celular.
+Ver [docs/17-db-client.md](docs/17-db-client.md).
 
-O app real vive em [`editor/`](editor/). A especificação funcional completa (a fonte de
-verdade para qualquer detalhe fino, código exato incluído) é
-[ESPECIFICACAO-APP-RN-EXPO.md](ESPECIFICACAO-APP-RN-EXPO.md); o protótipo web funcional que
-resolve qualquer ambiguidade de comportamento é
-[editor-mermaid.html](editor-mermaid.html). Os arquivos em `docs/` reorganizam essa spec por
-assunto, com mais contexto por parte — comece pelos diagramas.
+O app real vive em [`editor/`](editor/). A especificação funcional completa dos documentos
+Mermaid/Markdown/Rabisco (a fonte de verdade para qualquer detalhe fino, código exato incluído)
+é [ESPECIFICACAO-APP-RN-EXPO.md](ESPECIFICACAO-APP-RN-EXPO.md); o protótipo web funcional que
+resolve qualquer ambiguidade de comportamento é [editor-mermaid.html](editor-mermaid.html). O
+cliente de banco de dados tem sua própria especificação, [DB-MOBILE.md](DB-MOBILE.md), e seu
+próprio protótipo navegável, [prototipo.html](prototipo.html). Os arquivos em `docs/`
+reorganizam as duas specs por assunto, com mais contexto por parte — comece pelos diagramas.
+
+**A pasta `cognition` é um monorepo** (workspaces do npm, `package.json` na raiz):
+[`editor/`](editor/) é o app Expo (documentos + cliente de banco); [`backend/`](backend/) é a
+API própria do cliente de banco (NestJS) — os dois times de código vivem juntos, mas
+`backend/` não é dependência de build do `editor/`, é um serviço HTTP à parte que o app
+consome.
 
 ## Comece aqui
 
@@ -61,6 +71,7 @@ Para saber **o que já foi construído e o que falta**, o ponto de retomada é o
 | [14-nativo-e-armadilhas.md](docs/14-nativo-e-armadilhas.md) | Rota 100% nativa (opcional), armadilhas conhecidas | referência |
 | [15-diagramas.md](docs/15-diagramas.md) | Os 5 fluxos em Mermaid do projeto | referência |
 | [16-rabisco.md](docs/16-rabisco.md) | Canvas Skia nativo, roadmap R1-R5 do desenho livre | Etapas R1-R2 ✅ |
+| [17-db-client.md](docs/17-db-client.md) | Cliente de banco de dados: app + backend NestJS/Knex/Prisma/CASL | Etapa DB1 ✅ |
 
 ## Como este projeto foi construído
 

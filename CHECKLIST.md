@@ -708,6 +708,139 @@ antes de reaplicá-la.
   `domain/markdown/toHtml.test.ts` — título, negrito/itálico/code, escapamento de XML, tarefa
   marcada, tabela com alinhamento, bloco mermaid rotulado). `tsc --noEmit` limpo. Verificação:
   só automatizada, mesmo motivo das etapas de export anteriores.
+- [x] **Etapa DB1 — Cliente de banco de dados: nova tab no app + backend NestJS/Knex/Prisma/
+  CASL, monorepo** — pedido grande do usuário, guiado por dois documentos que ele escreveu:
+  `DB-MOBILE.md` (spec funcional completa, ~1950 linhas) e `prototipo.html` (protótipo
+  navegável/inspetor de rotas). Detalhe completo em
+  [docs/17-db-client.md](docs/17-db-client.md) — aqui só o resumo do que foi construído e
+  testado.
+  - **Monorepo**: `package.json` novo na raiz (workspaces `["editor","backend"]`). `editor/`
+    não mudou de lugar nem de comportamento — só passou a compartilhar `node_modules` hoisted.
+  - **Decisão de arquitetura**: duas ferramentas de dado, de propósito — Knex pros bancos-ALVO
+    (schema desconhecido até conectar, dialeto escolhido em runtime) e Prisma pros dados
+    PRÓPRIOS do backend (usuários/roles/permissões CASL/conexões salvas, schema fixo, roda
+    sobre Postgres via `docker-compose.yml` novo na raiz).
+  - **Backend novo (`backend/`)**: NestJS. `auth/` (login JWT), `users/` (CRUD), `permissions/`
+    (`CaslAbilityFactory` monta a Ability por usuário a partir de Role→Permission do Prisma,
+    sem cache — revogar uma role vale na hora; `PermissionsGuard` + `@CheckAbility()`),
+    `connections/` (CRUD + senha cifrada AES-256-GCM + `KnexPoolService`, uma instância knex
+    por conexão em memória, + `GET /drivers`), `catalog/` (schemas/tables/ddl/rows — controller
+    nunca sabe dialeto, pede pro `DialectRegistry`; `dialects/` tem `pg`/`mysql`/`sqlite`/
+    `mssql`/`oracle` .strategy.ts na MESMA interface), `erd/` (Mermaid `erDiagram` a partir do
+    catálogo), `mutations/` (insert/update/delete numa transação, trava otimista via `was`,
+    `NO_PK`/`NULL_PK`/`CONFLICT`/`READ_ONLY`). Swagger em `/api/docs` desde o primeiro boot.
+    `prisma/seed.ts` novo (`npm run db:seed`) cria a primeira role admin — sem isso ninguém
+    conseguiria nem criar o segundo usuário.
+  - **App (`editor/src/features/dbclient/`)**: nova tab "Banco de Dados" (`app/(tabs)/
+    dbclient.tsx`), telas empilhadas em `app/db/` (mesmo padrão de `app/doc/[id].tsx`) — Login,
+    Conexões (lista com bolinha colorida), Formulário de conexão (campos gerados por
+    `drivers.ts`, Testar conexão), Banco (Tabelas + Diagrama), Tabela (Dados/Estrutura/DDL/
+    Diagrama). **Reaproveita o design system existente inteiro** — `GroupedList`/`Row`/`Field`/
+    `Segmented`/`Sheet`/`Chip`/`NavBar`/`AlertDialog`/`Fab` — em vez de recriar um do zero
+    (o `DB-MOBILE.md` original desenhava um `theme.ts`/`ui/index.tsx` próprios, redundantes com
+    o que já existe). ERD reaproveita o MESMO runtime WebView dos diagramas Mermaid do resto do
+    app. i18n: seção `"dbclient"` nova nos três catálogos.
+  - **Testes**: backend com Jest — 3 arquivos unitários (`crypto.util.spec.ts`,
+    `filters.service.spec.ts` — inclui um teste que tenta injetar `DROP TABLE` num nome de
+    coluna e confirma que é rejeitado antes de tocar no query builder —, `casl-ability.factory.
+    spec.ts`) + 2 e2e completos com supertest contra o app Nest real (`dbclient.e2e-spec.ts`:
+    login → CRUD de conexão → conectar → tabelas → estrutura → DDL → rows com filtro/paginação/
+    busca → coluna inexistente rejeitada → ERD → preview/aplicar mutation → conflito otimista
+    com rollback confirmado → NULL_PK → READ_ONLY → senha nunca exposta; `permissions.e2e-spec.
+    ts`: CASL de verdade, usuário só-leitura não passa de 403). 46 testes de backend, todos
+    passando. App: `drivers.test.ts` novo (7 testes, `getPath`/`setPath`/`baseConfigFor`) — 217
+    testes no total do app (era 210). `tsc --noEmit` limpo nos dois lados.
+  - **Banco de teste**: SQLite, não Postgres — decisão de teste (mais rápido, sem depender de
+    infra externa), não limitação de ambiente: o Postgres real do `docker-compose.yml` já foi
+    subido e validado ao vivo nesta mesma sessão (migrations, seed, boot do backend, chamadas
+    HTTP reais). `schema.test.prisma` (mesmos modelos de `schema.prisma`, provider sqlite) gera um
+    client à parte, injetado no lugar do `PrismaService` real via `overrideProvider()` do Nest.
+    O schema é aplicado com DDL escrito à mão (`test/prisma-test-client.ts`), **não** `prisma db
+    push`/`migrate` — essas ferramentas alteram um banco de verdade, e tanto o CLI do Prisma 7
+    quanto o harness deste agente bloqueiam por padrão um agente de IA rodando esse tipo de
+    comando, mesmo mirando um arquivo temporário. Pedimos consentimento explícito do usuário
+    antes de qualquer tentativa, e a solução final (SQL de mão) nem precisa mais do bypass.
+    `sqlite.strategy.ts` é o único dialeto testado de ponta a ponta (dos dois lados: metadados
+    do backend via Prisma E banco-alvo de exemplo via Knex). `pg`/`mysql`/`mssql`/`oracle.
+    strategy.ts` têm código completo (consultas de catálogo padrão documentadas —
+    `pg_catalog`/`information_schema`/`sys.*`/`ALL_*`) mas SEM teste de integração ao vivo —
+    fica pro usuário validar com `docker-compose up` + um servidor de verdade.
+  - **Deliberadamente fora desta entrega** (documentado, não escondido — ver
+    docs/17-db-client.md): construtor de consultas solto (a mesma grade da aba Dados já cobre a
+    maior parte do valor), edição em lote com revisão antes de salvar (a edição é uma mutação
+    por toque agora, ainda passa pela mesma rota com trava otimista), dialeto Oracle na lista
+    do app (driver `oracledb` pesado, não instalado), filtros salvos/exportar CSV/túnel SSH/
+    múltiplas abas (já eram "fora" no `DB-MOBILE.md` original).
+  - Verificação: `npm run test` + `npm run test:e2e` no `backend/`, `tsc --noEmit` + `vitest
+    run` no `editor/` — tudo verde. Sem verificação visual num simulador de verdade (mesma
+    limitação de sempre deste ambiente).
+- [x] **Etapa DB2 — retoques pós-uso real: grade com ações, filtros, novo registro, cartões de
+  DDL/Diagrama, console SQL livre** — depois de usar o app de verdade num simulador e comparar
+  com `prototipo.html`, o usuário listou o que faltava na Etapa DB1; esta etapa cobre esse lote
+  inteiro. Detalhe em [docs/17-db-client.md](docs/17-db-client.md).
+  - **`DataGrid` compartilhada** (`editor/src/features/dbclient/screens/DataGrid.tsx`), usada
+    tanto na aba Dados de `TableScreen` quanto no resultado da aba Consulta: número da linha
+    tocável abre folha (copiar/duplicar/excluir/editar registro inteiro); tocar numa célula
+    NUNCA edita direto — abre folha de opções (editar valor **ou** definir NULL, filtrar por
+    esse valor, excluir esse valor = filtro `neq` que tira as linhas com aquele valor da grade
+    sem apagar nada, copiar); rodapé mostra total de registros, página atual/total de páginas e
+    tamanho de página (cicla 25/50/100); borda laranja quando o resultado não é editável (view,
+    tabela sem PK, ou SELECT com JOIN no console).
+  - **`FiltersSheet`**: construtor de filtro por toque — coluna e operador sempre de uma lista
+    fechada (nunca texto livre viraria SQL, mesma regra de ouro do resto do app), lista os
+    filtros ativos com botão de remover.
+  - **`RecordFormSheet`**: um só componente pra "Nova linha" e "Editar registro inteiro" —
+    mostra tipo e obrigatoriedade (NOT NULL sem default → obrigatório) por coluna, toggle NULL
+    por campo que aceita nulo, colunas autoincrement ficam travadas/ocultas na criação.
+  - **DDL** (aba de `TableScreen`) agora é um cartão com borda, scroll interno e botão "Copiar
+    DDL" — antes era um `<Text>` solto sem moldura.
+  - **`DiagramCard`** (`screens/DiagramCard.tsx`), compartilhado entre o Diagrama de
+    `DatabaseScreen` (schema inteiro) e de `TableScreen` (vizinhança de uma tabela): cartão com
+    borda e scroll interno; alternâncias "Mostrar colunas"/"Só chaves" nos dois níveis, mais
+    "Profundidade" (1-3, só na vizinhança de tabela — o backend já suportava esse parâmetro,
+    só não tinha UI); "Ver código Mermaid" mostra o texto num cartão próprio com "Copiar";
+    exportar reaproveita o MESMO `ShareSheet`/`services/export.ts` da tela de Diagrama de
+    documentos (PNG, PDF, arquivo `.mmd`, copiar) — `MermaidView` virou `forwardRef` pro handle
+    `exportPng`/`exportSvg` do `DiagramCanvas` pra isso funcionar sem duplicar nada.
+  - **Console SQL livre — aba "Consulta"** (`QueryTab.tsx`, entre Tabelas e Diagrama em
+    `DatabaseScreen`): pedido explícito do usuário, e por escolha própria dele diverge de
+    `prototipo.html` (que reservava "console SQL" pra outra coisa). Única rota do app inteiro
+    em que o texto digitado vira SQL de verdade — exceção controlada à "REGRA DE PROJETO",
+    documentada, não escondida. Backend: `POST /connections/:id/query` →
+    `IntrospectService#rawQuery` → `sql-safety.ts#checkReadOnlySql()` (só um `SELECT`/`WITH`,
+    sem `;` no meio, varre a string inteira atrás de palavra de escrita — pega até CTE
+    gravável; heurística por regex que erra pro lado de rejeitar, não de deixar passar). Editável
+    célula a célula só quando vem de uma tabela só sem JOIN (`edicao.table`, campo novo que
+    `rows()` e `rawQuery()` agora devolvem os dois); com JOIN a `DataGrid` mostra os resultados
+    com borda laranja e sem ação de escrita nenhuma. App: `CodeEditor` (o mesmo do editor
+    Mermaid) ganhou props opcionais `tokenizer`/`palette` — reaproveita toda a técnica de
+    sobreposição texto colorido + `TextInput` transparente e o trabalho de teclado/scroll já
+    resolvido lá, plugando só um tokenizador novo (`lib/sql-highlight.ts`) em vez de duplicar o
+    componente; erro de SQL real do driver aparece embaixo do editor, não um alerta genérico.
+  - **i18n**: todas as chaves novas nos três catálogos (`pt-BR`/`en`/`es`), incluindo
+    `filterOp.*` (11 operadores) e `tabs.dbclient`/`common.save`.
+  - **Testes**: backend ganha `sql-safety.spec.ts` (9 testes unitários) e 4 casos novos em
+    `dbclient.e2e-spec.ts` (SELECT numa tabela só = editável com `table` certo, JOIN = não
+    editável, escrita rejeitada, múltiplas instruções rejeitadas) — 32 unitários / 27 e2e no
+    backend, todos verdes. App: `tsc --noEmit` limpo e as 217 suítes de `vitest` continuam
+    verdes (a `DataGrid`/`FiltersSheet`/`RecordFormSheet`/`DiagramCard`/`QueryTab` novos não têm
+    teste próprio de simulador — mesma limitação de sempre deste ambiente; cobertos por tipo e
+    pela suíte e2e do backend que exercita toda rota que eles chamam).
+  - **Fora desta entrega, por escolha, não por esquecimento**: edição em lote com buffer/revisão
+    antes de salvar (o usuário pediu ações — duplicar, excluir, editar — não um buffer
+    multi-seleção; cada ação já aplica na hora, passando pela mesma rota `mutations` com trava
+    otimista por trás) e construtor de consultas visual (o console SQL livre cobre esse caso de
+    uso de outro jeito, por pedido explícito do usuário).
+  - **Bug real achado e corrigido testando ao vivo, depois que o Docker do usuário voltou ao
+    ar**: `pg.strategy.ts#indexes()`/`#foreignKeys()` devolviam nomes de coluna como a string
+    literal `"{email}"` em vez de `["email"]` — o driver `pg` não desserializa `array_agg` de
+    colunas do tipo `name` (OID 1003) em array por padrão. Só aparece contra um Postgres de
+    verdade com FK/índice (SQLite não tem esse tipo, então a suíte automatizada nunca passava
+    por ali); sintoma era `500` em `GET .../ddl` e quebraria o ERD de qualquer schema com FK.
+    Corrigido com `::text` dentro dos três `array_agg` do arquivo. Validado de novo ao vivo:
+    DDL, estrutura (índices/FKs) e ERD do schema inteiro do próprio Postgres do backend, usado
+    como banco-ALVO de teste pra essa passada. Detalhe em
+    [docs/17-db-client.md](docs/17-db-client.md), seção "Bug achado testando ao vivo".
 
 ---
 

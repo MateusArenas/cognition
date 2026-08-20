@@ -16,7 +16,17 @@ Um editor de diagramas Mermaid, documentos Markdown e rabiscos, feito para o cel
 | `md` | Documento Markdown | Editor estilo Notas, com diagramas Mermaid embutidos e editáveis |
 | `rabisco` | Desenho livre (.svg) | Canvas nativo (Skia) — caneta, formas, texto, seleção, IA — ver [16-rabisco.md](16-rabisco.md) |
 
+Além desses cinco (que são todos variantes de `Doc`, vivem na Biblioteca), o app tem uma
+**segunda tab**, separada dos documentos: um cliente de banco de dados estilo DBeaver/TablePlus
+— conecta em bancos de verdade, explora tabelas, edita linhas, desenha o ERD. Não é um tipo de
+arquivo, é um produto irmão dentro do mesmo app, com backend próprio (`backend/`, NestJS) — ver
+[17-db-client.md](17-db-client.md).
+
 ## As três promessas que definem o produto
+
+(As três promessas abaixo descrevem o editor de documentos/diagramas — o cliente de banco de
+dados é uma experiência própria, sem barra de ações contextual nem bloco Mermaid embutido; ver
+[17-db-client.md](17-db-client.md) pro desenho de tela dele.)
 
 1. **Selecionar é barato.** Tocar num elemento não abre painel — mostra uma barra de ações
    com as cinco coisas que se faz o tempo todo. O painel completo fica a um toque.
