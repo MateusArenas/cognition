@@ -841,6 +841,27 @@ antes de reaplicá-la.
     DDL, estrutura (índices/FKs) e ERD do schema inteiro do próprio Postgres do backend, usado
     como banco-ALVO de teste pra essa passada. Detalhe em
     [docs/17-db-client.md](docs/17-db-client.md), seção "Bug achado testando ao vivo".
+  - **Segunda passada de retoque visual, depois que o usuário testou Consulta/Diagrama no
+    simulador**: causa raiz do "ficou feio" era `Chip` (cápsula translúcida com blur, pensada
+    pra HUD flutuante SOBRE canvas — zoom/desfazer na tela de Diagrama de documentos) sendo
+    usado como botão comum em telas sem canvas por trás. Três componentes novos promovidos pro
+    design system geral (`docs/03-design-system.md`): `RowSwitch` (`Switch` nativo encolhido
+    0.8× pra caber numa `Row`), `TintedButton` (botão de largura cheia, fundo azul translúcido —
+    Executar consulta, Compartilhar diagrama, Copiar DDL) e `Banner` (erro/aviso com fundo
+    tingido na cor do tom). `DiagramCard`: alternâncias viraram `Row`+`RowSwitch` num grupo
+    "Modelo relacional" em vez de `Chip`s soltos; "Ver código Mermaid" agora troca o conteúdo
+    (canvas ↔ texto) em vez de empilhar os dois; bug real corrigido — `MermaidView` nunca
+    repassava o `onError` do `DiagramCanvas` pro React, então um erro de render do mermaid.js
+    (schema vazio, por exemplo) deixava a tela em branco pra sempre sem spinner nem mensagem;
+    ganhou também uma checagem de "sem entidades" com estado vazio decente em vez de tentar
+    desenhar um `erDiagram` impossível. `QueryTab`: cartão do SQL com borda esquerda colorida
+    (vermelha em erro, como o protótipo), `TintedButton` no lugar do Chip, e a consulta abre
+    pré-preenchida com um SELECT nas tabelas do catálogo (varia por dialeto — `sqlite_master` no
+    SQLite, `information_schema.tables` nos demais) em vez de uma caixa vazia. `TableScreen`: DDL
+    ganhou realce de sintaxe de verdade (`sql-highlight.ts` ganhou vocabulário DDL — `CREATE
+    TABLE`, tipos de coluna — além do DML que já tinha pro console). `tsc --noEmit` limpo, 217
+    testes verdes; sem verificação visual de novo no simulador (a sessão do Metro era do
+    usuário, sem `idb` no ambiente pra automatizar toque de forma confiável).
 
 ---
 

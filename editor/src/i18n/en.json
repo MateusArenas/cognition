@@ -155,7 +155,7 @@
     "requiredField": "Fill in the required field: %{field}",
     "showColumns": "Show columns", "keysOnly": "Keys only", "depth": "Depth %{depth}",
     "viewMermaidCode": "View Mermaid code", "copyMermaidCode": "Copy Mermaid code",
-    "mermaidSource": "Mermaid code", "runQuery": "Run", "copyDdl": "Copy DDL",
+    "mermaidSource": "Mermaid code", "runQuery": "Run", "runningQuery": "Running…", "copyDdl": "Copy DDL",
     "relationalModel": "Relational model", "keysOnlyHint": "PK, FK, and UNIQUE only.",
     "depthTitle": "Depth", "erdEmptyTitle": "Nothing to draw",
     "erdEmptySubtitle": "This database (or this neighborhood) has no tables to build a diagram from.",

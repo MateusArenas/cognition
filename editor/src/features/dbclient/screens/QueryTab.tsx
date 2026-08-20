@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Keyboard, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Banner } from '@/design/components/Banner';
-import { Chip } from '@/design/components/Chip';
+import { TintedButton } from '@/design/components/TintedButton';
 import { useTheme } from '@/design/useTheme';
 import { useI18n } from '@/i18n/I18nProvider';
 import { CodeEditor } from '@/features/code/CodeEditor';
@@ -65,8 +65,15 @@ export function QueryTab({ connectionId }: { connectionId: string }) {
       >
         <CodeEditor code={sql} onChangeText={setSql} tokenizer={tokenizeSql} palette={SQL_COLORS} />
       </View>
-      <View style={{ flexDirection: 'row', paddingHorizontal: space.lg, paddingVertical: space.sm }}>
-        <Chip label={running ? '…' : t('dbclient.runQuery')} active onPress={execute} disabled={running || !sql.trim()} />
+      <View style={{ paddingHorizontal: space.lg, paddingVertical: space.sm }}>
+        <TintedButton
+          label={running ? t('dbclient.runningQuery') : t('dbclient.runQuery')}
+          icon="play"
+          busy={running}
+          disabled={!sql.trim()}
+          onPress={execute}
+          accessibilityLabel={t('dbclient.runQuery')}
+        />
       </View>
 
       {error ? (

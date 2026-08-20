@@ -155,7 +155,7 @@
     "requiredField": "Preencha o campo obrigatório: %{field}",
     "showColumns": "Mostrar colunas", "keysOnly": "Só chaves", "depth": "Profundidade %{depth}",
     "viewMermaidCode": "Ver código Mermaid", "copyMermaidCode": "Copiar código Mermaid",
-    "mermaidSource": "Código Mermaid", "runQuery": "Executar", "copyDdl": "Copiar DDL",
+    "mermaidSource": "Código Mermaid", "runQuery": "Executar", "runningQuery": "Executando…", "copyDdl": "Copiar DDL",
     "relationalModel": "Modelo relacional", "keysOnlyHint": "PK, FK e UNIQUE apenas.",
     "depthTitle": "Profundidade", "erdEmptyTitle": "Nada para desenhar",
     "erdEmptySubtitle": "Este banco (ou esta vizinhança) não tem tabelas para gerar o diagrama.",
