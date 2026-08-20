@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
 import type { Knex } from 'knex';
 import { ConnectionsService } from '../connections/connections.service';
 import { KnexPoolService, StoredConnectionConfig } from '../connections/knex-pool.service';
@@ -23,6 +23,9 @@ export interface RowsResult {
     editavel: boolean;
     motivoBloqueio?: string;
   };
+  /** Só presente quando rawQuery() rodou um INSERT/UPDATE/DELETE (allowWrite) — `rows`/`fields`
+   *  ficam vazios nesse caso, não faz sentido tentar exibir grade pra um comando de escrita. */
+  affectedRows?: number;
 }
 
 export interface TableDetail {
@@ -188,17 +191,43 @@ export class IntrospectService {
 
   // Console SQL livre (Etapa DB2, pedido explícito do usuário — diferente do resto do app,
   // aqui o texto digitado VIRA a consulta de verdade). Único ponto de exceção à "REGRA DE
-  // PROJETO"; a proteção é checkReadOnlySql() (sql-safety.ts): só SELECT/WITH, uma instrução,
-  // sem palavra de escrita em lugar nenhum da string. `editavel` segue a MESMA lógica de
-  // rows() — só que a tabela de origem é inferida da consulta (regex `FROM <tabela>`, sem
+  // PROJETO"; a proteção é checkReadOnlySql() (sql-safety.ts): por padrão só SELECT/WITH, uma
+  // instrução, sem palavra de escrita em lugar nenhum da string. `editavel` segue a MESMA lógica
+  // de rows() — só que a tabela de origem é inferida da consulta (regex `FROM <tabela>`, sem
   // JOIN) em vez de vir do parâmetro de rota.
-  async rawQuery(connectionId: string, ownerId: string, sql: string): Promise<RowsResult> {
-    const safety = checkReadOnlySql(sql);
+  //
+  // `allowWrite` — toggle da aba Consulta, terceiro pedido do usuário — libera INSERT/UPDATE/
+  // DELETE. Mesmo com o toggle ligado no app, uma conexão marcada `readOnly` ainda bloqueia:
+  // o toggle é "permita ao app mandar escrita", não "ignore a marcação da conexão" — mesmo
+  // código/mensagem READ_ONLY que ReadOnlyGuard usa pras rotas de mutations, por consistência.
+  async rawQuery(connectionId: string, ownerId: string, sql: string, allowWrite = false): Promise<RowsResult> {
+    const safety = checkReadOnlySql(sql, { allowWrite });
     if (!safety.ok) {
       throw new BadRequestException({ message: safety.reason, code: 'UNSAFE_QUERY' });
     }
 
     const { knex, strategy, client, schema, readOnly } = await this.resolve(connectionId, ownerId);
+
+    if (safety.isWrite) {
+      if (readOnly) {
+        throw new ForbiddenException({ message: 'Conexão marcada como somente leitura.', code: 'READ_ONLY' });
+      }
+      const statement = sql.trim().replace(/;+\s*$/, '');
+      const result = await knex.raw(statement);
+      const affectedRows = this.extractAffectedRows(client, result);
+      return {
+        fields: [],
+        rows: [],
+        total: affectedRows,
+        totalSemFiltro: affectedRows,
+        offset: 0,
+        limit: affectedRows,
+        colunasBuscadas: 0,
+        affectedRows,
+        edicao: { table: safety.table, primaryKey: [], autoIncrement: [], editavel: false },
+      };
+    }
+
     const statement = sql.trim().replace(/;+\s*$/, '');
     const result = await knex.raw(statement);
     const { rows, fields } = this.extractRowsAndFields(client, result);
@@ -252,6 +281,28 @@ export class IntrospectService {
     const fields = fieldNames.map((name) => ({ name, type: 'unknown' }));
     const rows = objectRows.map((r) => fieldNames!.map((name) => r[name]));
     return { rows, fields };
+  }
+
+  // Resultado de INSERT/UPDATE/DELETE (console em modo allowWrite) não tem linhas pra desenhar
+  // grade — só a contagem de linhas afetadas, e cada driver devolve isso numa forma diferente.
+  // Só o caminho sqlite (better-sqlite3, `result.changes`) e pg (`result.rowCount`) foram
+  // validados ao vivo neste ambiente; mysql/mssql seguem a forma documentada dos drivers
+  // (mysql2: `ResultSetHeader.affectedRows`; tedious: soma de `rowsAffected[]`) mas sem teste de
+  // integração ao vivo — mesma lacuna já disclosed pros outros dialetos no resto do catálogo.
+  private extractAffectedRows(client: string, result: unknown): number {
+    if (client.startsWith('pg') || client === 'cockroachdb' || client === 'redshift') {
+      return (result as { rowCount?: number }).rowCount ?? 0;
+    }
+    if (client.startsWith('mysql')) {
+      const r = result as [{ affectedRows?: number }, unknown];
+      return r?.[0]?.affectedRows ?? 0;
+    }
+    if (client === 'tedious') {
+      const r = result as { rowsAffected?: number[] };
+      return (r.rowsAffected ?? []).reduce((total, n) => total + n, 0);
+    }
+    const r = result as { changes?: number };
+    return r.changes ?? 0;
   }
 
   // Cancelamento de consulta em andamento — só Postgres tem um jeito padronizado e barato

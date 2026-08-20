@@ -65,8 +65,9 @@ export class CatalogController {
   }
 
   // Console SQL livre — Etapa DB2, ver introspect.service.ts#rawQuery e sql-safety.ts.
+  // `allowWrite` só existe pro toggle da aba Consulta — sem ele (default), continua só leitura.
   @Post('query')
   query(@CurrentUser() user: CurrentUserPayload, @Param('id') id: string, @Body() dto: QueryDto) {
-    return this.introspect.rawQuery(id, user.id, dto.sql);
+    return this.introspect.rawQuery(id, user.id, dto.sql, dto.allowWrite ?? false);
   }
 }

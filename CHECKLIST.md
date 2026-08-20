@@ -862,6 +862,38 @@ antes de reaplicá-la.
     TABLE`, tipos de coluna — além do DML que já tinha pro console). `tsc --noEmit` limpo, 217
     testes verdes; sem verificação visual de novo no simulador (a sessão do Metro era do
     usuário, sem `idb` no ambiente pra automatizar toque de forma confiável).
+- [x] **Etapa DB3 — Consulta ganha toggle de escrita, DDL vira Compartilhar, cartão do DDL
+  menor** — três pedidos pequenos e diretos do usuário depois de usar a Etapa DB2. Detalhe em
+  [docs/17-db-client.md](docs/17-db-client.md).
+  - **Cartão do DDL com altura fixa (~40% da tela)**: era `flex:1`/`minHeight:50%`, crescia até
+    quase tomar a tela inteira. Agora `height: alturaJanela * 0.4` (`useWindowDimensions`), com
+    rolagem vertical E horizontal por dentro (`TableScreen.tsx`).
+  - **"Copiar DDL" virou "Compartilhar"**: abre uma bottom sheet (`Sheet`+`GroupedList`) com
+    duas opções — Copiar (mesmo de antes) e Arquivo SQL (`exportarSqlTexto()` novo em
+    `services/export.ts`, mesmo caminho de `exportarMermaidTexto` — escreve `.sql` no cache e
+    entrega pro share sheet nativo via `expo-sharing`).
+  - **Toggle "Permitir alterar dados" na aba Consulta** (só ali, em nenhum outro lugar do app):
+    `Row`+`RowSwitch` acima do editor, desligado por padrão a cada abertura da aba (não
+    persiste). Libera `INSERT`/`UPDATE`/`DELETE` como instrução única de topo —
+    `DROP`/`ALTER`/`TRUNCATE`/`CREATE`/etc. continuam bloqueados SEMPRE, com ou sem o toggle,
+    porque alteram schema/servidor, não "os dados de uma tabela". **Verificação nos dois
+    lados**: o app faz uma checagem rápida (primeira palavra) só pra feedback instantâneo sem
+    round-trip; a fonte de verdade é sempre o backend (`sql-safety.ts#checkReadOnlySql(sql,
+    {allowWrite})`) — chamar a rota direto (Swagger/curl) sem passar pelo app cai na mesma
+    validação. Conexão marcada `readOnly` continua bloqueando escrita mesmo com o toggle ligado
+    no app (código `READ_ONLY`, mesma exceção de `ReadOnlyGuard`). Resposta de escrita ganha
+    `affectedRows` (contagem por dialeto: `rowCount` no pg, `changes` no sqlite — os dois
+    validados ao vivo; `affectedRows`/`rowsAffected` no mysql/mssql, sem teste ao vivo, mesma
+    lacuna já disclosed pros outros dialetos) e o app mostra um banner "N linha(s) afetada(s)"
+    em vez de tentar desenhar grade vazia.
+  - **Testes**: `sql-safety.spec.ts` ganha 7 casos novos (`allowWrite` aceita INSERT/UPDATE/
+    DELETE e extrai tabela, continua rejeitando DDL/múltiplas instruções, SELECT inalterado) —
+    39 unitários no backend. `dbclient.e2e-spec.ts` ganha 4 casos novos contra SQLite de verdade
+    (INSERT/UPDATE/DELETE com allowWrite rodam e devolvem `affectedRows` certo, sem o toggle
+    continuam rejeitados, DROP rejeitado mesmo com o toggle, conexão `readOnly` bloqueia mesmo
+    com o toggle) — 31 e2e. Validado ao vivo de novo contra o Postgres real do
+    `docker-compose.yml` depois dos testes automatizados (mesmo roteiro, `rowCount` do driver
+    `pg` confirmado). App: `tsc --noEmit` limpo, 217 testes `vitest` continuam verdes.
 
 ---
 

@@ -51,4 +51,50 @@ describe('checkReadOnlySql', () => {
     const r = checkReadOnlySql('drop table customers');
     expect(r.ok).toBe(false);
   });
+
+  describe('com allowWrite: true', () => {
+    it('aceita UPDATE e extrai a tabela', () => {
+      const r = checkReadOnlySql('update customers set name = ? where id = 1', { allowWrite: true });
+      expect(r.ok).toBe(true);
+      expect(r.isWrite).toBe(true);
+      expect(r.table).toBe('customers');
+    });
+
+    it('aceita DELETE FROM e extrai a tabela', () => {
+      const r = checkReadOnlySql('delete from orders where id = 1', { allowWrite: true });
+      expect(r.ok).toBe(true);
+      expect(r.isWrite).toBe(true);
+      expect(r.table).toBe('orders');
+    });
+
+    it('aceita INSERT INTO e extrai a tabela', () => {
+      const r = checkReadOnlySql("insert into customers (name) values ('a')", { allowWrite: true });
+      expect(r.ok).toBe(true);
+      expect(r.isWrite).toBe(true);
+      expect(r.table).toBe('customers');
+    });
+
+    it('continua rejeitando DROP/ALTER/TRUNCATE mesmo com allowWrite', () => {
+      expect(checkReadOnlySql('drop table customers', { allowWrite: true }).ok).toBe(false);
+      expect(checkReadOnlySql('alter table customers add column x text', { allowWrite: true }).ok).toBe(false);
+      expect(checkReadOnlySql('truncate table customers', { allowWrite: true }).ok).toBe(false);
+    });
+
+    it('continua rejeitando múltiplas instruções mesmo com allowWrite', () => {
+      const r = checkReadOnlySql('update customers set name = ?; select 1', { allowWrite: true });
+      expect(r.ok).toBe(false);
+    });
+
+    it('SELECT continua funcionando normalmente com allowWrite ligado', () => {
+      const r = checkReadOnlySql('select * from customers', { allowWrite: true });
+      expect(r.ok).toBe(true);
+      expect(r.isWrite).toBeFalsy();
+    });
+  });
+
+  it('sem allowWrite, UPDATE/DELETE/INSERT continuam rejeitados (comportamento padrão inalterado)', () => {
+    expect(checkReadOnlySql('update customers set name = ?').ok).toBe(false);
+    expect(checkReadOnlySql('delete from customers').ok).toBe(false);
+    expect(checkReadOnlySql("insert into customers (name) values ('a')").ok).toBe(false);
+  });
 });

@@ -141,8 +141,10 @@ export async function applyMutations(id: string, table: string, changes: Mutatio
 // Console SQL livre — Etapa DB2. Única rota do app em que o texto do usuário vira a consulta
 // de verdade; a validação de somente-leitura (SELECT/WITH, uma instrução, sem JOIN pra editar)
 // é toda do backend (sql-safety.ts) — aqui só repassa e deixa o erro 400 (código UNSAFE_QUERY)
-// subir pra tela mostrar.
-export async function runQuery(id: string, sql: string): Promise<RowsResult> {
-  const { data } = await http.post<RowsResult>(R.query(id), { sql });
+// subir pra tela mostrar. `allowWrite` (Etapa DB3) espelha o toggle "Permitir alterar dados" da
+// aba Consulta — sem ele, INSERT/UPDATE/DELETE continuam rejeitados pelo backend mesmo que
+// alguém contorne a checagem do app (a fonte de verdade é sempre o servidor).
+export async function runQuery(id: string, sql: string, allowWrite = false): Promise<RowsResult> {
+  const { data } = await http.post<RowsResult>(R.query(id), { sql, allowWrite });
   return data;
 }

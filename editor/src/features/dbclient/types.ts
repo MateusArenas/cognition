@@ -92,6 +92,10 @@ export interface RowsResult {
     editavel: boolean;
     motivoBloqueio?: string;
   };
+  /** Só presente quando a Consulta rodou um INSERT/UPDATE/DELETE (toggle "Permitir alterar
+   *  dados" ligado) — `rows`/`fields` ficam vazios, QueryTab mostra isso num banner em vez de
+   *  tentar desenhar uma grade vazia. */
+  affectedRows?: number;
 }
 
 export type MutationKind = 'insert' | 'update' | 'delete';

@@ -188,6 +188,55 @@ describe('DB Mobile — fluxo completo (e2e)', () => {
     expect(res.body.code).toBe('UNSAFE_QUERY');
   });
 
+  it('query: com allowWrite, INSERT/UPDATE/DELETE rodam de verdade e devolvem affectedRows', async () => {
+    const insert = await request(app.getHttpServer())
+      .post(`/api/v1/connections/${connectionId}/query`)
+      .set(auth())
+      .send({ sql: "insert into customers (name, email) values ('Carla', 'carla@exemplo.com')", allowWrite: true });
+    expect(insert.status).toBe(201);
+    expect(insert.body.affectedRows).toBe(1);
+    expect(insert.body.edicao.table).toBe('customers');
+
+    const update = await request(app.getHttpServer())
+      .post(`/api/v1/connections/${connectionId}/query`)
+      .set(auth())
+      .send({ sql: "update customers set name = 'Carla Souza' where email = 'carla@exemplo.com'", allowWrite: true });
+    expect(update.status).toBe(201);
+    expect(update.body.affectedRows).toBe(1);
+
+    const check = await request(app.getHttpServer())
+      .post(`/api/v1/connections/${connectionId}/query`)
+      .set(auth())
+      .send({ sql: "select name from customers where email = 'carla@exemplo.com'" });
+    expect(check.body.rows[0]).toEqual(['Carla Souza']);
+
+    // limpa — não deve sobrar linha extra pros testes de mutations que vêm depois
+    const del = await request(app.getHttpServer())
+      .post(`/api/v1/connections/${connectionId}/query`)
+      .set(auth())
+      .send({ sql: "delete from customers where email = 'carla@exemplo.com'", allowWrite: true });
+    expect(del.status).toBe(201);
+    expect(del.body.affectedRows).toBe(1);
+  });
+
+  it('query: sem allowWrite, INSERT continua rejeitado (o toggle é obrigatório)', async () => {
+    const res = await request(app.getHttpServer())
+      .post(`/api/v1/connections/${connectionId}/query`)
+      .set(auth())
+      .send({ sql: "insert into customers (name, email) values ('X', 'x@exemplo.com')" });
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('UNSAFE_QUERY');
+  });
+
+  it('query: allowWrite continua bloqueando DDL/administrativo (DROP, ALTER, etc.)', async () => {
+    const res = await request(app.getHttpServer())
+      .post(`/api/v1/connections/${connectionId}/query`)
+      .set(auth())
+      .send({ sql: 'drop table customers', allowWrite: true });
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('UNSAFE_QUERY');
+  });
+
   let newOrderId: number;
 
   it('mutations: preview mostra o SQL sem escrever nada', async () => {
@@ -266,6 +315,17 @@ describe('DB Mobile — fluxo completo (e2e)', () => {
       .post(`/api/v1/connections/${connectionId}/tables/orders/mutations`)
       .set(auth())
       .send({ changes: [{ kind: 'delete', key: { id: 1 } }] });
+    expect(res.status).toBe(403);
+    expect(res.body.code).toBe('READ_ONLY');
+  });
+
+  it('allowWrite não sobrepõe a conexão marcada como somente leitura (READ_ONLY)', async () => {
+    // a conexão já está readOnly:true por causa do teste anterior — o toggle do app não manda
+    // mais que essa marcação.
+    const res = await request(app.getHttpServer())
+      .post(`/api/v1/connections/${connectionId}/query`)
+      .set(auth())
+      .send({ sql: "update orders set status = 'x' where id = 1", allowWrite: true });
     expect(res.status).toBe(403);
     expect(res.body.code).toBe('READ_ONLY');
   });

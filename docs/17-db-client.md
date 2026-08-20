@@ -157,7 +157,7 @@ tom, nunca mais texto vermelho solto sem moldura). O overlay do console SQL (§ 
 transparente + o trabalho de teclado/scroll já resolvido lá (três bugs reais documentados no
 próprio arquivo).
 
-## Console SQL livre — "Consulta" (Etapa DB2)
+## Console SQL livre — "Consulta" (Etapa DB2, toggle de escrita na DB3)
 
 Terceira aba de `DatabaseScreen` (entre Tabelas e Diagrama), pedida explicitamente pelo usuário
 DEPOIS de usar o app de verdade e comparar com `prototipo.html` — e por escolha própria dele,
@@ -172,6 +172,25 @@ controlada e documentada à "REGRA DE PROJETO" (seção acima):
   Heurística por regex, não um parser de SQL de verdade: erra pro lado de REJEITAR uma consulta
   legítima (ex.: uma string literal que só MENCIONE "insert") antes de arriscar deixar passar
   escrita — escolha deliberada, não uma lacuna.
+- **Toggle "Permitir alterar dados"** (Etapa DB3, pedido explícito do usuário — só existe **nesta
+  aba**, em nenhum outro lugar do app): uma `Row`+`RowSwitch` acima do editor, desligada por
+  padrão a cada vez que a aba abre (não persiste — nada de "esquecer ligado" entre sessões).
+  Ligada, um `Banner` laranja fica visível lembrando que a consulta pode alterar dados de
+  verdade. Só libera `INSERT`/`UPDATE`/`DELETE` como instrução única de topo — `DROP`/`ALTER`/
+  `TRUNCATE`/`CREATE`/`GRANT`/etc. continuam bloqueados SEMPRE, com ou sem o toggle, porque
+  alteram schema ou servidor inteiro, não "os dados de uma tabela" (o que o usuário pediu).
+  **Verificação dos dois lados, nenhum dos dois confiando no outro**: o app faz uma checagem
+  rápida (`QueryTab.tsx`, mesma ideia de olhar a primeira palavra) só pra dar feedback
+  instantâneo sem round-trip quando o toggle está desligado; a fonte de verdade é sempre
+  `checkReadOnlySql(sql, { allowWrite })` no backend — passar por cima do app e chamar a rota
+  direto (Swagger, curl) ainda cai na mesma validação. Mesmo com o toggle ligado no app, uma
+  conexão marcada **`readOnly`** continua bloqueando escrita (código `READ_ONLY`, mesma exceção
+  que `ReadOnlyGuard` usa nas rotas de `mutations` — o toggle da tela não sobrepõe a marcação da
+  conexão). Resultado de escrita não tem linhas pra desenhar grade: a resposta ganha um campo
+  `affectedRows` (contagem por dialeto — `rowCount` no pg, `changes` no sqlite, validados ao
+  vivo; `affectedRows`/`rowsAffected` no mysql/mssql, mesma lacuna de "sem servidor pra testar"
+  já disclosed pros outros dialetos) e o app mostra um banner "N linha(s) afetada(s)" em vez da
+  `DataGrid`.
 - Editável célula a célula só quando o `SELECT` vem de **uma tabela só, sem JOIN** — a mesma
   `DataGrid` do resto do app decide isso olhando `edicao.editavel`/`edicao.table` que o backend
   devolve (mesmo campo que `rows()` já preenche pra Dados). Com JOIN, a grade renderiza mas com
@@ -206,23 +225,28 @@ controlada e documentada à "REGRA DE PROJETO" (seção acima):
 
 ## Testes
 
-- **Backend, unitário** (Jest, 32/32): `crypto.util.spec.ts` (cifra/decifra AES-256-GCM),
+- **Backend, unitário** (Jest, 39/39): `crypto.util.spec.ts` (cifra/decifra AES-256-GCM),
   `filters.service.spec.ts` (todo filtro vira bind, nunca concatenação — inclusive um teste que
   tenta injetar `DROP TABLE` num nome de coluna e confirma que é rejeitado antes de tocar no
   query builder), `casl-ability.factory.spec.ts` (regras can/cannot/condição por role),
   `sql-safety.spec.ts` (o validador do console SQL livre: aceita SELECT/WITH simples, detecta
   JOIN, rejeita qualquer palavra de escrita mesmo escondida numa CTE, rejeita múltiplas
-  instruções, aceita um `;` final solto).
-- **Backend, e2e** (supertest, app Nest real, 27/27): dois arquivos —
+  instruções, aceita um `;` final solto; com `allowWrite: true` — aceita INSERT/UPDATE/DELETE e
+  extrai a tabela, continua rejeitando DROP/ALTER/TRUNCATE e múltiplas instruções, SELECT
+  continua funcionando igual).
+- **Backend, e2e** (supertest, app Nest real, 31/31): dois arquivos —
   `test/dbclient.e2e-spec.ts` (fluxo completo: login → criar conexão → conectar → tabelas →
   estrutura → DDL → linhas com filtro/paginação/busca → coluna inexistente rejeitada → ERD →
   console SQL livre (SELECT numa tabela só = editável com `edicao.table`, JOIN = não editável,
-  escrita/múltiplas instruções = `400 UNSAFE_QUERY`) → preview de mutation → aplicar → conflito
-  otimista com rollback confirmado → `NULL_PK` → `READ_ONLY` → senha nunca exposta →
-  desconectar/excluir) e `test/permissions.e2e-spec.ts` (usuário só-leitura consegue listar mas
-  não criar conexão nem gerenciar roles — CASL de verdade, não só a forma da rota). Banco de
-  metadados = SQLite (`schema.test.prisma`, ver abaixo); banco-alvo = SQLite de exemplo criado
-  na hora (`test/sample-target-db.ts`, tabelas `customers`/`orders` com PK, FK e índice).
+  escrita/múltiplas instruções = `400 UNSAFE_QUERY`; com `allowWrite` — INSERT/UPDATE/DELETE
+  rodam de verdade e devolvem `affectedRows` certo, sem o toggle continuam rejeitados, DROP
+  continua rejeitado mesmo com o toggle, conexão `readOnly` bloqueia mesmo com o toggle) →
+  preview de mutation → aplicar → conflito otimista com rollback confirmado → `NULL_PK` →
+  `READ_ONLY` → senha nunca exposta → desconectar/excluir) e `test/permissions.e2e-spec.ts`
+  (usuário só-leitura consegue listar mas não criar conexão nem gerenciar roles — CASL de
+  verdade, não só a forma da rota). Banco de metadados = SQLite (`schema.test.prisma`, ver
+  abaixo); banco-alvo = SQLite de exemplo criado na hora (`test/sample-target-db.ts`, tabelas
+  `customers`/`orders` com PK, FK e índice).
 - **App**: `vitest` (217/217) + `npx tsc --noEmit` limpo — `drivers.test.ts` (utilitários puros
   `getPath`/`setPath`/`baseConfigFor`); a `DataGrid`/`FiltersSheet`/`RecordFormSheet`/
   `DiagramCard`/`QueryTab` novos não têm teste de simulador (mesma limitação do resto do app,
@@ -275,9 +299,12 @@ backend via Prisma E banco-alvo de exemplo via Knex, propositalmente exercitando
 caminhos com a mesma tecnologia); **`pg.strategy.ts` já foi validado ao vivo** contra o Postgres
 real do `docker-compose.yml` (dados PRÓPRIOS do backend, via Prisma — não um banco-alvo pg, mas
 a mesma estratégia de dialeto serve os dois já que ambos falam Postgres), boot completo +
-`curl` confirmando login/`/drivers`. Validar mysql/mssql/oracle é rodar um servidor de verdade
-desses bancos e repetir o mesmo roteiro do e2e manualmente — não custa nada de código novo, é
-só não ter onde rodar aqui.
+`curl` confirmando login/`/drivers`/DDL/estrutura/ERD, e — depois do toggle "Permitir alterar
+dados" (Etapa DB3) — INSERT/UPDATE/DROP direto em `POST .../query` contra esse mesmo Postgres:
+sem o toggle rejeitado, com o toggle `affectedRows` certo (`rowCount` do driver `pg`), DROP
+continua rejeitado mesmo com o toggle. Validar mysql/mssql/oracle é rodar um servidor de
+verdade desses bancos e repetir o mesmo roteiro do e2e manualmente — não custa nada de código
+novo, é só não ter onde rodar aqui.
 
 ## Como rodar
 
