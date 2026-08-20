@@ -85,3 +85,18 @@ exercitado — nem visualmente, nem por teste):
 Caixas de tarefa clicáveis no modo Ler (conta a ocorrência N de `- [ ]`/`- [x]` para saber qual
 trocar, com desfazer). Aba Estrutura (títulos + diagramas embutidos, navegável — ver bugs
 acima). Contagem de palavras e de diagramas na linha de estado.
+
+## Compartilhar
+
+Botão "Compartilhar" na `NavBar` (no lugar do antigo "Exportar" direto) abre
+`DocumentShareSheet` (`features/document/ShareSheet.tsx`, mesmo padrão do `ShareSheet` de
+diagrama/Rabisco): **Copiar texto** (clipboard), **Arquivo Markdown** (`.md`, já existia via
+`exportarTexto`) e **Arquivo PDF** (novo — `domain/markdown/toHtml.ts` converte a MESMA árvore
+`renderMarkdown` que já alimenta o modo Ler pra HTML, `expo-print` gera o PDF). Bloco
+` ```mermaid ` embutido sai como código-fonte rotulado no PDF, não como diagrama renderizado —
+rodar o mermaid.js de verdade dentro do HTML do PDF é uma extensão possível mas não construída
+agora (detalhe em `domain/markdown/toHtml.ts`). Sem opção de PNG: não tem WebView/Skia
+renderizando este conteúdo (é RN puro, `MarkdownPreview.tsx`), e a forma usual de virar
+screenshot em imagem (`react-native-view-shot`) tem código nativo — não funciona no Expo Go,
+que é uma restrição dura do projeto (`docs/01-decisao-arquitetura.md`). Ver
+[12-persistencia-e-export.md](12-persistencia-e-export.md) pro detalhe do PDF.

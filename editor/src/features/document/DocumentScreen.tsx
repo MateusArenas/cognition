@@ -1,4 +1,5 @@
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
+import * as Clipboard from 'expo-clipboard';
 import { router } from 'expo-router';
 import { useMemo, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -6,6 +7,7 @@ import { KeyboardStickyView } from 'react-native-keyboard-controller';
 import { NavBar } from '@/design/components/NavBar';
 import { Segmented } from '@/design/components/Segmented';
 import { Sheet } from '@/design/components/Sheet';
+import { useToast } from '@/design/components/Toast';
 import { useTheme } from '@/design/useTheme';
 import { useI18n } from '@/i18n/I18nProvider';
 import { useDoc, useLiveField } from '@/store/useDoc';
@@ -13,12 +15,13 @@ import { renderMarkdown } from '@/domain/markdown/render';
 import { countDiagrams, countWords, insertMermaidBlock } from '@/domain/markdown/blocks';
 import { parseMermaid } from '@/domain/mermaid/parse';
 import { setMarkdown } from '@/domain/mutations/md';
-import { exportarTexto } from '@/services/export';
+import { exportarMdPdf, exportarTexto } from '@/services/export';
 import type { MdDoc } from '@/domain/types';
 import { MarkdownEditor } from './MarkdownEditor';
 import { MarkdownPreview } from './MarkdownPreview';
 import { FormatBar } from './FormatBar';
 import { Outline } from './Outline';
+import { DocumentShareSheet } from './ShareSheet';
 
 type Modo = 'edit' | 'read';
 
@@ -27,6 +30,7 @@ type Modo = 'edit' | 'read';
 export function DocumentScreen() {
   const { colors, space } = useTheme();
   const { t } = useI18n();
+  const { show } = useToast();
   const doc = useDoc((s) => s.doc) as MdDoc;
   const apply = useDoc((s) => s.apply);
   const openDoc = useDoc((s) => s.openDoc);
@@ -44,6 +48,7 @@ export function DocumentScreen() {
   const [modo, setModo] = useState<Modo>('edit');
   const [selection, setSelection] = useState({ start: doc.md.length, end: doc.md.length });
   const outlineRef = useRef<BottomSheetModal>(null);
+  const shareRef = useRef<BottomSheetModal>(null);
 
   const nodes = useMemo(() => renderMarkdown(live.value), [live.value]);
   const palavras = useMemo(() => countWords(live.value), [live.value]);
@@ -65,6 +70,20 @@ export function DocumentScreen() {
     apply((d) => setMarkdown(d as MdDoc, texto));
   }
 
+  async function copiarTexto() {
+    shareRef.current?.dismiss();
+    await Clipboard.setStringAsync(live.value);
+    show(t('common.copied'));
+  }
+  function exportarMdArquivo() {
+    shareRef.current?.dismiss();
+    exportarTexto(doc);
+  }
+  function exportarPdfArquivo() {
+    shareRef.current?.dismiss();
+    exportarMdPdf(doc);
+  }
+
   return (
     <View style={[styles.root, { backgroundColor: colors.bg }]}>
       <NavBar
@@ -72,7 +91,7 @@ export function DocumentScreen() {
         left={{ label: t('common.backToLibrary'), onPress: () => router.back() }}
         right={[
           { label: t('document.outline'), onPress: () => outlineRef.current?.present() },
-          { label: t('common.export'), onPress: () => exportarTexto(doc) },
+          { label: t('common.share'), onPress: () => shareRef.current?.present() },
         ]}
       />
       <View style={{ paddingHorizontal: space.lg, paddingVertical: space.sm }}>
@@ -133,6 +152,8 @@ export function DocumentScreen() {
           }}
         />
       </Sheet>
+
+      <DocumentShareSheet ref={shareRef} onCopy={copiarTexto} onMdFile={exportarMdArquivo} onPdfFile={exportarPdfArquivo} />
     </View>
   );
 }

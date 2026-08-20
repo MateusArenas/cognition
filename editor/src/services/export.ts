@@ -10,9 +10,11 @@ import { ImageFormat, Skia } from '@shopify/react-native-skia';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Print from 'expo-print';
 import { exportExtension, exportMime, slugFilename } from '@/domain/exportMeta';
+import { mdToHtml } from '@/domain/markdown/toHtml';
+import { renderMarkdown } from '@/domain/markdown/render';
 import { serialize } from '@/domain/mermaid/serialize';
 import { docToSvg } from '@/domain/rabisco/svg';
-import type { Doc, RabiscoDoc } from '@/domain/types';
+import type { Doc, MdDoc, RabiscoDoc } from '@/domain/types';
 import { shareFile } from './share';
 
 export async function exportarTexto(doc: Doc): Promise<void> {
@@ -60,17 +62,32 @@ export async function exportarRabiscoPng(doc: RabiscoDoc, scale = 2): Promise<vo
   await exportarPng(base64, doc.nome);
 }
 
-// PDF: mesma função pros dois tipos (Mermaid via bridge do WebView, Rabisco via
-// domain/rabisco/svg.ts) — ambos chegam aqui já como uma string SVG pronta. expo-print
-// renderiza HTML e funciona no Expo Go, sem precisar de build nem conta de loja (Etapa R6.2).
+async function printHtmlToPdfFile(html: string, nome: string, width?: number, height?: number): Promise<void> {
+  const { uri } = await Print.printToFileAsync({ html, width, height });
+  const dest = FileSystem.cacheDirectory + slugFilename(nome) + '.pdf';
+  await FileSystem.copyAsync({ from: uri, to: dest });
+  await shareFile(dest, 'application/pdf');
+}
+
+// PDF de diagrama/desenho: mesma função pros dois (Mermaid via bridge do WebView, Rabisco via
+// domain/rabisco/svg.ts) — ambos chegam aqui já como uma string SVG pronta, do tamanho exato
+// do conteúdo (a página do PDF acompanha, em vez do Letter padrão de um documento de texto).
 export async function exportarPdf(svg: string, nome: string): Promise<void> {
   const w = svg.match(/width="([\d.]+)"/);
   const h = svg.match(/height="([\d.]+)"/);
   const width = w ? Math.min(Math.max(Math.round(parseFloat(w[1])), 100), 3000) : 612;
   const height = h ? Math.min(Math.max(Math.round(parseFloat(h[1])), 100), 3000) : 792;
   const html = `<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;padding:0}svg{display:block;width:100%;height:auto}</style></head><body>${svg}</body></html>`;
-  const { uri } = await Print.printToFileAsync({ html, width, height });
-  const dest = FileSystem.cacheDirectory + slugFilename(nome) + '.pdf';
-  await FileSystem.copyAsync({ from: uri, to: dest });
-  await shareFile(dest, 'application/pdf');
+  await printHtmlToPdfFile(html, nome, width, height);
+}
+
+// PDF de documento Markdown: sem largura/altura fixa — expo-print pagina sozinho no tamanho
+// Letter padrão (612×792), como qualquer documento de texto. Reaproveita a MESMA árvore
+// (`renderMarkdown`) que já alimenta o modo Ler em RN — domain/markdown/toHtml.ts espelha
+// MarkdownPreview.tsx elemento por elemento, mesmo padrão de domain/rabisco/svg.ts. Bloco
+// ```mermaid``` embutido sai como código-fonte rotulado, não como diagrama renderizado (ver
+// nota no topo de toHtml.ts).
+export async function exportarMdPdf(doc: MdDoc): Promise<void> {
+  const html = mdToHtml(doc.nome, renderMarkdown(doc.md));
+  await printHtmlToPdfFile(html, doc.nome);
 }

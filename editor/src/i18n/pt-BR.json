@@ -82,6 +82,9 @@
   },
   "document": {
     "outline": "Estrutura", "write": "Escrever", "read": "Ler", "startWriting": "Comece a escrever…",
+    "shareCopy": "Copiar texto", "shareCopyDesc": "Cola direto na área de transferência",
+    "shareMdFile": "Arquivo Markdown", "shareMdFileDesc": "O documento em texto (.md)",
+    "sharePdfFile": "Arquivo PDF", "sharePdfFileDesc": "O documento pronto pra imprimir",
     "diagramLabel": "diagrama", "diagramEntry": "Diagrama", "diagramPlural": "diagramas",
     "noOutline": "Sem títulos ou diagramas ainda.", "wordSingular": "palavra", "wordPlural": "palavras",
     "formatTitle": "Título", "formatBold": "Negrito", "formatItalic": "Itálico", "formatList": "Lista",

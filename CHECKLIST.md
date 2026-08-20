@@ -688,6 +688,26 @@ antes de reaplicá-la.
   diagrama passa por gesto/gesture handler, então não precisou do simulador. **Pendente, fora
   do pedido desta sessão**: importar `.svg` de fora pra virar Rabisco editável (resto da Etapa
   R7 do roadmap original).
+- [x] **Etapa R7.1 — Compartilhar em documento Markdown (copiar, .md, PDF)** — pedido do
+  usuário, mesmo padrão nas três telas agora. `DocumentScreen` ganha `features/document/
+  ShareSheet.tsx` no lugar do antigo botão "Exportar" direto: Copiar texto, Arquivo Markdown
+  (já existia via `exportarTexto`) e Arquivo PDF (novo). `domain/markdown/toHtml.ts`
+  (`mdToHtml`) converte a MESMA árvore `MdNode[]` de `renderMarkdown()` que já alimenta o modo
+  Ler em RN — mesmo "geometria uma vez, N saídas" de `domain/rabisco/svg.ts`.
+  `exportarMdPdf(doc)` reaproveita `printHtmlToPdfFile()`, extraído da função `exportarPdf`
+  original pra separar a parte específica de SVG (diagrama/Rabisco) da parte genérica
+  HTML→arquivo→share (agora usada também pelo documento, sem largura/altura fixa — pagina
+  sozinho no Letter padrão). Bloco ` ```mermaid ` embutido sai como código-fonte rotulado, não
+  como diagrama renderizado (rodaria o mermaid.js de ~3.4MB dentro do HTML do PDF — não
+  pedido). **Sem PNG, deliberadamente**: diferente de diagrama/Rabisco (que JÁ são SVG,
+  rasterizável), um documento Markdown vira RN puro ou HTML — nenhum dos dois é SVG. A forma
+  padrão de rasterizar RN (`react-native-view-shot`) tem código nativo e não funciona no Expo
+  Go, que é uma restrição dura do projeto — não instalado; ver docs/12-persistencia-e-export.md
+  pras alternativas (aceitar a lib nativa, ou escrever um layout de texto próprio em SVG pra
+  reaproveitar `svgParaPngBase64()` sem sair do Expo Go). 210 testes (era 204; +6 em
+  `domain/markdown/toHtml.test.ts` — título, negrito/itálico/code, escapamento de XML, tarefa
+  marcada, tabela com alinhamento, bloco mermaid rotulado). `tsc --noEmit` limpo. Verificação:
+  só automatizada, mesmo motivo das etapas de export anteriores.
 
 ---
 

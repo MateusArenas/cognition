@@ -82,6 +82,9 @@
   },
   "document": {
     "outline": "Outline", "write": "Write", "read": "Read", "startWriting": "Start writing…",
+    "shareCopy": "Copy text", "shareCopyDesc": "Pastes into the clipboard",
+    "shareMdFile": "Markdown file", "shareMdFileDesc": "The document as text (.md)",
+    "sharePdfFile": "PDF file", "sharePdfFileDesc": "The document ready to print",
     "diagramLabel": "diagram", "diagramEntry": "Diagram", "diagramPlural": "diagrams",
     "noOutline": "No headings or diagrams yet.", "wordSingular": "word", "wordPlural": "words",
     "formatTitle": "Heading", "formatBold": "Bold", "formatItalic": "Italic", "formatList": "List",

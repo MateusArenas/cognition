@@ -79,6 +79,39 @@ Sem teste de simulador (nenhuma das quatro saídas passa por gesto/WebView) — 
 `domain/rabisco/svg.test.ts` (fill/stroke/rótulo/rotação/escapamento XML/viewBox) mais
 `tsc`/`vitest` limpos nas telas.
 
+### Documento Markdown — copiar, .md, PDF (sem PNG)
+
+Mesmo pedido do usuário, terceira tela: `DocumentScreen` ganhou o mesmo botão "Compartilhar"
+(`features/document/ShareSheet.tsx`) no lugar do antigo "Exportar" direto — **Copiar texto**
+(clipboard), **Arquivo Markdown** (`exportarTexto(doc)`, já existia) e **Arquivo PDF** (novo).
+
+`domain/markdown/toHtml.ts` — `mdToHtml(titulo, nodes)` converte a MESMA árvore `MdNode[]` de
+`renderMarkdown()` que já alimenta o modo Ler em RN (`MarkdownPreview.tsx`) pra HTML estático,
+espelhando bloco por bloco (heading/parágrafo/lista/tarefa/tabela/citação/código) — mesmo
+"geometria uma vez, N saídas" de `domain/rabisco/svg.ts`. `exportarMdPdf(doc)`
+(`services/export.ts`) manda esse HTML pro MESMO `printHtmlToPdfFile()` usado pelo PDF de
+diagrama/Rabisco (extraído da função `exportarPdf` original pra reaproveitar a parte
+genérica). Sem largura/altura fixa aqui — ao contrário do PDF de diagrama (do tamanho exato do
+SVG), o de documento pagina sozinho no Letter padrão (612×792), como texto de verdade.
+
+Bloco ` ```mermaid ` embutido sai como bloco de código rotulado ("Diagrama Mermaid"), não como
+diagrama renderizado — renderizar de verdade exigiria rodar o mermaid.js (os mesmos ~3.4MB
+embutidos em `runtime.html`, ver [06-canvas.md](06-canvas.md)) dentro do HTML que vira o PDF, o
+que pesaria a geração e não foi pedido; fica como extensão futura se um documento com diagramas
+embutidos precisar sair com eles desenhados de verdade no PDF.
+
+**Sem PNG, deliberadamente.** Diagrama e Rabisco conseguem PNG porque o conteúdo deles JÁ é
+SVG (rasterizável via canvas web ou `Skia.SVG.MakeFromString`, ver acima). Um documento
+Markdown vira `MdNode[]` → RN puro (`MarkdownPreview.tsx`) ou HTML (pro PDF) — nenhum dos dois
+é SVG, então não tem como reaproveitar o mesmo caminho. A forma padrão de virar screenshot em
+imagem é `react-native-view-shot`, que tem código nativo e não funciona no Expo Go — trocaria a
+restrição dura do projeto (abrir no Expo Go, `docs/01-decisao-arquitetura.md`) por uma imagem
+que nem foi pedida com muita ênfase. Não instalado; se um dia for pedido de verdade, as opções
+são essa lib (aceitando que quebra Expo Go só pra quem usar esse botão) ou escrever um
+layout de texto próprio em SVG (medindo linhas com `matchFont().measureText()`, como
+`ShapeLabel` do Rabisco já faz) pra reaproveitar `svgParaPngBase64()` sem dependência nativa
+nova — mais trabalho, mas Expo-Go-safe.
+
 ## Importar
 
 `expo-document-picker`. iOS não tem UTI para `.mmd` — filtrar pela extensão depois de ler o
