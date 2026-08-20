@@ -1,4 +1,4 @@
-import { BottomSheetModal, BottomSheetView, type BottomSheetModalProps } from '@gorhom/bottom-sheet';
+import { BottomSheetBackdrop, BottomSheetModal, BottomSheetView, type BottomSheetBackdropProps, type BottomSheetModalProps } from '@gorhom/bottom-sheet';
 import { forwardRef, useCallback, useMemo, useRef, useState, type ForwardedRef, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, useWindowDimensions, View, type LayoutChangeEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -57,12 +57,24 @@ export const Sheet = forwardRef<BottomSheetModal, Props>(function Sheet(
     [onChange, setOpen]
   );
 
+  // Sem isso, a área por trás da sheet (fora dela, tela inteira) fica sem nada — nem escurece
+  // nem fecha no toque, contra o próprio comportamento nativo do iOS que a lib assume por
+  // padrão sem @gorhom/bottom-sheet renderizar (bug real reportado pelo usuário: "se apertar
+  // fora do bottom sheet modal não importa aonde for deve fechá-lo"). `appearsOnIndex={0}` em
+  // vez do default da lib (`1`) porque toda sheet daqui abre com um snap só (dinâmico ou fixo,
+  // nunca dois níveis) — o backdrop tem que aparecer já no primeiro (e único) índice aberto.
+  const renderBackdrop = useCallback(
+    (props: BottomSheetBackdropProps) => <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} pressBehavior="close" />,
+    []
+  );
+
   return (
     <BottomSheetModal
       ref={ref}
       snapPoints={points}
       enableDynamicSizing
       maxDynamicContentSize={maxDynamicContentSize}
+      backdropComponent={renderBackdrop}
       // Sem isso, no snap mais alto (dinâmico ou '92%' explícito) o header nasce colado no
       // status bar/notch — reportado pelo usuário ("respeitar o safe area do status bar").
       topInset={insets.top}

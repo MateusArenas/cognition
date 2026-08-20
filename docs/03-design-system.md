@@ -20,7 +20,7 @@ Cobrem o app inteiro — construir antes de qualquer tela.
 | Componente | Papel |
 |---|---|
 | `NavBar` | 44pt + safe area, título centrado, ações em azul |
-| `Sheet` | `@gorhom/bottom-sheet`, snaps `['45%','92%']`, tela de trás encolhe para 92,5% |
+| `Sheet` | `@gorhom/bottom-sheet`, snaps `['45%','92%']`, tela de trás encolhe para 92,5%, backdrop escurecido que fecha no toque (`BottomSheetBackdrop`, `pressBehavior="close"`), `tag` opcional = badge monoespaçado ao lado do título pra contexto (qual tabela/linha, "COLUNA" etc.) |
 | `GroupedList` + `Row` | lista inset do iOS, raio 12, separadores recuados 16pt |
 | `Segmented` | trilho + pílula selecionada, usado em Escrever/Ler e no escopo da IA |
 | `ActionBar` | barra contextual — ver [08-barra-de-acoes.md](08-barra-de-acoes.md) |
