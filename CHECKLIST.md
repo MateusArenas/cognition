@@ -953,6 +953,14 @@ antes de reaplicá-la.
     'row', flexWrap: 'wrap'` (`styles.filterBar`) — mesmo comportamento do `.filtros` do
     `prototipo.html` (`display:flex;flex-wrap:wrap`): as pills usam a largura inteira da barra e
     quebram linha sozinhas quando não cabem mais, nada escondido atrás de scroll.
+  - **Terceiro ajuste, mesmo pedido de fundo**: o pill azul "+ Filtro" saiu de vez — virou um
+    botão só-ícone (`sliders`, mesmo desenho do X de fechar do `Sheet`: círculo 36pt subtil,
+    `surface3` normal, azul quando algum filtro já está ativo) na MESMA linha do campo de busca,
+    canto direito. O campo de busca migrou de `TableScreen.tsx` pra dentro de `DataGrid.tsx`
+    (props novas `search`/`onSearchChange`/`onSearchSubmit`) só pra poder ficar na mesma linha
+    do botão — os dois são a mesma faixa de UI (busca + filtro), fazia sentido morarem juntos.
+    Os pills de filtro ATIVO continuam numa segunda linha (`flexWrap`), só o gatilho "abrir
+    editor de filtro novo" que virou ícone. `tsc --noEmit` limpo, 217 testes `vitest` verdes.
 
 ---
 

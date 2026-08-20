@@ -122,22 +122,30 @@ dbclient/
                             `tag` "COLUNA", deixando claro o que está sendo tocado), rodapé com
                             total/página atual/total de páginas/tamanho de página, borda laranja
                             quando o resultado não é editável (views, sem PK, ou SELECT com JOIN
-                            no console)
+                            no console). Busca (`search`/`onSearchChange`/`onSearchSubmit`, só no
+                            Dados/TableScreen — o campo migrou de `TableScreen` pra cá) e o botão
+                            de abrir o editor de filtro moram na MESMA linha: campo de busca à
+                            esquerda (`flex:1`), botão só-ícone circular e subtil (mesmo desenho
+                            do X do `Sheet`, não `Chip`) no canto direito, azul quando algum
+                            filtro está ativo. Filtros ativos aparecem numa segunda linha, como
+                            pills planas e coloridas (protótipo `.pill`, `flexWrap: 'wrap'` — usa
+                            a largura da barra e quebra linha sozinha, nunca some atrás de um
+                            scroll lateral) com rótulo legível ("status é igual a ABERTO"), mais
+                            um pill cinza "limpar tudo"
     FiltersSheet             editor de UMA condição por vez (coluna+operador de listas fechadas,
                             nunca texto livre — mesma regra de ouro do resto do app); operador
                             filtrado pelo tipo da coluna (só `contains`/`startsWith`/`endsWith`
                             em colunas de texto). Redesenhado seguindo `prototipo.html`
-                            (`folhaFiltro`) — antes era uma folha só com lista de filtros
-                            ativos + construtor embutido (poluída, "pouco Apple", pedido do
-                            usuário); agora os filtros ativos viram pills planas e coloridas
-                            (não `Chip` — sem canvas atrás pra justificar o blur) inline acima
-                            da grade em `DataGrid` ("+ Filtro" azul, um pill índigo por filtro
-                            com rótulo legível tipo "status é igual a ABERTO", "limpar tudo"
-                            cinza quando há algum), cada pill tocável reabre este editor já
-                            preenchido; `draft` é controlado pelo `DataGrid` (não estado local
-                            do `FiltersSheet`), mesmo motivo do bug já corrigido em
-                            `RecordFormSheet` (estado que só reseta quando referência de prop
-                            muda quebra num fluxo "sempre `index: null`" como "+ Filtro")
+                            (`folhaFiltro`) — antes era uma folha só com lista de filtros ativos +
+                            construtor embutido (poluída, "pouco Apple", pedido do usuário); o
+                            gatilho pra abrir (novo filtro) é o ícone de filtro na barra de busca
+                            do `DataGrid` (pedido seguinte do usuário — nada de pill própria "+
+                            Filtro" competindo com a busca), tocar num pill de filtro ativo
+                            reabre este editor já preenchido; `draft` é controlado pelo
+                            `DataGrid` (não estado local do `FiltersSheet`), mesmo motivo do bug
+                            já corrigido em `RecordFormSheet` (estado que só reseta quando
+                            referência de prop muda quebra num fluxo "sempre `index: null`" como
+                            "novo filtro")
     RecordFormSheet          formulário de registro (criar E editar) com tipo/obrigatoriedade
                             por coluna e toggle NULL por campo nullable; ação primária é um
                             `TintedButton` "Salvar" cheio (não `Chip`, mesmo motivo do resto do

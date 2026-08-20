@@ -5,9 +5,11 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { AlertDialog } from '@/design/components/AlertDialog';
 import { Chip } from '@/design/components/Chip';
 import { Fab } from '@/design/components/Fab';
+import { Field } from '@/design/components/Field';
 import { GroupedList } from '@/design/components/GroupedList';
 import { Row } from '@/design/components/Row';
 import { Sheet } from '@/design/components/Sheet';
+import { Icon } from '@/design/Icon';
 import { useTheme } from '@/design/useTheme';
 import { useToast } from '@/design/components/Toast';
 import { useI18n } from '@/i18n/I18nProvider';
@@ -31,9 +33,9 @@ function filterLabel(t: (key: string, opts?: Record<string, unknown>) => string,
 // Pill plana e colorida (protótipo `.pill`) — NÃO é `Chip` de propósito: `Chip` é a cápsula com
 // blur pro HUD sobre canvas (zoom/desfazer do Rabisco), errado aqui numa barra sobre fundo
 // sólido (mesmo motivo de fundo do lote de retoques em Consulta/Diagrama/Nova linha).
-function FilterPill({ label, tone, onPress }: { label: string; tone: 'blue' | 'indigo' | 'gray'; onPress: () => void }) {
+function FilterPill({ label, tone, onPress }: { label: string; tone: 'indigo' | 'gray'; onPress: () => void }) {
   const { colors, radius } = useTheme();
-  const tint = tone === 'blue' ? colors.blue : tone === 'indigo' ? colors.indigo : colors.labelSecondary;
+  const tint = tone === 'indigo' ? colors.indigo : colors.labelSecondary;
   return (
     <Pressable
       onPress={onPress}
@@ -45,6 +47,29 @@ function FilterPill({ label, tone, onPress }: { label: string; tone: 'blue' | 'i
       <Text numberOfLines={1} style={{ color: tint, fontSize: 12, fontWeight: '600' }}>
         {label}
       </Text>
+    </Pressable>
+  );
+}
+
+// Botão só-ícone, subtil, circular — mesmo desenho do X de fechar do `Sheet` (§5.2), não
+// `Chip` (ela é HUD com blur, errado sobre a barra de busca de fundo sólido). Fica na MESMA
+// linha da busca, canto direito (pedido explícito do usuário) — abrir o editor de filtro é um
+// toque aqui, os filtros já aplicados aparecem como pills logo abaixo.
+function FilterIconButton({ active, onPress, label }: { active: boolean; onPress: () => void; label: string }) {
+  const { colors } = useTheme();
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ selected: active }}
+      hitSlop={6}
+      style={({ pressed }) => [
+        styles.filterIconBtn,
+        { backgroundColor: active ? colors.blue + '1f' : colors.surface3, opacity: pressed ? 0.5 : 1 },
+      ]}
+    >
+      <Icon name="sliders" size={18} color={active ? colors.blue : colors.labelSecondary} />
     </Pressable>
   );
 }
@@ -64,6 +89,12 @@ interface Props {
   /** Falso no Consulta (QueryTab) — resultado de SQL livre não pagina nem filtra pelo builder. */
   showFilters?: boolean;
   showPagination?: boolean;
+  /** Busca (só no Dados/TableScreen) — o campo mora aqui pra ficar na MESMA linha do ícone de
+   * filtro (pedido explícito do usuário: filtro vira só um ícone no canto direito da busca, não
+   * mais uma pill própria). */
+  search?: string;
+  onSearchChange?: (q: string) => void;
+  onSearchSubmit?: () => void;
 }
 
 function rowToObject(fields: { name: string }[], row: unknown[]): Record<string, unknown> {
@@ -89,6 +120,9 @@ export function DataGrid({
   columnsMeta,
   showFilters = true,
   showPagination = true,
+  search,
+  onSearchChange,
+  onSearchSubmit,
 }: Props) {
   const { colors, space } = useTheme();
   const { t } = useI18n();
@@ -288,12 +322,20 @@ export function DataGrid({
   return (
     <View style={{ flex: 1 }}>
       {showFilters ? (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: space.lg, paddingBottom: space.sm }}>
+          <View style={{ flex: 1 }}>
+            <Field value={search ?? ''} onChangeText={onSearchChange} onSubmitEditing={onSearchSubmit} placeholder={t('dbclient.search')} />
+          </View>
+          <FilterIconButton active={filters.length > 0} onPress={openNewFilter} label={t('dbclient.addFilter')} />
+        </View>
+      ) : null}
+
+      {showFilters && filters.length ? (
         <View style={[styles.filterBar, { paddingHorizontal: space.lg, paddingBottom: space.sm }]}>
-          <FilterPill label={t('dbclient.addFilter')} tone="blue" onPress={openNewFilter} />
           {filters.map((f, i) => (
             <FilterPill key={i} label={filterLabel(t, f)} tone="indigo" onPress={() => openEditFilter(i)} />
           ))}
-          {filters.length ? <FilterPill label={t('dbclient.clearFilters')} tone="gray" onPress={() => onFiltersChange([])} /> : null}
+          <FilterPill label={t('dbclient.clearFilters')} tone="gray" onPress={() => onFiltersChange([])} />
         </View>
       ) : null}
 
@@ -462,4 +504,5 @@ const styles = StyleSheet.create({
   // conteúdo (pills) já dita a altura.
   filterBar: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   pill: { paddingVertical: 5, paddingHorizontal: 10, borderWidth: StyleSheet.hairlineWidth },
+  filterIconBtn: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
 });

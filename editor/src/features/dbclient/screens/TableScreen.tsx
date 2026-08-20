@@ -3,7 +3,6 @@ import * as Clipboard from 'expo-clipboard';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
-import { Field } from '@/design/components/Field';
 import { GroupedList } from '@/design/components/GroupedList';
 import { Icon } from '@/design/Icon';
 import { NavBar } from '@/design/components/NavBar';
@@ -110,14 +109,6 @@ export function TableScreen() {
 
       {tab === 'data' ? (
         <View style={{ flex: 1 }}>
-          <View style={{ paddingHorizontal: space.lg, paddingBottom: space.sm }}>
-            <Field
-              value={q}
-              onChangeText={setQ}
-              onSubmitEditing={() => setPage(1)}
-              placeholder={t('dbclient.search')}
-            />
-          </View>
           {!data ? (
             <ActivityIndicator style={{ marginTop: space.xl }} />
           ) : (
@@ -135,6 +126,9 @@ export function TableScreen() {
               onFiltersChange={changeFilters}
               onReload={loadRows}
               columnsMeta={detail?.columns}
+              search={q}
+              onSearchChange={setQ}
+              onSearchSubmit={() => setPage(1)}
             />
           )}
         </View>

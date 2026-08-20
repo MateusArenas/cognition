@@ -138,7 +138,7 @@
     "tabData": "Dados", "tabStructure": "Estrutura", "tabDdl": "DDL",
     "search": "Buscar em todas as colunas", "prevPage": "‹ Anterior", "nextPage": "Próxima ›",
     "columns": "COLUNAS", "indexes": "ÍNDICES", "referencedBy": "REFERENCIADA POR",
-    "addFilter": "+ Filtro", "filterTitle": "Filtro", "filterColumn": "Coluna", "filterOperator": "Operador",
+    "addFilter": "Adicionar filtro", "filterTitle": "Filtro", "filterColumn": "Coluna", "filterOperator": "Operador",
     "filterValue": "Valor", "applyFilterAction": "Aplicar", "removeFilterAction": "Remover filtro",
     "clearFilters": "limpar tudo",
     "filterOp": {
