@@ -946,6 +946,13 @@ antes de reaplicá-la.
     pills). Corrigido com `flexGrow: 0, flexShrink: 0` no `style` do `ScrollView` (`DataGrid.tsx`,
     `styles.filterBar`) — a barra agora ocupa a tela só horizontalmente, do jeito que uma faixa
     de filtros deveria.
+  - **Ajuste seguinte, pedido pontual do usuário ("não ficou do jeito que falei")**: o
+    `ScrollView horizontal` continuava escondendo as pills atrás de um gesto de arrastar — uma
+    pill solitária num canto, o resto da largura da barra vazio; não era "ocupar a tela
+    horizontalmente" (pedido original), era o oposto. Trocado por `View` com `flexDirection:
+    'row', flexWrap: 'wrap'` (`styles.filterBar`) — mesmo comportamento do `.filtros` do
+    `prototipo.html` (`display:flex;flex-wrap:wrap`): as pills usam a largura inteira da barra e
+    quebram linha sozinhas quando não cabem mais, nada escondido atrás de scroll.
 
 ---
 
