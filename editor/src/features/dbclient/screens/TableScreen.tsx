@@ -1,7 +1,7 @@
 import * as Clipboard from 'expo-clipboard';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Field } from '@/design/components/Field';
 import { GroupedList } from '@/design/components/GroupedList';
 import { NavBar } from '@/design/components/NavBar';
@@ -26,6 +26,7 @@ type Tab = 'data' | 'structure' | 'ddl' | 'erd';
 // exportar) — DB-MOBILE.md, lote de retoques pós-uso real.
 export function TableScreen() {
   const { colors, space, scheme } = useTheme();
+  const { height: alturaJanela } = useWindowDimensions();
   const { t } = useI18n();
   const { show } = useToast();
   const { id, table } = useLocalSearchParams<{ id: string; table: string }>();
@@ -178,14 +179,19 @@ export function TableScreen() {
       ) : null}
 
       {tab === 'ddl' ? (
-        <View style={{ flex: 1, paddingHorizontal: space.lg, paddingTop: space.sm }}>
+        <View style={{ paddingHorizontal: space.lg, paddingTop: space.sm }}>
           {ddl === null ? (
             <ActivityIndicator style={{ marginTop: space.xl }} />
           ) : (
             <>
-              <View style={[styles.ddlCard, { borderColor: colors.separator, backgroundColor: colors.surface }]}>
-                <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
-                  <ScrollView horizontal contentContainerStyle={{ flexGrow: 1 }}>
+              <View
+                style={[
+                  styles.ddlCard,
+                  { height: alturaJanela * 0.4, borderColor: colors.separator, backgroundColor: colors.surface },
+                ]}
+              >
+                <ScrollView>
+                  <ScrollView horizontal>
                     <Text selectable style={styles.ddlText} allowFontScaling={false}>
                       {tokenizeSql(ddl).map((tok, i) => (
                         <Text
@@ -218,9 +224,10 @@ export function TableScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  // Pelo menos metade da tela (flex:1 divide o espaço restante com o botão abaixo, que é baixo)
-  // e nunca a tela inteira — rolagem vertical E horizontal por dentro, sem quebra de linha.
-  ddlCard: { flex: 1, minHeight: '50%', borderWidth: StyleSheet.hairlineWidth, borderRadius: 10, overflow: 'hidden' },
+  // Altura fixa (~40% da tela, calculada em alturaJanela) em vez de flex:1 — o cartão não deve
+  // dominar a tela sozinho; rolagem vertical E horizontal por dentro dá conta do texto inteiro,
+  // por maior que seja o CREATE TABLE, sem quebra de linha (pedido do usuário, DB-MOBILE.md).
+  ddlCard: { borderWidth: StyleSheet.hairlineWidth, borderRadius: 10, overflow: 'hidden' },
   ddlText: {
     fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }),
     fontSize: 13,
