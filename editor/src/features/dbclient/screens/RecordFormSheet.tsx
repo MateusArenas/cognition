@@ -75,6 +75,12 @@ export const RecordFormSheet = forwardRef<BottomSheetModal, Props>(function Reco
     setError(null);
     try {
       await onSubmit(out);
+      // "Nova linha" reabre com o MESMO `initial` (null) da vez anterior — o efeito acima só
+      // reseta os campos quando a referência de `initial`/`columns` muda, então sem isso o
+      // formulário reabria com o que foi digitado da última vez (bug real reportado pelo
+      // usuário). Editar não precisa disso: cada linha manda um `initial` novo, o efeito já
+      // limpa sozinho.
+      if (!isEdit) setValues(buildInitialState(columns, null));
     } catch (e) {
       setError(isApiError(e) ? e.message : e instanceof Error ? e.message : String(e));
     } finally {

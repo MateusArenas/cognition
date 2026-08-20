@@ -916,7 +916,12 @@ antes de reaplicá-la.
     "Salvar" eram dois `Chip` lado a lado — mesmo problema de design já corrigido em Consulta/
     Diagrama (`Chip` é pra HUD sobre canvas, não botão genérico); trocado por `TintedButton`
     "Salvar" cheio como única ação primária (cancelar já é o X do `Sheet`, botão duplicado
-    removido). `tsc --noEmit` limpo, 217 testes `vitest` verdes.
+    removido). (4) Depois de salvar com sucesso, "Nova linha" reabria com o que tinha sido
+    digitado da vez anterior — o `useEffect` que limpa os campos só dispara quando a referência
+    de `initial`/`columns` muda, e "Nova linha" sempre manda `initial=null` (mesma referência);
+    corrigido resetando os campos direto no sucesso do `submit()` quando `!isEdit` (editar não
+    precisa, cada linha já manda um `initial` novo). `tsc --noEmit` limpo, 217 testes `vitest`
+    verdes.
 
 ---
 
