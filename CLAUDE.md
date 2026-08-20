@@ -10,6 +10,12 @@ entregue ou o que falta, atualize o [CHECKLIST.md](CHECKLIST.md) junto. Vale par
 [.github/copilot-instructions.md](.github/copilot-instructions.md)) — os docs não podem ficar
 para trás do código.
 
+**Toda interface nova já nasce traduzível.** Textos visíveis, `accessibilityLabel`, mensagens,
+ações e placeholders devem usar uma chave de `editor/src/i18n/<idioma>.json`, nunca uma string
+solta no componente. Ao criar uma feature, inclua a mesma chave nos três catálogos atuais
+(`pt-BR.json`, `en.json`, `es.json`) e registre a decisão/impacto na documentação da feature
+e no `CHECKLIST.md` quando ela alterar o que foi entregue.
+
 ## O produto, em uma frase
 
 Um editor de diagramas Mermaid, documentos Markdown e rabiscos (desenho livre) para celular

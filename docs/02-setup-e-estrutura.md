@@ -41,7 +41,7 @@ npx create-expo-app@latest editor --template default
 cd editor
 npx expo install react-native-webview expo-asset expo-file-system expo-sharing \
   expo-clipboard expo-document-picker expo-haptics expo-sqlite expo-localization
-npm i zustand @gorhom/bottom-sheet react-native-keyboard-controller
+npm i zustand @gorhom/bottom-sheet react-native-keyboard-controller i18n-js
 npm i -D mermaid vitest @testing-library/react-native jest-expo jest react-test-renderer
 ```
 
@@ -61,13 +61,22 @@ editor/src/
   features/     diagram/ code/ document/ gallery/ ai/ library/ settings/
   store/        useDoc.ts useLibrary.ts useSettings.ts history.ts — ver 05-estado.md
   services/     storage.ts export.ts share.ts haptics.ts ai.ts
-  i18n/         pt-BR.ts en.ts index.ts
+  i18n/         pt-BR.json en.json es.json index.ts I18nProvider.tsx
 ```
 
 **Por que isso escala.** Cada feature é uma pasta que se pode ler sozinha. O domínio é puro,
 então testar a serialização de um fluxograma não exige montar componente nenhum. Os serviços
 são fachadas finas: trocar SQLite por outra coisa mexe em um arquivo. E `design/` impede que
 cada tela invente o próprio botão.
+
+## Idiomas
+
+`expo-localization` (incluído no Expo Go) lê o idioma inicial do aparelho; `i18n-js` resolve as
+chaves de interface. Os catálogos são deliberadamente um JSON por idioma em `src/i18n/`:
+`pt-BR.json`, `en.json` e `es.json`. `I18nProvider` expõe `useI18n().t()` e observa a preferência
+persistida em `useSettings`; trocar em Ajustes atualiza a UI sem reiniciar o app. Português é o
+fallback para um idioma ainda não traduzido. Nenhum componente deve introduzir texto visível ou
+de acessibilidade sem incluir a chave equivalente nos três JSONs.
 
 ## Estado atual (ver CHECKLIST.md para detalhe)
 

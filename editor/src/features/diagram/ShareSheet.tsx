@@ -4,6 +4,7 @@ import { GroupedList } from '@/design/components/GroupedList';
 import { Row } from '@/design/components/Row';
 import { Sheet } from '@/design/components/Sheet';
 import { Icon } from '@/design/Icon';
+import { useI18n } from '@/i18n/I18nProvider';
 
 interface Props {
   /** "Arquivo .mmd" ou "Arquivo .md" — o tipo do doc já resolvido por quem monta a tela. */
@@ -21,18 +22,19 @@ export const ShareSheet = forwardRef<BottomSheetModal, Props>(function ShareShee
   { textoLabel, onPng, onTexto, onCopiar },
   ref
 ) {
+  const { t } = useI18n();
   return (
-    <Sheet ref={ref} title="Compartilhar" snapPoints={['36%']}>
+    <Sheet ref={ref} title={t('common.share')} snapPoints={['36%']}>
       <GroupedList>
         <Row
-          title="Imagem PNG"
-          subtitle="O diagrama como está na tela"
+          title={t('diagram.exportPng')}
+          subtitle={t('diagram.diagramAsIs')}
           left={<Icon name="image" size={20} />}
           navigable
           onPress={onPng}
         />
-        <Row title="Código-fonte" subtitle={textoLabel} left={<Icon name="code" size={20} />} navigable onPress={onTexto} />
-        <Row title="Copiar texto" subtitle="Cola direto na área de transferência" left={<Icon name="copy" size={20} />} onPress={onCopiar} />
+        <Row title={t('diagram.sourceCode')} subtitle={textoLabel} left={<Icon name="code" size={20} />} navigable onPress={onTexto} />
+        <Row title={t('diagram.copyText')} subtitle={t('diagram.copyToClipboard')} left={<Icon name="copy" size={20} />} onPress={onCopiar} />
       </GroupedList>
     </Sheet>
   );

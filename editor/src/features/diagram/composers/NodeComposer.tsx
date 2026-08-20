@@ -4,6 +4,7 @@ import { AlertDialog } from '@/design/components/AlertDialog';
 import { Field } from '@/design/components/Field';
 import { useTheme } from '@/design/useTheme';
 import { useDoc } from '@/store/useDoc';
+import { useI18n } from '@/i18n/I18nProvider';
 import { SHAPES } from '@/domain/mermaid/shapes';
 import { addEdge, addNode } from '@/domain/mutations/flow';
 import { hapticCreate } from '@/services/haptics';
@@ -20,6 +21,7 @@ interface Props {
 // grandeza (§11) — dá pra montar um fluxo de doze etapas sem sair do teclado.
 export function NodeComposer({ visible, onClose }: Props) {
   const { colors, radius } = useTheme();
+  const { t } = useI18n();
   const sel = useDoc((s) => s.sel);
   const apply = useDoc((s) => s.apply);
   const select = useDoc((s) => s.select);
@@ -61,15 +63,15 @@ export function NodeComposer({ visible, onClose }: Props) {
   return (
     <AlertDialog
       visible={visible}
-      title={from ? 'Adicionar etapa' : 'Nova etapa'}
+      title={from ? t('diagram.addStep') : t('diagram.newStep')}
       onRequestClose={onClose}
       buttons={[
-        { label: 'Cancelar', role: 'cancel', onPress: onClose },
-        { label: 'Adicionar e continuar', onPress: () => criar(true) },
-        { label: 'Adicionar', role: 'primary', onPress: () => criar(false) },
+        { label: t('common.cancel'), role: 'cancel', onPress: onClose },
+        { label: t('diagram.addAndContinue'), onPress: () => criar(true) },
+        { label: t('common.add'), role: 'primary', onPress: () => criar(false) },
       ]}
     >
-      <Field value={label} onChangeText={setLabel} placeholder="Texto do nó" autoFocus multiline />
+      <Field value={label} onChangeText={setLabel} placeholder={t('diagram.nodeTextTitle')} autoFocus multiline />
       <View style={styles.shapes}>
         {COMUNS.map((k) => (
           <Pressable

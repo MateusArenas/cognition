@@ -9,6 +9,7 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS, useAnimatedReaction, useDerivedValue, useSharedValue } from 'react-native-reanimated';
 import { Icon } from '@/design/Icon';
 import { useTheme } from '@/design/useTheme';
+import { useI18n } from '@/i18n/I18nProvider';
 import {
   bindingAt, bounds, boundsOfSelection, dashPattern, elementGeometry, hitTest, normalizeElement,
   pickBindable, resolvedPoints, rotateElementAround, toElementLocal, LABELABLE, LINEAR, ROTATABLE,
@@ -172,6 +173,7 @@ export function RabiscoCanvas({
   // `selectedId` derivado, sem precisar saber que a seleção agora pode ter mais de um id.
   const selectedId = selectedIds.length === 1 ? selectedIds[0] : null;
   const { colors, radius, scheme } = useTheme();
+  const { t } = useI18n();
   const backgroundPath = useMemo(() => backgroundPathFor(background), [background]);
   const [viewSize, setViewSize] = useState({ w: 0, h: 0 });
   const outerViewRef = useRef<View>(null);
@@ -807,11 +809,11 @@ export function RabiscoCanvas({
           nunca respondiam (bug real, achado testando ao vivo). */}
       <View style={styles.zoomHud} pointerEvents="box-none">
         <BlurView intensity={50} tint={scheme} style={[styles.zoomBar, { borderRadius: radius.pill, borderColor: colors.separator }]}>
-          <Pressable onPress={() => zoomBy(1 / 1.25)} accessibilityRole="button" accessibilityLabel="Diminuir zoom" hitSlop={6} style={styles.zoomBtn}>
+          <Pressable onPress={() => zoomBy(1 / 1.25)} accessibilityRole="button" accessibilityLabel={t('common.zoomOut')} hitSlop={6} style={styles.zoomBtn}>
             <Icon name="minus" size={18} color={colors.label} />
           </Pressable>
           <Text style={[styles.zoomLabel, { color: colors.label }]}>{Math.round(zoomState * 100)}%</Text>
-          <Pressable onPress={() => zoomBy(1.25)} accessibilityRole="button" accessibilityLabel="Aumentar zoom" hitSlop={6} style={styles.zoomBtn}>
+          <Pressable onPress={() => zoomBy(1.25)} accessibilityRole="button" accessibilityLabel={t('common.zoomIn')} hitSlop={6} style={styles.zoomBtn}>
             <Icon name="plus" size={18} color={colors.label} />
           </Pressable>
         </BlurView>

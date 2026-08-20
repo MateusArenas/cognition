@@ -6,6 +6,15 @@
 `useDoc` (zustand) guarda o documento aberto, a seleção, o histórico de undo/redo e o modo de
 conexão (criar aresta tocando em dois nós).
 
+## Preferências — `useSettings`
+
+`useSettings` guarda `language` (`pt-BR`, `en` ou `es`) e `themeMode` (`auto`, `light`, `dark`).
+O valor inicial do idioma vem de `expo-localization.getLocales()` e a escolha posterior é
+persistida via `expo-sqlite/kv-store`, portanto funciona no Expo Go. O store hidrata uma vez no
+`RootLayout`; falhar a leitura não bloqueia o editor, que conserva idioma do aparelho e tema
+automático. `ThemeProvider` e `I18nProvider` observam o mesmo store, por isso a troca em Ajustes
+é imediata e continua válida ao reabrir o app.
+
 ```ts
 interface DocState {
   doc: Doc;

@@ -3,26 +3,27 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Icon, type IconName } from '@/design/Icon';
 import { useTheme } from '@/design/useTheme';
+import { useI18n } from '@/i18n/I18nProvider';
 import type { RabiscoElement } from '@/domain/types';
 
 export type Tool = 'select' | 'hand' | 'draw' | 'shape' | 'text' | 'eraser';
 export type ShapeKind = Extract<RabiscoElement['type'], 'rect' | 'diamond' | 'ellipse' | 'arrow' | 'line'>;
 
-const TOOLS: { tool: Tool; icon: IconName; label: string }[] = [
-  { tool: 'select', icon: 'pointer', label: 'Selecionar' },
-  { tool: 'hand', icon: 'hand', label: 'Mão' },
-  { tool: 'draw', icon: 'pencil', label: 'Caneta' },
-  { tool: 'shape', icon: 'shapes', label: 'Forma' },
-  { tool: 'text', icon: 'type', label: 'Texto' },
-  { tool: 'eraser', icon: 'eraser', label: 'Borracha' },
+const TOOL_KEYS: { tool: Tool; icon: IconName; labelKey: string }[] = [
+  { tool: 'select', icon: 'pointer', labelKey: 'rabisco.select' },
+  { tool: 'hand', icon: 'hand', labelKey: 'rabisco.hand' },
+  { tool: 'draw', icon: 'pencil', labelKey: 'rabisco.pen' },
+  { tool: 'shape', icon: 'shapes', labelKey: 'rabisco.shape' },
+  { tool: 'text', icon: 'type', labelKey: 'rabisco.text' },
+  { tool: 'eraser', icon: 'eraser', labelKey: 'rabisco.eraser' },
 ];
 
-const SHAPES: { kind: ShapeKind; icon: IconName; label: string }[] = [
-  { kind: 'rect', icon: 'square', label: 'Retângulo' },
-  { kind: 'diamond', icon: 'cardinality', label: 'Losango' },
-  { kind: 'ellipse', icon: 'circle', label: 'Elipse' },
-  { kind: 'arrow', icon: 'moveUpRight', label: 'Seta' },
-  { kind: 'line', icon: 'slash', label: 'Linha' },
+const SHAPE_KEYS: { kind: ShapeKind; icon: IconName; labelKey: string }[] = [
+  { kind: 'rect', icon: 'square', labelKey: 'rabisco.rectangle' },
+  { kind: 'diamond', icon: 'cardinality', labelKey: 'rabisco.diamond' },
+  { kind: 'ellipse', icon: 'circle', labelKey: 'rabisco.ellipse' },
+  { kind: 'arrow', icon: 'moveUpRight', labelKey: 'rabisco.arrow' },
+  { kind: 'line', icon: 'slash', labelKey: 'rabisco.line' },
 ];
 
 interface Props {
@@ -39,6 +40,7 @@ interface Props {
 // forma fecha e já ativa a ferramenta).
 export function Dock({ tool, shapeKind, selectedId, onChangeTool, onChangeShape }: Props) {
   const { colors, radius, scheme } = useTheme();
+  const { t } = useI18n();
   const [shapePopOpen, setShapePopOpen] = useState(false);
 
   // Bug real: `shapePopOpen` é estado só do Dock, mas o `tool` pode mudar por FORA dele — ao
@@ -68,12 +70,12 @@ export function Dock({ tool, shapeKind, selectedId, onChangeTool, onChangeShape 
     <View style={styles.wrap} pointerEvents="box-none">
       {shapePopOpen && tool === 'shape' ? (
         <BlurView intensity={50} tint={scheme} style={[styles.pop, { borderRadius: radius.card, borderColor: colors.separator }]}>
-          {SHAPES.map((s) => (
+          {SHAPE_KEYS.map((s) => (
             <Pressable
               key={s.kind}
               onPress={() => { onChangeShape(s.kind); setShapePopOpen(false); }}
               accessibilityRole="button"
-              accessibilityLabel={s.label}
+              accessibilityLabel={t(s.labelKey)}
               hitSlop={8}
               style={[styles.btn, shapeKind === s.kind && { backgroundColor: colors.blue + '26', borderRadius: radius.control }]}
             >
@@ -83,17 +85,17 @@ export function Dock({ tool, shapeKind, selectedId, onChangeTool, onChangeShape 
         </BlurView>
       ) : null}
       <BlurView intensity={50} tint={scheme} style={[styles.bar, { borderRadius: radius.card, borderColor: colors.separator }]}>
-        {TOOLS.map((t) => (
+        {TOOL_KEYS.map((tl) => (
           <Pressable
-            key={t.tool}
-            onPress={() => pressTool(t.tool)}
+            key={tl.tool}
+            onPress={() => pressTool(tl.tool)}
             accessibilityRole="button"
-            accessibilityLabel={t.label}
-            accessibilityState={{ selected: tool === t.tool }}
+            accessibilityLabel={t(tl.labelKey)}
+            accessibilityState={{ selected: tool === tl.tool }}
             hitSlop={6}
-            style={[styles.btn, tool === t.tool && { backgroundColor: colors.blue + '26', borderRadius: radius.control }]}
+            style={[styles.btn, tool === tl.tool && { backgroundColor: colors.blue + '26', borderRadius: radius.control }]}
           >
-            <Icon name={t.tool === 'shape' ? SHAPES.find((s) => s.kind === shapeKind)!.icon : t.icon} size={21} color={tool === t.tool ? colors.blue : colors.label} />
+            <Icon name={tl.tool === 'shape' ? SHAPE_KEYS.find((s) => s.kind === shapeKind)!.icon : tl.icon} size={21} color={tool === tl.tool ? colors.blue : colors.label} />
           </Pressable>
         ))}
       </BlurView>

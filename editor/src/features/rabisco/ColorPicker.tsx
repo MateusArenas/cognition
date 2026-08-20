@@ -7,6 +7,7 @@ import { Canvas as SkiaCanvas, Image as SkiaImage, Rect, LinearGradient, vec, ty
 import { Field } from '@/design/components/Field';
 import { Icon } from '@/design/Icon';
 import { useTheme } from '@/design/useTheme';
+import { useI18n } from '@/i18n/I18nProvider';
 import { hsvToRgb, parseColor, rgbaToCss, rgbaToHex, rgbToHsv, type HSV } from '@/domain/rabisco/color';
 import type { RabiscoCanvasHandle } from './Canvas';
 
@@ -79,6 +80,7 @@ function clamp01(v: number) {
 // usadas — os dois convivem, cada um mais rápido pra um caso diferente).
 export function ColorPicker({ visible, title, value, usedColors, canvasRef, onChange, onBeginLive, onChangeLive, onEndLive, onRequestClose }: Props) {
   const { colors, scheme } = useTheme();
+  const { t } = useI18n();
   const { width: winW, height: winH } = useWindowDimensions();
   const [hsv, setHsv] = useState<HSV>({ h: 0, s: 1, v: 1 });
   const [hexText, setHexText] = useState('#000000');
@@ -254,7 +256,7 @@ export function ColorPicker({ visible, title, value, usedColors, canvasRef, onCh
                     <Text style={[styles.title, { color: colors.label }]}>{title}</Text>
                   </View>
                 </GestureDetector>
-                <Pressable onPress={onRequestClose} hitSlop={8} accessibilityRole="button" accessibilityLabel="Fechar">
+                <Pressable onPress={onRequestClose} hitSlop={8} accessibilityRole="button" accessibilityLabel={t('common.close')}>
                   <Icon name="close" size={20} color={colors.labelSecondary} />
                 </Pressable>
               </View>
@@ -315,7 +317,7 @@ export function ColorPicker({ visible, title, value, usedColors, canvasRef, onCh
                 <Pressable
                   onPress={() => setEyedropperOn((v) => !v)}
                   accessibilityRole="button"
-                  accessibilityLabel="Conta-gotas — escolher cor do quadro"
+                  accessibilityLabel={t('rabisco.eyedropperTool')}
                   accessibilityState={{ selected: eyedropperOn }}
                   hitSlop={6}
                   style={[
@@ -333,7 +335,7 @@ export function ColorPicker({ visible, title, value, usedColors, canvasRef, onCh
                         key={c}
                         onPress={() => onChange(c)}
                         accessibilityRole="button"
-                        accessibilityLabel={`Usar cor ${c}`}
+                        accessibilityLabel={t('rabisco.useColor', { color: c })}
                         style={[styles.usedSwatch, { backgroundColor: c, borderColor: colors.separator }]}
                       />
                     ))}

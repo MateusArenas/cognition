@@ -73,9 +73,10 @@ testes jest continuam todos passando. Ver a nota de versões em
 **Navegação por tab bar + tela de Ajustes** (fora do roteiro original — pedido direto do
 usuário). `app/(tabs)/` com Biblioteca e Ajustes, tab bar translúcida (`BlurView`, mesma
 linguagem do `Chip`), Galeria/editor continuam empilhados por cima cobrindo a barra. Ajustes
-(`features/settings/`) estreia com um seletor de tema (Automático/Claro/Escuro,
-`ThemeProvider.setMode`) — funciona ao vivo, mas ainda não sobrevive a fechar o app (persistir
-a escolha continua pendente, ver abaixo). Corrigido de quebra: o FAB da Biblioteca (fixo desde
+(`features/settings/`) tem seletores de tema (Automático/Claro/Escuro) e idioma (Português,
+English, Español), ambos persistidos. As traduções vivem em `src/i18n/`, um JSON por idioma,
+resolvidas por `i18n-js` + `expo-localization` (compatível com Expo Go); textos novos devem
+entrar nos três catálogos no mesmo commit. Corrigido de quebra: o FAB da Biblioteca (fixo desde
 antes da tab bar existir) ficava atrás da barra nova, e o `Toast` global (calibrado só pro FAB
 antigo) passou a cair atrás do FAB depois que ele subiu — ver
 [docs/03-design-system.md](docs/03-design-system.md).
@@ -618,9 +619,12 @@ antes de reaplicá-la.
 - [x] Erro de sintaxe mostra a mensagem e mantém o último diagrama válido
 - [x] PNG exportado contém o texto dos nós (`htmlLabels:false` já garantido — ver §20; não
   verificado visualmente num device de verdade)
-- [ ] Tema segue o sistema até o usuário escolher, e aí persiste — segue o sistema já funciona
-  (`ThemeProvider`); persistir a escolha do usuário depende de `store/useSettings.ts`, que não
-  existe ainda (não estava em nenhuma etapa do roteiro original — é uma lacuna real)
+- [x] Tema segue o sistema até o usuário escolher, e aí persiste
+- [x] Interface base traduzível em Português, English e Español; idioma muda em Ajustes e
+  persiste entre sessões (testes de catálogo cobrem normalização e as chaves principais).
+  Cobertura estendida à interface inteira (galeria, diagrama incl. composers/inspectors/
+  ActionBar, documento incl. barra de formatação/outline, editor de código, assistente de IA,
+  rabisco incl. dock/barra de estilo/seletor de cor/canvas) — não só as abas e ajustes iniciais.
 - [ ] Faixas de atributo do ER legíveis nos dois temas, inclusive no arquivo exportado — visual
 - [ ] Toque em aresta funciona com o dedo, não só com mouse — visual, precisa de device
 - [ ] Toque em qualquer coluna do ER seleciona aquela coluna — visual, precisa de device
@@ -647,10 +651,6 @@ redescobertas do zero:
   passa, não sobre conversão de coordenadas (nada a ver com os bugs de escala corrigidos em
   docs/06-canvas.md/docs/07-selecao.md), e não foi mexido de propósito pra não arriscar o que
   já está 100% no ER. Documentado como limitação conhecida no próprio script de verificação.
-- **Persistir a escolha de tema do usuário.** `store/useSettings.ts` não existe —
-  `features/settings/SettingsScreen.tsx` já deixa trocar o tema (Automático/Claro/Escuro) na
-  aba Ajustes, mas só pra sessão atual: fechar e reabrir o app volta pro automático. Não estava
-  em nenhuma etapa do roteiro original; é um buraco real no spec, não só neste build.
 - **Miniatura visual da biblioteca.** `LibraryScreen`/`DocCard` mostram tipo + data, não uma
   imagem do diagrama. Renderizar o SVG ao salvar e guardar como arquivo (§15) ainda não foi
   feito.

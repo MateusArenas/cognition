@@ -4,6 +4,7 @@ import { KeyCaps } from '@/design/components/KeyCaps';
 import { Icon } from '@/design/Icon';
 import { useTheme } from '@/design/useTheme';
 import { useDoc } from '@/store/useDoc';
+import { useI18n } from '@/i18n/I18nProvider';
 import { addColumn, removeColumn, updateColumn } from '@/domain/mutations/er';
 import type { ColumnKey, ErDoc } from '@/domain/types';
 
@@ -15,15 +16,16 @@ interface Props {
 // extra, e some com um toque (§11).
 export function TableInspector({ id }: Props) {
   const { colors } = useTheme();
+  const { t } = useI18n();
   const doc = useDoc((s) => s.doc) as ErDoc;
   const apply = useDoc((s) => s.apply);
-  const t = doc.tables.find((x) => x.id === id);
-  if (!t) return null;
+  const t2 = doc.tables.find((x) => x.id === id);
+  if (!t2) return null;
 
   return (
     <View style={{ gap: 8 }}>
-      <Text style={[styles.section, { color: colors.labelSecondary }]}>COLUNAS</Text>
-      {t.cols.map((c, i) => (
+      <Text style={[styles.section, { color: colors.labelSecondary }]}>{t('diagram.columns')}</Text>
+      {t2.cols.map((c, i) => (
         <View key={i} style={[styles.row, { backgroundColor: colors.surface }]}>
           <Field mono value={c.type} onChangeText={(v) => apply((d) => updateColumn(d as ErDoc, id, i, { type: v }))} style={styles.cty} />
           <Field mono value={c.name} onChangeText={(v) => apply((d) => updateColumn(d as ErDoc, id, i, { name: v }))} style={styles.cnm} />
@@ -47,7 +49,7 @@ export function TableInspector({ id }: Props) {
         style={[styles.add, { backgroundColor: colors.surface }]}
       >
         <Icon name="plus" size={18} color={colors.blue} />
-        <Text style={{ color: colors.blue, fontSize: 15 }}>Adicionar coluna</Text>
+        <Text style={{ color: colors.blue, fontSize: 15 }}>{t('diagram.addColumn')}</Text>
       </Pressable>
     </View>
   );

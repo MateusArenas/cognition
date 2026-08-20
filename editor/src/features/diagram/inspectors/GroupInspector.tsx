@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Icon } from '@/design/Icon';
 import { useTheme } from '@/design/useTheme';
 import { useDoc } from '@/store/useDoc';
+import { useI18n } from '@/i18n/I18nProvider';
 import { setNodeGroup } from '@/domain/mutations/flow';
 import type { FlowDoc } from '@/domain/types';
 
@@ -14,6 +15,7 @@ interface Props {
 // igual tabela faz — aqui é só composição.
 export function GroupInspector({ id }: Props) {
   const { colors, radius } = useTheme();
+  const { t } = useI18n();
   const doc = useDoc((s) => s.doc) as FlowDoc;
   const apply = useDoc((s) => s.apply);
   const g = doc.groups.find((x) => x.id === id);
@@ -24,7 +26,7 @@ export function GroupInspector({ id }: Props) {
   return (
     <View style={{ gap: 20 }}>
       <View>
-        <Text style={[styles.section, { color: colors.labelSecondary }]}>NÓS DO GRUPO</Text>
+        <Text style={[styles.section, { color: colors.labelSecondary }]}>{t('diagram.nodesInGroup')}</Text>
         {g.nodes.length ? (
           g.nodes.map((nid) => {
             const n = doc.nodes.find((x) => x.id === nid);
@@ -38,13 +40,13 @@ export function GroupInspector({ id }: Props) {
             );
           })
         ) : (
-          <Text style={{ color: colors.labelSecondary }}>Nenhum nó ainda.</Text>
+          <Text style={{ color: colors.labelSecondary }}>{t('diagram.noNodesInGroup')}</Text>
         )}
       </View>
 
       {fora.length ? (
         <View>
-          <Text style={[styles.section, { color: colors.labelSecondary }]}>ADICIONAR</Text>
+          <Text style={[styles.section, { color: colors.labelSecondary }]}>{t('diagram.addNodes')}</Text>
           <View style={styles.grid}>
             {fora.map((n) => (
               <Pressable

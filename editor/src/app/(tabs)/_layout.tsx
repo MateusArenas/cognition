@@ -4,12 +4,14 @@ import { StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '@/design/Icon';
 import { useTheme } from '@/design/useTheme';
+import { useI18n } from '@/i18n/I18nProvider';
 
 // Duas abas só: Biblioteca (a "home" do app) e Ajustes. Galeria, diagrama e documento
 // continuam empilhados fora daqui (docs/02-setup-e-estrutura.md) — o Stack ao redor deste
 // grupo já cobre a barra sozinho ao empilhar por cima, sem configuração extra.
 export default function TabsLayout() {
   const { colors, scheme } = useTheme();
+  const { t } = useI18n();
   const insets = useSafeAreaInsets();
 
   return (
@@ -29,11 +31,11 @@ export default function TabsLayout() {
     >
       <Tabs.Screen
         name="index"
-        options={{ title: 'Biblioteca', tabBarIcon: ({ color, size }) => <Icon name="library" size={size} color={color} /> }}
+        options={{ title: t('tabs.library'), tabBarIcon: ({ color, size }) => <Icon name="library" size={size} color={color} /> }}
       />
       <Tabs.Screen
         name="settings"
-        options={{ title: 'Ajustes', tabBarIcon: ({ color, size }) => <Icon name="settings" size={size} color={color} /> }}
+        options={{ title: t('tabs.settings'), tabBarIcon: ({ color, size }) => <Icon name="settings" size={size} color={color} /> }}
       />
     </Tabs>
   );

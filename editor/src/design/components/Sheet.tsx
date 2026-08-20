@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, useWindowDimensions, View, type LayoutChan
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../useTheme';
 import { Icon } from '../Icon';
+import { useI18n } from '@/i18n/I18nProvider';
 import { useOptionalSheetChrome } from '../SheetChrome';
 import { InsideSheetContext } from './insideSheetContext';
 
@@ -24,6 +25,7 @@ export const Sheet = forwardRef<BottomSheetModal, Props>(function Sheet(
   ref
 ) {
   const { colors, radius, space } = useTheme();
+  const { t } = useI18n();
   const { setOpen } = useOptionalSheetChrome();
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
@@ -83,7 +85,7 @@ export const Sheet = forwardRef<BottomSheetModal, Props>(function Sheet(
         <Pressable
           onPress={() => dismiss(ref)}
           accessibilityRole="button"
-          accessibilityLabel="Fechar painel"
+          accessibilityLabel={t('common.closePanel')}
           hitSlop={8}
           style={({ pressed }) => [styles.close, { backgroundColor: colors.surface3, opacity: pressed ? 0.5 : 1 }]}
         >

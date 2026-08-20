@@ -5,6 +5,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { NavBar } from '@/design/components/NavBar';
 import { Icon } from '@/design/Icon';
 import { useTheme } from '@/design/useTheme';
+import { useI18n } from '@/i18n/I18nProvider';
 import { useDoc } from '@/store/useDoc';
 import { GRUPOS, TIPOS, type TipoDiagrama } from '@/domain/mermaid/catalog';
 import { parseMermaid } from '@/domain/mermaid/parse';
@@ -27,6 +28,7 @@ const INFO_DOCUMENTO = {
 // docs/04-dominio.md).
 export function GalleryScreen() {
   const { colors, space, radius } = useTheme();
+  const { t: tr } = useI18n();
   const openDoc = useDoc((s) => s.openDoc);
   const infoRef = useRef<BottomSheetModal>(null);
   const [infoTipo, setInfoTipo] = useState<(TipoDiagrama | typeof INFO_DOCUMENTO) | null>(null);
@@ -49,38 +51,38 @@ export function GalleryScreen() {
 
   return (
     <View style={[styles.root, { backgroundColor: colors.bg }]}>
-      <NavBar title="Novo" left={{ label: 'Cancelar', onPress: () => router.back() }} />
+      <NavBar title={tr('gallery.title')} left={{ label: tr('common.cancel'), onPress: () => router.back() }} />
       <ScrollView contentContainerStyle={{ padding: space.lg }}>
         <View style={{ marginBottom: space.lg }}>
-          <Text style={[styles.grupo, { color: colors.labelSecondary }]}>DOCUMENTOS</Text>
+          <Text style={[styles.grupo, { color: colors.labelSecondary }]}>{tr('gallery.documentsGroup')}</Text>
           <View style={styles.grid}>
             <View style={[styles.card, { backgroundColor: colors.surface, borderRadius: radius.card }]}>
               <Pressable style={styles.cardMain} onPress={() => abrirDoc(templateMd())}>
-                <Text style={[styles.nome, { color: colors.label }]} numberOfLines={1}>Documento</Text>
-                <Text style={[styles.tagVisual, { color: colors.blue }]}>COM DIAGRAMA</Text>
+                <Text style={[styles.nome, { color: colors.label }]} numberOfLines={1}>{tr('gallery.document')}</Text>
+                <Text style={[styles.tagVisual, { color: colors.blue }]}>{tr('gallery.withDiagramTag')}</Text>
               </Pressable>
-              <Pressable style={styles.info} onPress={() => abrirInfo(INFO_DOCUMENTO)} accessibilityLabel="Sobre Documento">
+              <Pressable style={styles.info} onPress={() => abrirInfo(INFO_DOCUMENTO)} accessibilityLabel={tr('gallery.aboutDocument')}>
                 <Icon name="info" size={18} color={colors.blue} />
               </Pressable>
             </View>
             <View style={[styles.card, { backgroundColor: colors.surface, borderRadius: radius.card }]}>
               <Pressable
                 style={styles.cardMain}
-                onPress={() => abrirDoc(blankMd('Novo documento', '# Novo documento\n\nComece a escrever…'))}
+                onPress={() => abrirDoc(blankMd(tr('gallery.blankDocName'), tr('gallery.blankDocBody')))}
               >
-                <Text style={[styles.nome, { color: colors.label }]} numberOfLines={1}>Em branco</Text>
+                <Text style={[styles.nome, { color: colors.label }]} numberOfLines={1}>{tr('gallery.blank')}</Text>
               </Pressable>
             </View>
           </View>
         </View>
 
         <View style={{ marginBottom: space.lg }}>
-          <Text style={[styles.grupo, { color: colors.labelSecondary }]}>DESENHO</Text>
+          <Text style={[styles.grupo, { color: colors.labelSecondary }]}>{tr('gallery.drawingGroup')}</Text>
           <View style={styles.grid}>
             <View style={[styles.card, { backgroundColor: colors.surface, borderRadius: radius.card }]}>
-              <Pressable style={styles.cardMain} onPress={() => abrirDoc(blankRabisco('Novo rabisco'))}>
-                <Text style={[styles.nome, { color: colors.label }]} numberOfLines={1}>Rabisco</Text>
-                <Text style={[styles.tagVisual, { color: colors.blue }]}>DESENHO LIVRE</Text>
+              <Pressable style={styles.cardMain} onPress={() => abrirDoc(blankRabisco(tr('gallery.blankSketchName')))}>
+                <Text style={[styles.nome, { color: colors.label }]} numberOfLines={1}>{tr('gallery.sketch')}</Text>
+                <Text style={[styles.tagVisual, { color: colors.blue }]}>{tr('gallery.freeDrawTag')}</Text>
               </Pressable>
             </View>
           </View>
@@ -94,9 +96,9 @@ export function GalleryScreen() {
                 <View key={t.id} style={[styles.card, { backgroundColor: colors.surface, borderRadius: radius.card }]}>
                   <Pressable style={styles.cardMain} onPress={() => abrir(t)}>
                     <Text style={[styles.nome, { color: colors.label }]} numberOfLines={1}>{t.nome}</Text>
-                    {t.visual ? <Text style={[styles.tagVisual, { color: colors.blue }]}>EDITÁVEL</Text> : null}
+                    {t.visual ? <Text style={[styles.tagVisual, { color: colors.blue }]}>{tr('gallery.editableTag')}</Text> : null}
                   </Pressable>
-                  <Pressable style={styles.info} onPress={() => abrirInfo(t)} accessibilityLabel={`Sobre ${t.nome}`}>
+                  <Pressable style={styles.info} onPress={() => abrirInfo(t)} accessibilityLabel={tr('gallery.aboutType', { name: t.nome })}>
                     <Icon name="info" size={18} color={colors.blue} />
                   </Pressable>
                 </View>

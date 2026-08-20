@@ -10,6 +10,7 @@ import { Row } from '@/design/components/Row';
 import { Segmented } from '@/design/components/Segmented';
 import { useTheme } from '@/design/useTheme';
 import { useToast } from '@/design/components/Toast';
+import { useI18n } from '@/i18n/I18nProvider';
 import { useDoc } from '@/store/useDoc';
 import { serialize } from '@/domain/mermaid/serialize';
 import { parseMermaid } from '@/domain/mermaid/parse';
@@ -41,6 +42,7 @@ type Tab = 'canvas' | 'elements' | 'code';
 export function DiagramScreen() {
   const { colors, space, scheme } = useTheme();
   const { show } = useToast();
+  const { t } = useI18n();
   const doc = useDoc((s) => s.doc);
   const sel = useDoc((s) => s.sel);
   const select = useDoc((s) => s.select);
@@ -101,7 +103,7 @@ export function DiagramScreen() {
         return;
       }
       if (linkMode.de === resolved.id) {
-        show('Escolha um elemento diferente');
+        show(t('diagram.chooseDifferentElement'));
         return;
       }
       if (doc.tipo === 'flow' && resolved.kind === 'node') {
@@ -148,7 +150,7 @@ export function DiagramScreen() {
   async function copiarTexto() {
     shareRef.current?.dismiss();
     await Clipboard.setStringAsync(code);
-    show('Copiado');
+    show(t('common.copied'));
   }
 
   // Ida e volta documento↔diagrama (§13.4): recorta o serialize() atualizado de volta no
@@ -174,7 +176,7 @@ export function DiagramScreen() {
 
   async function validarParaIA(codigo: string) {
     const r = await canvasRef.current?.validate(codigo);
-    return r ?? { ok: false, message: 'Canvas não está pronto.' };
+    return r ?? { ok: false, message: t('diagram.canvasNotReady') };
   }
 
   function aplicarResultadoIA(codigo: string) {
@@ -199,16 +201,16 @@ export function DiagramScreen() {
     <View style={[styles.root, { backgroundColor: colors.bg }]}>
       <NavBar
         title={doc.nome}
-        subtitle={doc.tipo === 'flow' ? 'Fluxograma' : doc.tipo === 'er' ? 'Modelo relacional' : doc.tipo === 'raw' ? doc.kind : 'Documento'}
-        left={{ label: retornoMd ? '‹ Documento' : '‹ Biblioteca', onPress: voltar }}
-        right={[{ label: 'Compartilhar', onPress: () => shareRef.current?.present() }]}
+        subtitle={doc.tipo === 'flow' ? t('library.types.flow') : doc.tipo === 'er' ? t('library.types.er') : doc.tipo === 'raw' ? doc.kind : t('library.types.md')}
+        left={{ label: retornoMd ? t('diagram.backToDocumentNav') : t('common.backToLibrary'), onPress: voltar }}
+        right={[{ label: t('common.share'), onPress: () => shareRef.current?.present() }]}
       />
 
       <Segmented
         options={[
-          { value: 'canvas', label: 'Diagrama' },
-          { value: 'elements', label: 'Elementos' },
-          { value: 'code', label: 'Código' },
+          { value: 'canvas', label: t('diagram.tabDiagram') },
+          { value: 'elements', label: t('diagram.tabElements') },
+          { value: 'code', label: t('diagram.tabCode') },
         ]}
         value={tab}
         onChange={(v) => handleTabChange(v as Tab)}
@@ -230,29 +232,29 @@ export function DiagramScreen() {
 
           {!nEls ? (
             <View style={[styles.empty, { backgroundColor: colors.surface }]} pointerEvents="box-none">
-              <Text style={[styles.emptyTitle, { color: colors.label }]}>Tela em branco</Text>
-              <Text style={{ color: colors.labelSecondary }}>Toque em + para criar a primeira etapa.</Text>
+              <Text style={[styles.emptyTitle, { color: colors.label }]}>{t('diagram.emptyTitle')}</Text>
+              <Text style={{ color: colors.labelSecondary }}>{t('diagram.emptySubtitle')}</Text>
             </View>
           ) : null}
 
           <View style={styles.hud}>
-            <Chip icon="scan" accessibilityLabel="Ajustar à tela" onPress={() => canvasRef.current?.fit()} />
-            <Chip icon="minus" accessibilityLabel="Diminuir zoom" onPress={() => canvasRef.current?.zoomBy(0.8)} />
+            <Chip icon="scan" accessibilityLabel={t('diagram.fitToScreen')} onPress={() => canvasRef.current?.fit()} />
+            <Chip icon="minus" accessibilityLabel={t('common.zoomOut')} onPress={() => canvasRef.current?.zoomBy(0.8)} />
             <Chip label={`${Math.round(zoom * 100)}%`} mono />
-            <Chip icon="plus" accessibilityLabel="Aumentar zoom" onPress={() => canvasRef.current?.zoomBy(1.25)} />
-            {retornoMd ? <Chip label="Voltar ao documento" onPress={voltar} /> : null}
+            <Chip icon="plus" accessibilityLabel={t('common.zoomIn')} onPress={() => canvasRef.current?.zoomBy(1.25)} />
+            {retornoMd ? <Chip label={t('diagram.backToDocument')} onPress={voltar} /> : null}
           </View>
 
           <View style={styles.hudRight}>
-            <Chip icon="undo" accessibilityLabel="Desfazer" onPress={undo} disabled={!history.past.length} />
-            <Chip icon="redo" accessibilityLabel="Refazer" onPress={redo} disabled={!history.future.length} />
+            <Chip icon="undo" accessibilityLabel={t('common.undo')} onPress={undo} disabled={!history.past.length} />
+            <Chip icon="redo" accessibilityLabel={t('common.redo')} onPress={redo} disabled={!history.future.length} />
           </View>
 
           {linkMode.ativo ? (
             <View style={[styles.linkBanner, { backgroundColor: colors.orange }]}>
-              <Text style={styles.linkText}>{linkMode.de ? 'Toque no destino' : 'Toque no início da ligação'}</Text>
+              <Text style={styles.linkText}>{linkMode.de ? t('diagram.linkTapDestination') : t('diagram.linkTapStart')}</Text>
               <Pressable onPress={() => setLinkMode(false)}>
-                <Text style={styles.linkCancel}>Cancelar</Text>
+                <Text style={styles.linkCancel}>{t('common.cancel')}</Text>
               </Pressable>
             </View>
           ) : null}
@@ -264,9 +266,9 @@ export function DiagramScreen() {
           ) : null}
 
           <View style={[styles.fabs, { bottom: 16 + (sel ? barHeight : 0) }]}>
-            <Fab icon="spark" accessibilityLabel="Pedir para a IA" onPress={() => aiRef.current?.present()} />
+            <Fab icon="spark" accessibilityLabel={t('ai.title')} onPress={() => aiRef.current?.present()} />
             {(doc.tipo === 'flow' || doc.tipo === 'er') && (
-              <Fab icon="plus" primary accessibilityLabel="Adicionar elemento" onPress={openComposer} />
+              <Fab icon="plus" primary accessibilityLabel={t('diagram.addElement')} onPress={openComposer} />
             )}
           </View>
         </View>
@@ -321,6 +323,7 @@ export function DiagramScreen() {
 
 function ElementsList({ rawElements }: { rawElements: { id: string; texto: string }[] }) {
   const { colors, space } = useTheme();
+  const { t: tr } = useI18n();
   const doc = useDoc((s) => s.doc);
   const select = useDoc((s) => s.select);
 
@@ -356,7 +359,7 @@ function ElementsList({ rawElements }: { rawElements: { id: string; texto: strin
                   );
                 })
               ) : (
-                <Row title="Nenhum nó ainda" style={styles.filho} />
+                <Row title={tr('diagram.noNodesYet')} style={styles.filho} />
               )}
             </GroupedList>
           </View>
@@ -364,14 +367,14 @@ function ElementsList({ rawElements }: { rawElements: { id: string; texto: strin
 
         {!doc.groups.length || semGrupo.length ? (
           <View>
-            {doc.groups.length ? <Text style={[styles.secao, { color: colors.labelSecondary }]}>SEM GRUPO</Text> : null}
+            {doc.groups.length ? <Text style={[styles.secao, { color: colors.labelSecondary }]}>{tr('diagram.noGroupSection')}</Text> : null}
             <GroupedList>
               {semGrupo.length ? (
                 semGrupo.map((n) => (
                   <Row key={n.id} title={n.label || n.id} subtitle={n.id} navigable onPress={() => select({ kind: 'node', id: n.id })} />
                 ))
               ) : (
-                <Row title="Nenhum elemento ainda" />
+                <Row title={tr('diagram.noElements')} />
               )}
             </GroupedList>
           </View>
@@ -382,7 +385,7 @@ function ElementsList({ rawElements }: { rawElements: { id: string; texto: strin
 
   const rows =
     doc.tipo === 'er'
-      ? doc.tables.map((t) => ({ key: t.id, title: t.id, subtitle: `${t.cols.length} colunas`, sel: { kind: 'table' as const, id: t.id } }))
+      ? doc.tables.map((t) => ({ key: t.id, title: t.id, subtitle: tr('diagram.columnsCount', { count: t.cols.length }), sel: { kind: 'table' as const, id: t.id } }))
       : doc.tipo === 'raw'
         ? [...rawElements]
             .sort((a, b) => Number(a.id.split(':')[0]) - Number(b.id.split(':')[0]))
@@ -395,7 +398,7 @@ function ElementsList({ rawElements }: { rawElements: { id: string; texto: strin
         {rows.length ? (
           rows.map((r) => <Row key={r.key} title={r.title} subtitle={r.subtitle} navigable onPress={() => select(r.sel)} />)
         ) : (
-          <Row title="Nenhum elemento ainda" />
+          <Row title={tr('diagram.noElements')} />
         )}
       </GroupedList>
     </ScrollView>

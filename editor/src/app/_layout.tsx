@@ -1,5 +1,6 @@
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { Stack } from 'expo-router';
+import { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
@@ -7,13 +8,19 @@ import { ThemeProvider } from '@/design/ThemeProvider';
 import { useTheme } from '@/design/useTheme';
 import { SheetChromeProvider, SheetChromeContainer } from '@/design/SheetChrome';
 import { ToastProvider } from '@/design/components/Toast';
+import { I18nProvider } from '@/i18n/I18nProvider';
+import { useSettings } from '@/store/useSettings';
 
 // Providers globais: tema, gestos, bottom sheet, teclado, toast, e o "chrome" que encolhe a
 // tela por trás de uma sheet aberta (§5.2). Ver docs/03-design-system.md.
 export default function RootLayout() {
+  const hydrate = useSettings((state) => state.hydrate);
+  useEffect(() => { void hydrate(); }, [hydrate]);
   return (
     <ThemeProvider>
-      <RootShell />
+      <I18nProvider>
+        <RootShell />
+      </I18nProvider>
     </ThemeProvider>
   );
 }

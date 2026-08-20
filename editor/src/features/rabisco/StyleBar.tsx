@@ -6,6 +6,7 @@ import { runOnJS } from 'react-native-reanimated';
 import { Icon, type IconName } from '@/design/Icon';
 import { Segmented } from '@/design/components/Segmented';
 import { useTheme } from '@/design/useTheme';
+import { useI18n } from '@/i18n/I18nProvider';
 import { FILLS, FONT_FAMILIES, FONT_SIZES, STROKES } from '@/domain/rabisco/palette';
 import type { RabiscoArrowType, RabiscoFontFamily, RabiscoTextAlign } from '@/domain/types';
 
@@ -32,16 +33,16 @@ interface Props {
   onLayerToBack: () => void;
 }
 
-const ARROW_TYPES: { v: RabiscoArrowType; icon: IconName; label: string }[] = [
-  { v: 'straight', icon: 'moveUpRight', label: 'Seta reta' },
-  { v: 'curved', icon: 'spline', label: 'Seta curva' },
-  { v: 'elbow', icon: 'route', label: 'Seta em cotovelo' },
+const ARROW_TYPE_KEYS: { v: RabiscoArrowType; icon: IconName; labelKey: string }[] = [
+  { v: 'straight', icon: 'moveUpRight', labelKey: 'rabisco.arrowStraight' },
+  { v: 'curved', icon: 'spline', labelKey: 'rabisco.arrowCurved' },
+  { v: 'elbow', icon: 'route', labelKey: 'rabisco.arrowElbow' },
 ];
 
-const TEXT_ALIGNS: { v: RabiscoTextAlign; icon: IconName; label: string }[] = [
-  { v: 'left', icon: 'alignLeft', label: 'Alinhar à esquerda' },
-  { v: 'center', icon: 'alignCenter', label: 'Centralizar' },
-  { v: 'right', icon: 'alignRight', label: 'Alinhar à direita' },
+const TEXT_ALIGN_KEYS: { v: RabiscoTextAlign; icon: IconName; labelKey: string }[] = [
+  { v: 'left', icon: 'alignLeft', labelKey: 'rabisco.alignLeft' },
+  { v: 'center', icon: 'alignCenter', labelKey: 'rabisco.alignCenter' },
+  { v: 'right', icon: 'alignRight', labelKey: 'rabisco.alignRight' },
 ];
 
 // Trilho de opacidade — mesmo range do protótipo (whiteboard-ios.html:481, 10-100% em passos
@@ -84,11 +85,12 @@ function OpacityTrack({ value, onChange }: { value: number; onChange: (v: number
 
 function Swatch({ color, selected, onPress, transparent }: { color: string; selected: boolean; onPress: () => void; transparent?: boolean }) {
   const { colors } = useTheme();
+  const { t } = useI18n();
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={transparent ? 'Sem preenchimento' : `Cor ${color}`}
+      accessibilityLabel={transparent ? t('rabisco.noFill') : t('rabisco.colorSwatch', { color })}
       accessibilityState={{ selected }}
       hitSlop={6}
       style={styles.btn}
@@ -124,13 +126,14 @@ export function StyleBar({
   onLayerForward, onLayerBackward, onLayerToFront, onLayerToBack,
 }: Props) {
   const { radius, colors, scheme } = useTheme();
+  const { t } = useI18n();
   return (
     <BlurView intensity={50} tint={scheme} style={[styles.card, { borderRadius: radius.card, borderColor: colors.separator }]}>
       <View style={styles.row}>
         {STROKES.map((c) => (
           <Swatch key={c} color={c} selected={strokeValue === c} onPress={() => onStrokeChange(c)} />
         ))}
-        <Pressable onPress={onOpenStrokePicker} accessibilityRole="button" accessibilityLabel="Mais cores de borda" hitSlop={6} style={styles.btn}>
+        <Pressable onPress={onOpenStrokePicker} accessibilityRole="button" accessibilityLabel={t('rabisco.moreStrokeColors')} hitSlop={6} style={styles.btn}>
           <View style={[styles.swatch, styles.moreSwatch, { borderColor: colors.separator }]}>
             <Icon name="palette" size={16} color={colors.labelSecondary} />
           </View>
@@ -141,7 +144,7 @@ export function StyleBar({
           {FILLS.map((c) => (
             <Swatch key={c} color={c} selected={fillValue === c} onPress={() => onFillChange(c)} transparent={c === 'transparent'} />
           ))}
-          <Pressable onPress={onOpenFillPicker} accessibilityRole="button" accessibilityLabel="Mais cores de preenchimento" hitSlop={6} style={styles.btn}>
+          <Pressable onPress={onOpenFillPicker} accessibilityRole="button" accessibilityLabel={t('rabisco.moreFillColors')} hitSlop={6} style={styles.btn}>
             <View style={[styles.swatch, styles.moreSwatch, { borderColor: colors.separator }]}>
               <Icon name="palette" size={16} color={colors.labelSecondary} />
             </View>
@@ -150,17 +153,17 @@ export function StyleBar({
       ) : null}
       {arrowType !== undefined && onArrowTypeChange ? (
         <View style={styles.row}>
-          {ARROW_TYPES.map((t) => (
+          {ARROW_TYPE_KEYS.map((a) => (
             <Pressable
-              key={t.v}
-              onPress={() => onArrowTypeChange(t.v)}
+              key={a.v}
+              onPress={() => onArrowTypeChange(a.v)}
               accessibilityRole="button"
-              accessibilityLabel={t.label}
-              accessibilityState={{ selected: arrowType === t.v }}
+              accessibilityLabel={t(a.labelKey)}
+              accessibilityState={{ selected: arrowType === a.v }}
               hitSlop={6}
-              style={[styles.btn, arrowType === t.v && { backgroundColor: colors.blue + '26', borderRadius: radius.control }]}
+              style={[styles.btn, arrowType === a.v && { backgroundColor: colors.blue + '26', borderRadius: radius.control }]}
             >
-              <Icon name={t.icon} size={20} color={arrowType === t.v ? colors.blue : colors.label} />
+              <Icon name={a.icon} size={20} color={arrowType === a.v ? colors.blue : colors.label} />
             </Pressable>
           ))}
         </View>
@@ -185,17 +188,17 @@ export function StyleBar({
       ) : null}
       {textAlign !== undefined && onTextAlignChange ? (
         <View style={styles.row}>
-          {TEXT_ALIGNS.map((t) => (
+          {TEXT_ALIGN_KEYS.map((a) => (
             <Pressable
-              key={t.v}
-              onPress={() => onTextAlignChange(t.v)}
+              key={a.v}
+              onPress={() => onTextAlignChange(a.v)}
               accessibilityRole="button"
-              accessibilityLabel={t.label}
-              accessibilityState={{ selected: textAlign === t.v }}
+              accessibilityLabel={t(a.labelKey)}
+              accessibilityState={{ selected: textAlign === a.v }}
               hitSlop={6}
-              style={[styles.btn, textAlign === t.v && { backgroundColor: colors.blue + '26', borderRadius: radius.control }]}
+              style={[styles.btn, textAlign === a.v && { backgroundColor: colors.blue + '26', borderRadius: radius.control }]}
             >
-              <Icon name={t.icon} size={20} color={textAlign === t.v ? colors.blue : colors.label} />
+              <Icon name={a.icon} size={20} color={textAlign === a.v ? colors.blue : colors.label} />
             </Pressable>
           ))}
         </View>
@@ -206,16 +209,16 @@ export function StyleBar({
         <Text style={[styles.opacityLabel, { color: colors.labelSecondary }]}>{Math.round(opacity * 100)}%</Text>
       </View>
       <View style={styles.row}>
-        <Pressable onPress={onLayerToBack} accessibilityRole="button" accessibilityLabel="Enviar para trás (fundo)" hitSlop={6} style={styles.btn}>
+        <Pressable onPress={onLayerToBack} accessibilityRole="button" accessibilityLabel={t('rabisco.sendToBack')} hitSlop={6} style={styles.btn}>
           <Icon name="sendToBack" size={18} color={colors.label} />
         </Pressable>
-        <Pressable onPress={onLayerBackward} accessibilityRole="button" accessibilityLabel="Recuar uma camada" hitSlop={6} style={styles.btn}>
+        <Pressable onPress={onLayerBackward} accessibilityRole="button" accessibilityLabel={t('rabisco.layerBackward')} hitSlop={6} style={styles.btn}>
           <Icon name="chevronDown" size={18} color={colors.label} />
         </Pressable>
-        <Pressable onPress={onLayerForward} accessibilityRole="button" accessibilityLabel="Avançar uma camada" hitSlop={6} style={styles.btn}>
+        <Pressable onPress={onLayerForward} accessibilityRole="button" accessibilityLabel={t('rabisco.layerForward')} hitSlop={6} style={styles.btn}>
           <Icon name="chevronUp" size={18} color={colors.label} />
         </Pressable>
-        <Pressable onPress={onLayerToFront} accessibilityRole="button" accessibilityLabel="Trazer para frente (topo)" hitSlop={6} style={styles.btn}>
+        <Pressable onPress={onLayerToFront} accessibilityRole="button" accessibilityLabel={t('rabisco.bringToFront')} hitSlop={6} style={styles.btn}>
           <Icon name="bringToFront" size={18} color={colors.label} />
         </Pressable>
       </View>

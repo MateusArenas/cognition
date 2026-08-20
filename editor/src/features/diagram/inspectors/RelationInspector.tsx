@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '@/design/useTheme';
 import { useDoc } from '@/store/useDoc';
+import { useI18n } from '@/i18n/I18nProvider';
 import { CARD_L, CARD_R } from '@/domain/mermaid/cardinality';
 import { setRelationCardinality } from '@/domain/mutations/er';
 import type { ErDoc, Relation } from '@/domain/types';
@@ -10,6 +11,7 @@ interface Props {
 }
 
 export function RelationInspector({ id }: Props) {
+  const { t } = useI18n();
   const doc = useDoc((s) => s.doc) as ErDoc;
   const apply = useDoc((s) => s.apply);
   const r = doc.relations.find((x) => x.id === id);
@@ -18,13 +20,13 @@ export function RelationInspector({ id }: Props) {
   return (
     <View style={{ gap: 20 }}>
       <Picker
-        title={`LADO ${r.from}`}
+        title={t('diagram.sideLabel', { side: r.from })}
         options={CARD_L}
         value={r.cardL}
         onChange={(v) => apply((d) => setRelationCardinality(d as ErDoc, id, v as Relation['cardL'], r.cardR))}
       />
       <Picker
-        title={`LADO ${r.to}`}
+        title={t('diagram.sideLabel', { side: r.to })}
         options={CARD_R}
         value={r.cardR}
         onChange={(v) => apply((d) => setRelationCardinality(d as ErDoc, id, r.cardL, v as Relation['cardR']))}

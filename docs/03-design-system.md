@@ -201,8 +201,8 @@ três continuam no DOM e clicáveis).
 
 ## Navegação (tab bar)
 
-`app/(tabs)/_layout.tsx` — duas abas, **Biblioteca** e **Ajustes** (`features/settings/`, nova:
-por enquanto só o seletor de tema, ver abaixo). Grupo `(tabs)` do expo-router: não aparece na
+`app/(tabs)/_layout.tsx` — duas abas, **Biblioteca** e **Ajustes** (`features/settings/`, com
+seletores de tema e idioma). Grupo `(tabs)` do expo-router: não aparece na
 URL, então a rota da Biblioteca continua sendo `/`. `Galeria` e o editor (`doc/[id]`) ficam
 *fora* do grupo, empilhados pelo `Stack` raiz por cima — cobrem a tab bar inteira ao navegar
 pra lá, sem configuração extra (é o comportamento padrão de um `Stack` por cima de um
@@ -230,8 +230,7 @@ nas telas empilhadas sem tab bar, mas sem colisão em lugar nenhum. Ver `Toast.t
 editor/src/design/
   tokens.ts          palette (dark/light), type, space, radius, easing — porta exata do §5.1
   ThemeProvider.tsx   segue o sistema até o usuário escolher (mode: 'auto'|'light'|'dark');
-                      a persistência da escolha chega com store/useSettings.ts (Etapa 16) —
-                      a aba Ajustes já troca o tema ao vivo, só não sobrevive a fechar o app
+                      a preferência persiste em useSettings junto do idioma
   useTheme.ts         hook — lança se usado fora do provider
   Icon.tsx            ícones do lucide-react-native — registro pequeno, cresce por feature
   SheetChrome.tsx      o efeito "tela encolhe atrás da sheet aberta" — Provider + Container,

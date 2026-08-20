@@ -4,6 +4,7 @@ import { Field } from '@/design/components/Field';
 import { Icon } from '@/design/Icon';
 import { useTheme } from '@/design/useTheme';
 import { useDoc } from '@/store/useDoc';
+import { useI18n } from '@/i18n/I18nProvider';
 import { SHAPES } from '@/domain/mermaid/shapes';
 import { addGroup, setNodeClass, setNodeGroup, setNodeShape } from '@/domain/mutations/flow';
 import type { FlowDoc, ShapeKey } from '@/domain/types';
@@ -15,6 +16,7 @@ interface Props {
 // Forma + Cor do nó (§11) — a barra de ações já leva direto pra cá, na seção certa.
 export function NodeInspector({ id }: Props) {
   const { colors, radius } = useTheme();
+  const { t } = useI18n();
   const doc = useDoc((s) => s.doc) as FlowDoc;
   const apply = useDoc((s) => s.apply);
   const [novoGrupo, setNovoGrupo] = useState('');
@@ -25,7 +27,7 @@ export function NodeInspector({ id }: Props) {
   return (
     <View style={{ gap: 20 }}>
       <View>
-        <Text style={[styles.section, { color: colors.labelSecondary }]}>FORMA</Text>
+        <Text style={[styles.section, { color: colors.labelSecondary }]}>{t('diagram.inspectorShape')}</Text>
         <View style={styles.grid}>
           {(Object.keys(SHAPES) as ShapeKey[]).map((k) => (
             <Pressable
@@ -44,13 +46,13 @@ export function NodeInspector({ id }: Props) {
       </View>
 
       <View>
-        <Text style={[styles.section, { color: colors.labelSecondary }]}>COR</Text>
+        <Text style={[styles.section, { color: colors.labelSecondary }]}>{t('diagram.inspectorColor')}</Text>
         <View style={styles.grid}>
           <Pressable
             onPress={() => apply((d) => setNodeClass(d as FlowDoc, id, null))}
             style={[styles.chip, { borderRadius: radius.control + 2, backgroundColor: colors.surface }, !n.cls && { borderColor: colors.blue, borderWidth: 1.5 }]}
           >
-            <Text style={{ color: colors.label, fontSize: 13 }}>Nenhuma</Text>
+            <Text style={{ color: colors.label, fontSize: 13 }}>{t('diagram.noneColor')}</Text>
           </Pressable>
           {doc.classes.map((c) => (
             <Pressable
@@ -69,13 +71,13 @@ export function NodeInspector({ id }: Props) {
       </View>
 
       <View>
-        <Text style={[styles.section, { color: colors.labelSecondary }]}>GRUPO</Text>
+        <Text style={[styles.section, { color: colors.labelSecondary }]}>{t('diagram.inspectorGroup')}</Text>
         <View style={styles.grid}>
           <Pressable
             onPress={() => apply((d) => setNodeGroup(d as FlowDoc, id, null))}
             style={[styles.chip, { borderRadius: radius.control + 2, backgroundColor: colors.surface }, !grupoAtual && { borderColor: colors.blue, borderWidth: 1.5 }]}
           >
-            <Text style={{ color: colors.label, fontSize: 13 }}>Nenhum</Text>
+            <Text style={{ color: colors.label, fontSize: 13 }}>{t('diagram.noneGroup')}</Text>
           </Pressable>
           {doc.groups.map((g) => (
             <Pressable
@@ -93,7 +95,7 @@ export function NodeInspector({ id }: Props) {
         </View>
         <View style={styles.novoGrupo}>
           <Field
-            placeholder="Novo grupo"
+            placeholder={t('diagram.newGroupPlaceholder')}
             value={novoGrupo}
             onChangeText={setNovoGrupo}
             style={styles.novoGrupoField}

@@ -13,6 +13,7 @@ import { useLibrary } from '@/store/useLibrary';
 import type { DocRow } from '@/services/storage';
 import { importarDocumento } from '@/services/import';
 import { DocCard } from './DocCard';
+import { useI18n } from '@/i18n/I18nProvider';
 
 // Biblioteca de verdade (§15): grade de documentos salvos, busca por nome/conteúdo,
 // excluir com confirmação. "+" abre a galeria (§15). Miniatura visual (renderizar o SVG e
@@ -20,6 +21,7 @@ import { DocCard } from './DocCard';
 // docs/12-persistencia-e-export.md.
 export default function LibraryScreen() {
   const { colors, space } = useTheme();
+  const { t } = useI18n();
   const { show } = useToast();
   const docs = useLibrary((s) => s.docs);
   const query = useLibrary((s) => s.query);
@@ -38,23 +40,23 @@ export default function LibraryScreen() {
   async function confirmarExclusao() {
     if (!paraExcluir) return;
     await remove(paraExcluir.id);
-    show('Excluído');
+    show(t('library.deleted'));
     setParaExcluir(null);
   }
 
   async function importar() {
     const doc = await importarDocumento();
     if (doc) {
-      show(`Importado: ${doc.nome}`);
+      show(t('library.imported', { name: doc.nome }));
       load();
     }
   }
 
   return (
     <View style={[styles.root, { backgroundColor: colors.bg }]}>
-      <NavBar title="Biblioteca" subtitle="Editor de Diagramas" right={{ label: 'Importar', onPress: importar }} />
+      <NavBar title={t('library.title')} subtitle={t('library.subtitle')} right={{ label: t('library.import'), onPress: importar }} />
       <View style={{ paddingHorizontal: space.lg, paddingTop: space.sm }}>
-        <Field value={query} onChangeText={setQuery} placeholder="Buscar por nome ou conteúdo" />
+        <Field value={query} onChangeText={setQuery} placeholder={t('library.search')} />
       </View>
       <ScrollView contentContainerStyle={{ padding: space.lg, paddingBottom: space.lg + tabBarHeight }}>
         <GroupedList>
@@ -69,17 +71,17 @@ export default function LibraryScreen() {
       </ScrollView>
 
       <View style={[styles.fab, { bottom: 16 + tabBarHeight }]}>
-        <Fab icon="plus" primary accessibilityLabel="Novo documento" onPress={() => router.push('/gallery')} />
+        <Fab icon="plus" primary accessibilityLabel={t('library.newDocument')} onPress={() => router.push('/gallery')} />
       </View>
 
       <AlertDialog
         visible={!!paraExcluir}
-        title="Excluir documento?"
+        title={t('library.deleteTitle')}
         message={paraExcluir?.nome}
         onRequestClose={() => setParaExcluir(null)}
         buttons={[
-          { label: 'Cancelar', role: 'cancel', onPress: () => setParaExcluir(null) },
-          { label: 'Excluir', role: 'destructive', onPress: confirmarExclusao },
+          { label: t('common.cancel'), role: 'cancel', onPress: () => setParaExcluir(null) },
+          { label: t('common.delete'), role: 'destructive', onPress: confirmarExclusao },
         ]}
       />
     </View>

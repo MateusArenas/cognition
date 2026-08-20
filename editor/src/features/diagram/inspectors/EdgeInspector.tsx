@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '@/design/useTheme';
 import { useDoc } from '@/store/useDoc';
+import { useI18n } from '@/i18n/I18nProvider';
 import { LINKS } from '@/domain/mermaid/links';
 import { setEdgeType } from '@/domain/mutations/flow';
 import type { FlowDoc, LinkKey } from '@/domain/types';
@@ -11,6 +12,7 @@ interface Props {
 
 export function EdgeInspector({ id }: Props) {
   const { colors, radius } = useTheme();
+  const { t } = useI18n();
   const doc = useDoc((s) => s.doc) as FlowDoc;
   const apply = useDoc((s) => s.apply);
   const e = doc.edges.find((x) => x.id === id);
@@ -18,7 +20,7 @@ export function EdgeInspector({ id }: Props) {
 
   return (
     <View>
-      <Text style={[styles.section, { color: colors.labelSecondary }]}>TRAÇO</Text>
+      <Text style={[styles.section, { color: colors.labelSecondary }]}>{t('diagram.inspectorStroke')}</Text>
       <View style={styles.grid}>
         {(Object.keys(LINKS) as LinkKey[]).map((k) => (
           <Pressable

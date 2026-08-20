@@ -1,6 +1,7 @@
 import { ScrollView, Text, View } from 'react-native';
 import { Row } from '@/design/components/Row';
 import { useTheme } from '@/design/useTheme';
+import { useI18n } from '@/i18n/I18nProvider';
 import type { MdNode } from '@/domain/markdown/render';
 
 interface Props {
@@ -15,12 +16,12 @@ interface Entrada {
   offset: number;
 }
 
-function coletar(nodes: MdNode[]): Entrada[] {
+function coletar(nodes: MdNode[], diagramaTexto: string): Entrada[] {
   const out: Entrada[] = [];
   for (const n of nodes) {
     if (n.t === 'heading') out.push({ tipo: 'titulo', texto: n.filhos.map((f) => (f.t === 'text' ? f.texto : '')).join(''), nivel: n.nivel, offset: n.ini });
-    else if (n.t === 'mermaid') out.push({ tipo: 'diagrama', texto: 'Diagrama', nivel: 1, offset: n.ini });
-    else if (n.t === 'quote') out.push(...coletar(n.filhos));
+    else if (n.t === 'mermaid') out.push({ tipo: 'diagrama', texto: diagramaTexto, nivel: 1, offset: n.ini });
+    else if (n.t === 'quote') out.push(...coletar(n.filhos, diagramaTexto));
   }
   return out;
 }
@@ -29,12 +30,13 @@ function coletar(nodes: MdNode[]): Entrada[] {
 // leva o cursor até lá; tocar num diagrama abre no canvas.
 export function Outline({ nodes, onJump }: Props) {
   const { colors, space } = useTheme();
-  const entradas = coletar(nodes);
+  const { t } = useI18n();
+  const entradas = coletar(nodes, t('document.diagramEntry'));
 
   if (!entradas.length) {
     return (
       <View style={{ padding: space.lg }}>
-        <Text style={{ color: colors.labelSecondary }}>Sem títulos ou diagramas ainda.</Text>
+        <Text style={{ color: colors.labelSecondary }}>{t('document.noOutline')}</Text>
       </View>
     );
   }

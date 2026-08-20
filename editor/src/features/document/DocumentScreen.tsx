@@ -7,6 +7,7 @@ import { NavBar } from '@/design/components/NavBar';
 import { Segmented } from '@/design/components/Segmented';
 import { Sheet } from '@/design/components/Sheet';
 import { useTheme } from '@/design/useTheme';
+import { useI18n } from '@/i18n/I18nProvider';
 import { useDoc, useLiveField } from '@/store/useDoc';
 import { renderMarkdown } from '@/domain/markdown/render';
 import { countDiagrams, countWords, insertMermaidBlock } from '@/domain/markdown/blocks';
@@ -25,6 +26,7 @@ type Modo = 'edit' | 'read';
 // verdade e voltam pro lugar exato (§13.4, ver DiagramScreen#voltar).
 export function DocumentScreen() {
   const { colors, space } = useTheme();
+  const { t } = useI18n();
   const doc = useDoc((s) => s.doc) as MdDoc;
   const apply = useDoc((s) => s.apply);
   const openDoc = useDoc((s) => s.openDoc);
@@ -67,17 +69,17 @@ export function DocumentScreen() {
     <View style={[styles.root, { backgroundColor: colors.bg }]}>
       <NavBar
         title={doc.nome}
-        left={{ label: '‹ Biblioteca', onPress: () => router.back() }}
+        left={{ label: t('common.backToLibrary'), onPress: () => router.back() }}
         right={[
-          { label: 'Estrutura', onPress: () => outlineRef.current?.present() },
-          { label: 'Exportar', onPress: () => exportarTexto(doc) },
+          { label: t('document.outline'), onPress: () => outlineRef.current?.present() },
+          { label: t('common.export'), onPress: () => exportarTexto(doc) },
         ]}
       />
       <View style={{ paddingHorizontal: space.lg, paddingVertical: space.sm }}>
         <Segmented
           options={[
-            { value: 'edit', label: 'Escrever' },
-            { value: 'read', label: 'Ler' },
+            { value: 'edit', label: t('document.write') },
+            { value: 'read', label: t('document.read') },
           ]}
           value={modo}
           onChange={(v) => setModo(v as Modo)}
@@ -103,7 +105,7 @@ export function DocumentScreen() {
 
       <View style={[styles.status, { borderTopColor: colors.separator }]}>
         <Text style={{ color: colors.labelTertiary, fontSize: 11.5 }}>
-          {palavras} palavra{palavras === 1 ? '' : 's'} · {diagramas} diagrama{diagramas === 1 ? '' : 's'}
+          {palavras} {t(palavras === 1 ? 'document.wordSingular' : 'document.wordPlural')} · {diagramas} {t(diagramas === 1 ? 'document.diagramLabel' : 'document.diagramPlural')}
         </Text>
       </View>
 
@@ -121,7 +123,7 @@ export function DocumentScreen() {
         </KeyboardStickyView>
       ) : null}
 
-      <Sheet ref={outlineRef} title="Estrutura">
+      <Sheet ref={outlineRef} title={t('document.outline')}>
         <Outline
           nodes={nodes}
           onJump={(offset) => {

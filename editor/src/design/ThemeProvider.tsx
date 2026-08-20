@@ -1,5 +1,6 @@
-import { createContext, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useMemo, type ReactNode } from 'react';
 import { useColorScheme } from 'react-native';
+import { useSettings } from '@/store/useSettings';
 import { easing, palette, radius, space, type, type Palette, type Scheme } from './tokens';
 
 export type ThemeMode = 'auto' | 'light' | 'dark';
@@ -19,22 +20,23 @@ export const ThemeContext = createContext<Theme | null>(null);
 
 interface Props {
   children: ReactNode;
-  /** Só para testes/storybook — em produção o modo vem de useSettings (Etapa 16). */
+  /** Só para testes/storybook — em produção o modo vem de useSettings. */
   initialMode?: ThemeMode;
 }
 
-// O app segue o tema do sistema (`mode: 'auto'`) até o usuário escolher um, e aí passa a
-// respeitar a escolha — é como o iOS se comporta. A persistência da escolha do usuário chega
-// com store/useSettings.ts (Etapa 16); por enquanto o estado só vive nesta sessão.
+// O app segue o tema do sistema (`mode: 'auto'`) até o usuário escolher um. A escolha é
+// persistida pelo store junto do idioma; initialMode só mantém o provider simples em testes.
 export function ThemeProvider({ children, initialMode = 'auto' }: Props) {
   const system = useColorScheme();
-  const [mode, setMode] = useState<ThemeMode>(initialMode);
+  const savedMode = useSettings((state) => state.themeMode);
+  const setSavedMode = useSettings((state) => state.setThemeMode);
+  const mode = initialMode === 'auto' ? savedMode : initialMode;
 
   const scheme: Scheme = mode === 'auto' ? (system === 'dark' ? 'dark' : 'light') : mode;
 
   const value = useMemo<Theme>(
-    () => ({ scheme, mode, colors: palette[scheme], type, space, radius, easing, setMode }),
-    [scheme, mode]
+    () => ({ scheme, mode, colors: palette[scheme], type, space, radius, easing, setMode: setSavedMode }),
+    [scheme, mode, setSavedMode]
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

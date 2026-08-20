@@ -4,6 +4,7 @@ import { KeyboardStickyView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '@/design/Icon';
 import { useTheme } from '@/design/useTheme';
+import { useI18n } from '@/i18n/I18nProvider';
 
 interface Props {
   canUndo: boolean;
@@ -23,6 +24,7 @@ interface Props {
 // pegada apple... margens pra ver por trás algo sutil e tamanho compacto").
 export function CodeKeyboardBar({ canUndo, canRedo, onUndo, onRedo, onLayout }: Props) {
   const { colors, radius, scheme } = useTheme();
+  const { t } = useI18n();
   const insets = useSafeAreaInsets();
 
   return (
@@ -50,7 +52,7 @@ export function CodeKeyboardBar({ canUndo, canRedo, onUndo, onRedo, onLayout }: 
               onPress={onUndo}
               disabled={!canUndo}
               accessibilityRole="button"
-              accessibilityLabel="Desfazer"
+              accessibilityLabel={t('common.undo')}
               hitSlop={8}
               style={({ pressed }) => ({ opacity: !canUndo ? 0.3 : pressed ? 0.5 : 1 })}
             >
@@ -60,7 +62,7 @@ export function CodeKeyboardBar({ canUndo, canRedo, onUndo, onRedo, onLayout }: 
               onPress={onRedo}
               disabled={!canRedo}
               accessibilityRole="button"
-              accessibilityLabel="Refazer"
+              accessibilityLabel={t('common.redo')}
               hitSlop={8}
               style={({ pressed }) => ({ opacity: !canRedo ? 0.3 : pressed ? 0.5 : 1 })}
             >
@@ -70,7 +72,7 @@ export function CodeKeyboardBar({ canUndo, canRedo, onUndo, onRedo, onLayout }: 
           <Pressable
             onPress={() => Keyboard.dismiss()}
             accessibilityRole="button"
-            accessibilityLabel="Confirmar e fechar o teclado"
+            accessibilityLabel={t('code.confirmAndClose')}
             hitSlop={8}
             style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}
           >

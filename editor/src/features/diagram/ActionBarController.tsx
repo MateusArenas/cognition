@@ -7,6 +7,7 @@ import { Field } from '@/design/components/Field';
 import { Sheet } from '@/design/components/Sheet';
 import { useTheme } from '@/design/useTheme';
 import { useToast } from '@/design/components/Toast';
+import { useI18n } from '@/i18n/I18nProvider';
 import { useDoc } from '@/store/useDoc';
 import { hapticWarning } from '@/services/haptics';
 import type { Doc, ErDoc, FlowDoc, RawDoc } from '@/domain/types';
@@ -47,6 +48,7 @@ export const ActionBarController = forwardRef<ActionBarControllerHandle, Props>(
 ) {
   const { colors } = useTheme();
   const { show } = useToast();
+  const { t: tr } = useI18n();
   const doc = useDoc((s) => s.doc);
   const sel = useDoc((s) => s.sel);
   const select = useDoc((s) => s.select);
@@ -93,22 +95,22 @@ export const ActionBarController = forwardRef<ActionBarControllerHandle, Props>(
       const n = doc.nodes.find((x) => x.id === sel.id);
       if (!n) return null;
       return [
-        { key: 'texto', icon: 'pencil', label: 'Texto', onPress: () => openPrompt('Texto do nó', n.label, (v) => apply((d) => flow.setNodeLabel(d as FlowDoc, sel.id, v))) },
-        { key: 'conectar', icon: 'link', label: 'Conectar', onPress: () => onStartLink(sel.id) },
-        { key: 'forma', icon: 'shapes', label: 'Forma', onPress: () => openInspector('node') },
-        { key: 'cor', icon: 'palette', label: 'Cor', onPress: () => openInspector('node') },
-        { key: 'grupo', icon: 'columns', label: 'Grupo', onPress: () => openInspector('node') },
-        { key: 'duplicar', icon: 'copy', label: 'Duplicar', onPress: () => apply((d) => flow.duplicateNode(d as FlowDoc, sel.id)) },
-        { key: 'ia', icon: 'spark', label: 'IA', onPress: onOpenAi },
+        { key: 'texto', icon: 'pencil', label: tr('diagram.text'), onPress: () => openPrompt(tr('diagram.nodeTextTitle'), n.label, (v) => apply((d) => flow.setNodeLabel(d as FlowDoc, sel.id, v))) },
+        { key: 'conectar', icon: 'link', label: tr('diagram.connect'), onPress: () => onStartLink(sel.id) },
+        { key: 'forma', icon: 'shapes', label: tr('diagram.shape'), onPress: () => openInspector('node') },
+        { key: 'cor', icon: 'palette', label: tr('common.color'), onPress: () => openInspector('node') },
+        { key: 'grupo', icon: 'columns', label: tr('diagram.group'), onPress: () => openInspector('node') },
+        { key: 'duplicar', icon: 'copy', label: tr('common.duplicate'), onPress: () => apply((d) => flow.duplicateNode(d as FlowDoc, sel.id)) },
+        { key: 'ia', icon: 'spark', label: tr('common.ai'), onPress: onOpenAi },
         {
-          key: 'excluir', icon: 'trash', label: 'Excluir', destructive: true,
-          onPress: () => askDelete('Excluir nó?', `"${n.label}" e as ligações dele.`, () => {
+          key: 'excluir', icon: 'trash', label: tr('common.delete'), destructive: true,
+          onPress: () => askDelete(tr('diagram.deleteNodeConfirm'), tr('diagram.deleteNodeMessage', { label: n.label }), () => {
             apply((d) => flow.removeNode(d as FlowDoc, sel.id));
             select(null);
-            show('Excluído — desfazer no botão de desfazer');
+            show(tr('diagram.deletedCanUndo'));
           }),
         },
-        { key: 'editar', icon: 'chevronRight', label: 'Editar', onPress: () => openInspector('node') },
+        { key: 'editar', icon: 'chevronRight', label: tr('common.edit'), onPress: () => openInspector('node') },
       ];
     }
 
@@ -116,19 +118,19 @@ export const ActionBarController = forwardRef<ActionBarControllerHandle, Props>(
       const e = doc.edges.find((x) => x.id === sel.id);
       if (!e) return null;
       return [
-        { key: 'rotulo', icon: 'pencil', label: 'Rótulo', onPress: () => openPrompt('Rótulo da ligação', e.label, (v) => apply((d) => flow.setEdgeLabel(d as FlowDoc, sel.id, v))) },
-        { key: 'inverter', icon: 'swap', label: 'Inverter', onPress: () => apply((d) => flow.invertEdge(d as FlowDoc, sel.id)) },
-        { key: 'traco', icon: 'sliders', label: 'Traço', onPress: () => openInspector('edge') },
-        { key: 'ia', icon: 'spark', label: 'IA', onPress: onOpenAi },
+        { key: 'rotulo', icon: 'pencil', label: tr('diagram.label'), onPress: () => openPrompt(tr('diagram.edgeLabelTitle'), e.label, (v) => apply((d) => flow.setEdgeLabel(d as FlowDoc, sel.id, v))) },
+        { key: 'inverter', icon: 'swap', label: tr('diagram.invert'), onPress: () => apply((d) => flow.invertEdge(d as FlowDoc, sel.id)) },
+        { key: 'traco', icon: 'sliders', label: tr('diagram.stroke'), onPress: () => openInspector('edge') },
+        { key: 'ia', icon: 'spark', label: tr('common.ai'), onPress: onOpenAi },
         {
-          key: 'excluir', icon: 'trash', label: 'Excluir', destructive: true,
-          onPress: () => askDelete('Excluir ligação?', 'Não dá pra desfazer isso sozinho — mas dá pra desfazer a ação.', () => {
+          key: 'excluir', icon: 'trash', label: tr('common.delete'), destructive: true,
+          onPress: () => askDelete(tr('diagram.deleteEdgeConfirm'), tr('diagram.deleteEdgeMessage'), () => {
             apply((d) => flow.removeEdge(d as FlowDoc, sel.id));
             select(null);
-            show('Excluída — desfazer no botão de desfazer');
+            show(tr('diagram.deletedCanUndo'));
           }),
         },
-        { key: 'editar', icon: 'chevronRight', label: 'Editar', onPress: () => openInspector('edge') },
+        { key: 'editar', icon: 'chevronRight', label: tr('common.edit'), onPress: () => openInspector('edge') },
       ];
     }
 
@@ -136,18 +138,18 @@ export const ActionBarController = forwardRef<ActionBarControllerHandle, Props>(
       const g = doc.groups.find((x) => x.id === sel.id);
       if (!g) return null;
       return [
-        { key: 'nome', icon: 'pencil', label: 'Nome', onPress: () => openPrompt('Nome do grupo', g.label, (v) => apply((d) => flow.renameGroup(d as FlowDoc, sel.id, v))) },
-        { key: 'nos', icon: 'columns', label: 'Nós', onPress: () => openInspector('group') },
-        { key: 'ia', icon: 'spark', label: 'IA', onPress: onOpenAi },
+        { key: 'nome', icon: 'pencil', label: tr('diagram.name'), onPress: () => openPrompt(tr('diagram.groupNameTitle'), g.label, (v) => apply((d) => flow.renameGroup(d as FlowDoc, sel.id, v))) },
+        { key: 'nos', icon: 'columns', label: tr('diagram.nodes'), onPress: () => openInspector('group') },
+        { key: 'ia', icon: 'spark', label: tr('common.ai'), onPress: onOpenAi },
         {
-          key: 'excluir', icon: 'trash', label: 'Excluir', destructive: true,
-          onPress: () => askDelete('Excluir grupo?', `"${g.label}" — os nós continuam existindo, só saem do grupo.`, () => {
+          key: 'excluir', icon: 'trash', label: tr('common.delete'), destructive: true,
+          onPress: () => askDelete(tr('diagram.deleteGroupConfirm'), tr('diagram.deleteGroupMessage', { label: g.label }), () => {
             apply((d) => flow.removeGroup(d as FlowDoc, sel.id));
             select(null);
-            show('Excluído — desfazer no botão de desfazer');
+            show(tr('diagram.deletedCanUndo'));
           }),
         },
-        { key: 'editar', icon: 'chevronRight', label: 'Editar', onPress: () => openInspector('group') },
+        { key: 'editar', icon: 'chevronRight', label: tr('common.edit'), onPress: () => openInspector('group') },
       ];
     }
 
@@ -155,20 +157,20 @@ export const ActionBarController = forwardRef<ActionBarControllerHandle, Props>(
       const t = tableById(doc as ErDoc, sel.id);
       if (!t) return null;
       return [
-        { key: 'colunas', icon: 'columns', label: 'Colunas', onPress: () => openInspector('table') },
-        { key: 'nome', icon: 'pencil', label: 'Nome', onPress: () => openPrompt('Nome da tabela', t.id, (v) => apply((d) => er.renameTable(d as ErDoc, sel.id, v))) },
-        { key: 'relacionar', icon: 'link', label: 'Relacionar', onPress: () => onStartLink(sel.id) },
-        { key: 'duplicar', icon: 'copy', label: 'Duplicar', onPress: () => apply((d) => er.duplicateTable(d as ErDoc, sel.id)) },
-        { key: 'ia', icon: 'spark', label: 'IA', onPress: onOpenAi },
+        { key: 'colunas', icon: 'columns', label: tr('diagram.columns'), onPress: () => openInspector('table') },
+        { key: 'nome', icon: 'pencil', label: tr('diagram.name'), onPress: () => openPrompt(tr('diagram.tableNameTitle'), t.id, (v) => apply((d) => er.renameTable(d as ErDoc, sel.id, v))) },
+        { key: 'relacionar', icon: 'link', label: tr('diagram.relate'), onPress: () => onStartLink(sel.id) },
+        { key: 'duplicar', icon: 'copy', label: tr('common.duplicate'), onPress: () => apply((d) => er.duplicateTable(d as ErDoc, sel.id)) },
+        { key: 'ia', icon: 'spark', label: tr('common.ai'), onPress: onOpenAi },
         {
-          key: 'excluir', icon: 'trash', label: 'Excluir', destructive: true,
-          onPress: () => askDelete('Excluir tabela?', `"${t.id}" e as relações dela.`, () => {
+          key: 'excluir', icon: 'trash', label: tr('common.delete'), destructive: true,
+          onPress: () => askDelete(tr('diagram.deleteTableConfirm'), tr('diagram.deleteTableMessage', { id: t.id }), () => {
             apply((d) => er.removeTable(d as ErDoc, sel.id));
             select(null);
-            show('Excluída — desfazer no botão de desfazer');
+            show(tr('diagram.deletedCanUndo'));
           }),
         },
-        { key: 'editar', icon: 'chevronRight', label: 'Editar', onPress: () => openInspector('table') },
+        { key: 'editar', icon: 'chevronRight', label: tr('common.edit'), onPress: () => openInspector('table') },
       ];
     }
 
@@ -176,20 +178,20 @@ export const ActionBarController = forwardRef<ActionBarControllerHandle, Props>(
       const c = colunaDe(doc as ErDoc, sel.id);
       if (!c) return null;
       return [
-        { key: 'nome', icon: 'pencil', label: 'Nome', onPress: () => openPrompt('Nome da coluna', c.col.name, (v) => apply((d) => er.updateColumn(d as ErDoc, c.tab.id, c.idx, { name: v }))) },
-        { key: 'tipo', icon: 'type', label: 'Tipo', onPress: () => openPrompt('Tipo da coluna', c.col.type, (v) => apply((d) => er.updateColumn(d as ErDoc, c.tab.id, c.idx, { type: v }))) },
-        { key: 'comentario', icon: 'comment', label: 'Comentário', onPress: () => openPrompt('Comentário', c.col.note, (v) => apply((d) => er.updateColumn(d as ErDoc, c.tab.id, c.idx, { note: v }))) },
-        { key: 'ia', icon: 'spark', label: 'IA', onPress: onOpenAi },
-        { key: 'tabela', icon: 'table', label: 'Tabela', onPress: () => select({ kind: 'table', id: c.tab.id }) },
+        { key: 'nome', icon: 'pencil', label: tr('diagram.name'), onPress: () => openPrompt(tr('diagram.columnNameTitle'), c.col.name, (v) => apply((d) => er.updateColumn(d as ErDoc, c.tab.id, c.idx, { name: v }))) },
+        { key: 'tipo', icon: 'type', label: tr('diagram.type'), onPress: () => openPrompt(tr('diagram.columnTypeTitle'), c.col.type, (v) => apply((d) => er.updateColumn(d as ErDoc, c.tab.id, c.idx, { type: v }))) },
+        { key: 'comentario', icon: 'comment', label: tr('diagram.comment'), onPress: () => openPrompt(tr('diagram.comment'), c.col.note, (v) => apply((d) => er.updateColumn(d as ErDoc, c.tab.id, c.idx, { note: v }))) },
+        { key: 'ia', icon: 'spark', label: tr('common.ai'), onPress: onOpenAi },
+        { key: 'tabela', icon: 'table', label: tr('diagram.table'), onPress: () => select({ kind: 'table', id: c.tab.id }) },
         {
-          key: 'excluir', icon: 'trash', label: 'Excluir', destructive: true,
-          onPress: () => askDelete('Excluir coluna?', `"${c.col.name}" de ${c.tab.id}.`, () => {
+          key: 'excluir', icon: 'trash', label: tr('common.delete'), destructive: true,
+          onPress: () => askDelete(tr('diagram.deleteColumnConfirm'), tr('diagram.deleteColumnMessage', { name: c.col.name, table: c.tab.id }), () => {
             apply((d) => er.removeColumn(d as ErDoc, c.tab.id, c.idx));
             select(null);
-            show('Excluída — desfazer no botão de desfazer');
+            show(tr('diagram.deletedCanUndo'));
           }),
         },
-        { key: 'editar', icon: 'chevronRight', label: 'Editar', onPress: () => openInspector('column') },
+        { key: 'editar', icon: 'chevronRight', label: tr('common.edit'), onPress: () => openInspector('column') },
       ];
     }
 
@@ -197,19 +199,19 @@ export const ActionBarController = forwardRef<ActionBarControllerHandle, Props>(
       const r = relById(doc as ErDoc, sel.id);
       if (!r) return null;
       return [
-        { key: 'verbo', icon: 'pencil', label: 'Verbo', onPress: () => openPrompt('Verbo da relação', r.label, (v) => apply((d) => { const dd = structuredClone(d as ErDoc); const rr = dd.relations.find((x) => x.id === sel.id); if (rr) rr.label = v; return dd; })) },
-        { key: 'cardinalidade', icon: 'cardinality', label: 'Cardinalidade', onPress: () => openInspector('relation') },
-        { key: 'inverter', icon: 'swap', label: 'Inverter', onPress: () => apply((d) => er.invertRelation(d as ErDoc, sel.id)) },
-        { key: 'ia', icon: 'spark', label: 'IA', onPress: onOpenAi },
+        { key: 'verbo', icon: 'pencil', label: tr('diagram.verb'), onPress: () => openPrompt(tr('diagram.relationVerbTitle'), r.label, (v) => apply((d) => { const dd = structuredClone(d as ErDoc); const rr = dd.relations.find((x) => x.id === sel.id); if (rr) rr.label = v; return dd; })) },
+        { key: 'cardinalidade', icon: 'cardinality', label: tr('diagram.cardinality'), onPress: () => openInspector('relation') },
+        { key: 'inverter', icon: 'swap', label: tr('diagram.invert'), onPress: () => apply((d) => er.invertRelation(d as ErDoc, sel.id)) },
+        { key: 'ia', icon: 'spark', label: tr('common.ai'), onPress: onOpenAi },
         {
-          key: 'excluir', icon: 'trash', label: 'Excluir', destructive: true,
-          onPress: () => askDelete('Excluir relação?', '', () => {
+          key: 'excluir', icon: 'trash', label: tr('common.delete'), destructive: true,
+          onPress: () => askDelete(tr('diagram.deleteRelationConfirm'), '', () => {
             apply((d) => er.removeRelation(d as ErDoc, sel.id));
             select(null);
-            show('Excluída — desfazer no botão de desfazer');
+            show(tr('diagram.deletedCanUndo'));
           }),
         },
-        { key: 'editar', icon: 'chevronRight', label: 'Editar', onPress: () => openInspector('relation') },
+        { key: 'editar', icon: 'chevronRight', label: tr('common.edit'), onPress: () => openInspector('relation') },
       ];
     }
 
@@ -217,19 +219,19 @@ export const ActionBarController = forwardRef<ActionBarControllerHandle, Props>(
       const span = raw.textSpanAt(doc as RawDoc, sel);
       if (!span) return null;
       return [
-        { key: 'texto', icon: 'pencil', label: 'Texto', onPress: () => openPrompt('Texto', span.texto, (v) => apply((d) => raw.replaceTextSpan(d as RawDoc, span, v))) },
-        { key: 'duplicar', icon: 'copy', label: 'Duplicar linha', onPress: () => apply((d) => raw.duplicateLine(d as RawDoc, span)) },
-        { key: 'ia', icon: 'spark', label: 'IA', onPress: onOpenAi },
-        { key: 'codigo', icon: 'code', label: 'Código', onPress: () => onOpenCode?.() },
+        { key: 'texto', icon: 'pencil', label: tr('diagram.text'), onPress: () => openPrompt(tr('diagram.text'), span.texto, (v) => apply((d) => raw.replaceTextSpan(d as RawDoc, span, v))) },
+        { key: 'duplicar', icon: 'copy', label: tr('diagram.duplicateLine'), onPress: () => apply((d) => raw.duplicateLine(d as RawDoc, span)) },
+        { key: 'ia', icon: 'spark', label: tr('common.ai'), onPress: onOpenAi },
+        { key: 'codigo', icon: 'code', label: tr('diagram.code'), onPress: () => onOpenCode?.() },
         {
-          key: 'excluir', icon: 'trash', label: 'Excluir linha', destructive: true,
-          onPress: () => askDelete('Excluir linha?', span.linha, () => {
+          key: 'excluir', icon: 'trash', label: tr('diagram.deleteLineLabel'), destructive: true,
+          onPress: () => askDelete(tr('diagram.deleteLineConfirm'), span.linha, () => {
             apply((d) => raw.removeLine(d as RawDoc, span));
             select(null);
-            show('Linha removida — desfazer no botão de desfazer');
+            show(tr('diagram.lineDeletedCanUndo'));
           }),
         },
-        { key: 'editar', icon: 'chevronRight', label: 'Editar', onPress: () => openPrompt('Texto', span.texto, (v) => apply((d) => raw.replaceTextSpan(d as RawDoc, span, v))) },
+        { key: 'editar', icon: 'chevronRight', label: tr('common.edit'), onPress: () => openPrompt(tr('diagram.text'), span.texto, (v) => apply((d) => raw.replaceTextSpan(d as RawDoc, span, v))) },
       ];
     }
 
@@ -241,14 +243,14 @@ export const ActionBarController = forwardRef<ActionBarControllerHandle, Props>(
 
   return (
     <>
-      <ActionBar title={describeSelection(doc, sel)} items={items} onClose={() => select(null)} onLayout={onBarLayout} />
+      <ActionBar title={describeSelection(tr, doc, sel)} items={items} onClose={() => select(null)} onLayout={onBarLayout} />
 
       <AlertDialog
         visible={!!prompt}
         title={prompt?.title ?? ''}
         buttons={[
-          { label: 'Cancelar', role: 'cancel', onPress: () => setPrompt(null) },
-          { label: 'OK', role: 'primary', onPress: () => { prompt?.onSubmit(draft); setPrompt(null); } },
+          { label: tr('common.cancel'), role: 'cancel', onPress: () => setPrompt(null) },
+          { label: tr('common.ok'), role: 'primary', onPress: () => { prompt?.onSubmit(draft); setPrompt(null); } },
         ]}
         onRequestClose={() => setPrompt(null)}
       >
@@ -260,44 +262,44 @@ export const ActionBarController = forwardRef<ActionBarControllerHandle, Props>(
         title={confirm?.title ?? ''}
         message={confirm?.message}
         buttons={[
-          { label: 'Cancelar', role: 'cancel', onPress: () => setConfirm(null) },
-          { label: 'Excluir', role: 'destructive', onPress: () => { hapticWarning(); confirm?.onConfirm(); setConfirm(null); } },
+          { label: tr('common.cancel'), role: 'cancel', onPress: () => setConfirm(null) },
+          { label: tr('common.delete'), role: 'destructive', onPress: () => { hapticWarning(); confirm?.onConfirm(); setConfirm(null); } },
         ]}
         onRequestClose={() => setConfirm(null)}
       />
 
-      <Sheet ref={inspectorRef} title={inspectorTitle(inspectorKind)}>
+      <Sheet ref={inspectorRef} title={inspectorTitle(tr, inspectorKind)}>
         {inspectorKind === 'node' && sel?.kind === 'node' ? <NodeInspector id={sel.id} /> : null}
         {inspectorKind === 'edge' && sel?.kind === 'edge' ? <EdgeInspector id={sel.id} /> : null}
         {inspectorKind === 'group' && sel?.kind === 'group' ? <GroupInspector id={sel.id} /> : null}
         {inspectorKind === 'table' && sel?.kind === 'table' ? <TableInspector id={sel.id} /> : null}
         {inspectorKind === 'column' && sel?.kind === 'col' ? <ColumnInspector selId={sel.id} /> : null}
         {inspectorKind === 'relation' && sel?.kind === 'rel' ? <RelationInspector id={sel.id} /> : null}
-        {!sel ? <Text style={{ color: colors.labelSecondary }}>Nada selecionado.</Text> : null}
+        {!sel ? <Text style={{ color: colors.labelSecondary }}>{tr('diagram.nothingSelected')}</Text> : null}
       </Sheet>
     </>
   );
 });
 
-function inspectorTitle(kind: InspectorKind): string {
+function inspectorTitle(tr: (key: string) => string, kind: InspectorKind): string {
   switch (kind) {
-    case 'node': return 'Nó';
-    case 'edge': return 'Ligação';
-    case 'group': return 'Grupo';
-    case 'table': return 'Tabela';
-    case 'column': return 'Coluna';
-    case 'relation': return 'Relação';
-    default: return 'Painel';
+    case 'node': return tr('diagram.inspectorTitleNode');
+    case 'edge': return tr('diagram.inspectorTitleEdge');
+    case 'group': return tr('diagram.group');
+    case 'table': return tr('diagram.table');
+    case 'column': return tr('diagram.inspectorTitleColumn');
+    case 'relation': return tr('diagram.inspectorTitleRelation');
+    default: return tr('diagram.inspectorTitlePanel');
   }
 }
 
-function describeSelection(doc: Doc, sel: NonNullable<ReturnType<typeof useDoc.getState>['sel']>): string {
+function describeSelection(tr: (key: string) => string, doc: Doc, sel: NonNullable<ReturnType<typeof useDoc.getState>['sel']>): string {
   if (sel.kind === 'node' && doc.tipo === 'flow') return doc.nodes.find((n) => n.id === sel.id)?.label || sel.id;
-  if (sel.kind === 'edge' && doc.tipo === 'flow') return doc.edges.find((e) => e.id === sel.id)?.label || 'ligação';
+  if (sel.kind === 'edge' && doc.tipo === 'flow') return doc.edges.find((e) => e.id === sel.id)?.label || tr('diagram.fallbackLink');
   if (sel.kind === 'group' && doc.tipo === 'flow') return doc.groups.find((g) => g.id === sel.id)?.label || sel.id;
   if (sel.kind === 'table' && doc.tipo === 'er') return sel.id;
   if (sel.kind === 'col' && doc.tipo === 'er') { const c = colunaDe(doc, sel.id); return c ? `${c.tab.id} · ${c.col.name}` : sel.id; }
-  if (sel.kind === 'rel' && doc.tipo === 'er') return relById(doc, sel.id)?.label || 'relação';
-  if (sel.kind === 'txt' && doc.tipo === 'raw') return raw.textSpanAt(doc, sel)?.texto || 'texto';
+  if (sel.kind === 'rel' && doc.tipo === 'er') return relById(doc, sel.id)?.label || tr('diagram.fallbackRelation');
+  if (sel.kind === 'txt' && doc.tipo === 'raw') return raw.textSpanAt(doc, sel)?.texto || tr('diagram.fallbackText');
   return sel.id;
 }

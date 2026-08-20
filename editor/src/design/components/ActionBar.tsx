@@ -3,6 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../useTheme';
 import { Icon, type IconName } from '../Icon';
+import { useI18n } from '@/i18n/I18nProvider';
 
 export interface ActionBarItem {
   key: string;
@@ -30,6 +31,7 @@ interface Props {
 // precisa desviar dela (os FABs do canvas, ver DiagramScreen).
 export function ActionBar({ title, items, onClose, onLayout }: Props) {
   const { colors, space } = useTheme();
+  const { t } = useI18n();
   const insets = useSafeAreaInsets();
 
   return (
@@ -48,7 +50,7 @@ export function ActionBar({ title, items, onClose, onLayout }: Props) {
         <Pressable
           onPress={onClose}
           accessibilityRole="button"
-          accessibilityLabel="Cancelar seleção"
+          accessibilityLabel={t('common.cancelSelection')}
           hitSlop={8}
           style={({ pressed }) => [styles.close, { backgroundColor: colors.surface3, opacity: pressed ? 0.5 : 1 }]}
         >

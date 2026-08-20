@@ -1,6 +1,7 @@
 import { forwardRef } from 'react';
 import { StyleSheet, TextInput, type TextInputSelectionChangeEventData, type NativeSyntheticEvent } from 'react-native';
 import { useTheme } from '@/design/useTheme';
+import { useI18n } from '@/i18n/I18nProvider';
 
 interface Props {
   value: string;
@@ -17,6 +18,7 @@ export const MarkdownEditor = forwardRef<TextInput, Props>(function MarkdownEdit
   ref
 ) {
   const { colors } = useTheme();
+  const { t } = useI18n();
 
   return (
     <TextInput
@@ -28,7 +30,7 @@ export const MarkdownEditor = forwardRef<TextInput, Props>(function MarkdownEdit
       onFocus={onFocus}
       onBlur={onBlur}
       multiline
-      placeholder="Comece a escrever…"
+      placeholder={t('document.startWriting')}
       placeholderTextColor={colors.labelTertiary}
       style={[styles.area, { color: colors.label }]}
     />

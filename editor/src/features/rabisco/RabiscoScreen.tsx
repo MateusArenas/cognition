@@ -8,6 +8,7 @@ import { AlertDialog } from '@/design/components/AlertDialog';
 import { Field } from '@/design/components/Field';
 import { useToast } from '@/design/components/Toast';
 import { useTheme } from '@/design/useTheme';
+import { useI18n } from '@/i18n/I18nProvider';
 import { useDoc } from '@/store/useDoc';
 import { addElement, bringForward, bringToFront, duplicateElements, groupElements, moveElement, moveElements, removeElement, resizeElement, rotateGroup, sendBackward, sendToBack, ungroupElements, updateElement } from '@/domain/rabisco/mutations';
 import { LABELABLE, LINEAR } from '@/domain/rabisco/geom';
@@ -18,10 +19,10 @@ import { Dock, type ShapeKind, type Tool } from './Dock';
 import { StyleBar } from './StyleBar';
 import { ColorPicker } from './ColorPicker';
 
-const BACKGROUNDS: { kind: Background; icon: 'square' | 'grid' | 'dot'; label: string }[] = [
-  { kind: 'none', icon: 'square', label: 'Fundo liso' },
-  { kind: 'grid', icon: 'grid', label: 'Fundo em grade' },
-  { kind: 'dots', icon: 'dot', label: 'Fundo pontilhado' },
+const BACKGROUNDS: { kind: Background; icon: 'square' | 'grid' | 'dot'; labelKey: string }[] = [
+  { kind: 'none', icon: 'square', labelKey: 'rabisco.backgroundSolid' },
+  { kind: 'grid', icon: 'grid', labelKey: 'rabisco.backgroundGrid' },
+  { kind: 'dots', icon: 'dot', labelKey: 'rabisco.backgroundDots' },
 ];
 
 // Tela do Rabisco (docs/16-rabisco.md) — mesmo esqueleto de DiagramScreen (NavBar + canvas +
@@ -30,6 +31,7 @@ const BACKGROUNDS: { kind: Background; icon: 'square' | 'grid' | 'dot'; label: s
 export function RabiscoScreen() {
   const { colors } = useTheme();
   const { show } = useToast();
+  const { t } = useI18n();
   const doc = useDoc((s) => s.doc) as RabiscoDoc;
   const apply = useDoc((s) => s.apply);
   const applyLive = useDoc((s) => s.applyLive);
@@ -227,7 +229,7 @@ export function RabiscoScreen() {
     const els = (useDoc.getState().doc as RabiscoDoc).elements;
     const afterIdx = els.findIndex((e) => e.id === selectedId);
     if (afterIdx === -1) return;
-    show(`Camada ${beforeIdx + 1} → ${afterIdx + 1} de ${els.length}`);
+    show(t('diagram.layerAnnounce', { before: beforeIdx + 1, after: afterIdx + 1, total: els.length }));
   }
   function layerForward() {
     if (!selectedId) return;
@@ -263,7 +265,7 @@ export function RabiscoScreen() {
 
   return (
     <View style={[styles.root, { backgroundColor: colors.bg }]}>
-      <NavBar title={doc.nome} left={{ label: '‹ Biblioteca', onPress: () => router.back() }} />
+      <NavBar title={doc.nome} left={{ label: t('common.backToLibrary'), onPress: () => router.back() }} />
       <View style={styles.canvasArea}>
         <RabiscoCanvas
           ref={canvasRef}
@@ -291,15 +293,15 @@ export function RabiscoScreen() {
         <View style={styles.hudRight} pointerEvents="box-none">
           <Chip
             icon={background.icon}
-            accessibilityLabel={background.label}
+            accessibilityLabel={t(background.labelKey)}
             onPress={() => setBackgroundIdx((i) => (i + 1) % BACKGROUNDS.length)}
           />
-          <Chip icon="undo" accessibilityLabel="Desfazer" onPress={undo} disabled={!history.past.length} />
-          <Chip icon="redo" accessibilityLabel="Refazer" onPress={redo} disabled={!history.future.length} />
+          <Chip icon="undo" accessibilityLabel={t('common.undo')} onPress={undo} disabled={!history.past.length} />
+          <Chip icon="redo" accessibilityLabel={t('common.redo')} onPress={redo} disabled={!history.future.length} />
           {tool === 'select' ? (
             <Chip
               icon="multiSelect"
-              accessibilityLabel="Selecionar vários"
+              accessibilityLabel={t('rabisco.selectMany')}
               active={additiveSelect}
               onPress={() => setAdditiveSelect((v) => !v)}
             />
@@ -308,17 +310,17 @@ export function RabiscoScreen() {
         {selectedIds.length ? (
           <View style={styles.hudLeft} pointerEvents="box-none">
             {selectedEl?.type === 'text' ? (
-              <Chip icon="pencil" accessibilityLabel="Editar texto" onPress={() => requestTextEdit(selectedId!)} />
+              <Chip icon="pencil" accessibilityLabel={t('rabisco.editText')} onPress={() => requestTextEdit(selectedId!)} />
             ) : null}
             {selectedIds.length > 1 ? (
               isGroup ? (
-                <Chip icon="ungroup" accessibilityLabel="Desagrupar" onPress={ungroupSelected} />
+                <Chip icon="ungroup" accessibilityLabel={t('rabisco.ungroup')} onPress={ungroupSelected} />
               ) : (
-                <Chip icon="group" accessibilityLabel="Juntar" onPress={joinSelected} />
+                <Chip icon="group" accessibilityLabel={t('rabisco.group')} onPress={joinSelected} />
               )
             ) : null}
-            <Chip icon="copy" accessibilityLabel="Duplicar" onPress={duplicateSelected} />
-            <Chip icon="trash" accessibilityLabel="Excluir" onPress={deleteSelected} />
+            <Chip icon="copy" accessibilityLabel={t('common.duplicate')} onPress={duplicateSelected} />
+            <Chip icon="trash" accessibilityLabel={t('common.delete')} onPress={deleteSelected} />
           </View>
         ) : null}
         {selectedEl ? (
@@ -352,10 +354,10 @@ export function RabiscoScreen() {
 
       <AlertDialog
         visible={!!textEdit}
-        title={doc.elements.find((e) => e.id === textEdit?.id)?.type === 'text' ? 'Texto' : 'Rótulo'}
+        title={doc.elements.find((e) => e.id === textEdit?.id)?.type === 'text' ? t('rabisco.textTitle') : t('rabisco.labelTitle')}
         buttons={[
-          { label: 'Cancelar', role: 'cancel', onPress: cancelTextEdit },
-          { label: 'OK', role: 'primary', onPress: () => saveText(textEdit?.value ?? '') },
+          { label: t('common.cancel'), role: 'cancel', onPress: cancelTextEdit },
+          { label: t('common.ok'), role: 'primary', onPress: () => saveText(textEdit?.value ?? '') },
         ]}
         onRequestClose={cancelTextEdit}
       >
@@ -364,7 +366,7 @@ export function RabiscoScreen() {
 
       <ColorPicker
         visible={!!colorPickerTarget && !!selectedEl}
-        title={colorPickerTarget === 'fill' ? 'Preenchimento' : 'Cor da borda'}
+        title={colorPickerTarget === 'fill' ? t('rabisco.fillTitle') : t('rabisco.strokeColorTitle')}
         value={(colorPickerTarget === 'fill' ? selectedEl?.bgColor : selectedEl?.strokeColor) ?? '#000000'}
         usedColors={usedColors}
         canvasRef={canvasRef}
