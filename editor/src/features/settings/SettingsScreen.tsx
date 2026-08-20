@@ -1,10 +1,14 @@
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import Constants from 'expo-constants';
+import { useRef } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { GroupedList } from '@/design/components/GroupedList';
+import { Icon } from '@/design/Icon';
 import { NavBar } from '@/design/components/NavBar';
 import { Row } from '@/design/components/Row';
 import { Segmented } from '@/design/components/Segmented';
+import { Sheet } from '@/design/components/Sheet';
 import { useTheme } from '@/design/useTheme';
 import { useI18n } from '@/i18n/I18nProvider';
 import { SUPPORTED_LANGUAGES, type AppLanguage } from '@/i18n';
@@ -17,12 +21,12 @@ export default function SettingsScreen() {
   const { language, t } = useI18n();
   const setLanguage = useSettings((state) => state.setLanguage);
   const tabBarHeight = useBottomTabBarHeight();
+  const languageSheetRef = useRef<BottomSheetModal>(null);
   const themeOptions = [
     { value: 'auto', label: t('settings.themeAuto') },
     { value: 'light', label: t('settings.themeLight') },
     { value: 'dark', label: t('settings.themeDark') },
   ];
-  const languageOptions = SUPPORTED_LANGUAGES.map((value) => ({ value, label: t(`languages.${value}`) }));
 
   return (
     <View style={[styles.root, { backgroundColor: colors.bg }]}>
@@ -36,7 +40,14 @@ export default function SettingsScreen() {
 
         <Text style={[styles.sectionTitle, { color: colors.labelSecondary }]}>{t('settings.language')}</Text>
         <View style={{ marginBottom: space.xl }}>
-          <Segmented options={languageOptions} value={language} onChange={(v) => setLanguage(v as AppLanguage)} />
+          <GroupedList>
+            <Row
+              title={t('settings.language')}
+              right={<Text style={{ color: colors.labelSecondary }}>{t(`languages.${language}`)}</Text>}
+              navigable
+              onPress={() => languageSheetRef.current?.present()}
+            />
+          </GroupedList>
         </View>
 
         <Text style={[styles.sectionTitle, { color: colors.labelSecondary }]}>{t('settings.about')}</Text>
@@ -45,6 +56,22 @@ export default function SettingsScreen() {
           <Row title={t('settings.version')} right={<Text style={{ color: colors.labelSecondary }}>{Constants.expoConfig?.version ?? '—'}</Text>} />
         </GroupedList>
       </ScrollView>
+
+      <Sheet ref={languageSheetRef} title={t('settings.language')} snapPoints={['40%']}>
+        <GroupedList>
+          {SUPPORTED_LANGUAGES.map((value) => (
+            <Row
+              key={value}
+              title={t(`languages.${value}`)}
+              right={value === language ? <Icon name="check" size={18} color={colors.blue} /> : undefined}
+              onPress={() => {
+                setLanguage(value as AppLanguage);
+                languageSheetRef.current?.dismiss();
+              }}
+            />
+          ))}
+        </GroupedList>
+      </Sheet>
     </View>
   );
 }
