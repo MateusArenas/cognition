@@ -1,12 +1,13 @@
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import * as Clipboard from 'expo-clipboard';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Banner } from '@/design/components/Banner';
-import { Chip } from '@/design/components/Chip';
 import { GroupedList } from '@/design/components/GroupedList';
 import { Row } from '@/design/components/Row';
+import { RowSwitch } from '@/design/components/RowSwitch';
 import { Segmented } from '@/design/components/Segmented';
+import { TintedButton } from '@/design/components/TintedButton';
 import { useTheme } from '@/design/useTheme';
 import { useToast } from '@/design/components/Toast';
 import { useI18n } from '@/i18n/I18nProvider';
@@ -98,19 +99,24 @@ export function DiagramCard({ nome, fetchMermaid, depthControl }: Props) {
       <View style={{ paddingHorizontal: space.lg, paddingTop: space.sm }}>
         <Text style={[styles.gtitle, { color: colors.labelSecondary }]}>{t('dbclient.relationalModel')}</Text>
         <GroupedList>
-          <Row title={t('dbclient.showColumns')} right={<Switch value={showColumns} onValueChange={setShowColumns} trackColor={{ true: colors.blue }} />} />
+          <Row title={t('dbclient.showColumns')} right={<RowSwitch value={showColumns} onValueChange={setShowColumns} />} />
           <Row
             title={t('dbclient.keysOnly')}
             subtitle={t('dbclient.keysOnlyHint')}
-            right={<Switch value={keysOnly} onValueChange={setKeysOnly} trackColor={{ true: colors.blue }} />}
+            right={<RowSwitch value={keysOnly} onValueChange={setKeysOnly} />}
           />
-          <Row title={t('dbclient.viewMermaidCode')} right={<Switch value={showCode} onValueChange={setShowCode} trackColor={{ true: colors.blue }} />} />
+          <Row title={t('dbclient.viewMermaidCode')} right={<RowSwitch value={showCode} onValueChange={setShowCode} />} />
         </GroupedList>
         {depthControl ? (
           <>
             <Text style={[styles.gtitle, { color: colors.labelSecondary }]}>{t('dbclient.depthTitle')}</Text>
             <Segmented options={DEPTHS} value={String(depth)} onChange={(v) => setDepth(Number(v))} />
           </>
+        ) : null}
+        {podeExportar ? (
+          <View style={{ marginTop: 14 }}>
+            <TintedButton label={t('common.share')} icon="share" onPress={() => shareRef.current?.present()} />
+          </View>
         ) : null}
       </View>
 
@@ -144,12 +150,6 @@ export function DiagramCard({ nome, fetchMermaid, depthControl }: Props) {
             ) : null}
           </>
         )}
-
-        {podeExportar ? (
-          <View style={styles.hud}>
-            <Chip icon="share" accessibilityLabel={t('common.share')} onPress={() => shareRef.current?.present()} />
-          </View>
-        ) : null}
       </View>
 
       <ShareSheet
@@ -167,7 +167,6 @@ export function DiagramCard({ nome, fetchMermaid, depthControl }: Props) {
 const styles = StyleSheet.create({
   gtitle: { fontSize: 11, fontWeight: '600', letterSpacing: 0.5, textTransform: 'uppercase', marginTop: 18, marginBottom: 6, marginLeft: 4 },
   canvasArea: { flex: 1, marginTop: 8 },
-  hud: { position: 'absolute', top: 12, right: 12 },
   err: { position: 'absolute', left: 14, right: 14, bottom: 14, maxHeight: '34%' },
   emptyBox: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 },
   emptyTitle: { fontSize: 17, fontWeight: '600', marginBottom: 4 },

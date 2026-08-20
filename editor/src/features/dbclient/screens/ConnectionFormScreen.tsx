@@ -1,10 +1,11 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Chip } from '@/design/components/Chip';
 import { GroupedList } from '@/design/components/GroupedList';
 import { NavBar } from '@/design/components/NavBar';
 import { Row } from '@/design/components/Row';
+import { RowSwitch } from '@/design/components/RowSwitch';
 import { useTheme } from '@/design/useTheme';
 import { useToast } from '@/design/components/Toast';
 import { useI18n } from '@/i18n/I18nProvider';
@@ -179,7 +180,7 @@ export function ConnectionFormScreen() {
                     <Row
                       key={f.path}
                       title={t(f.labelKey)}
-                      right={<Switch value={fieldSwitch(f)} onValueChange={(v) => setFieldSwitch(f, v)} trackColor={{ true: colors.blue }} />}
+                      right={<RowSwitch value={fieldSwitch(f)} onValueChange={(v) => setFieldSwitch(f, v)} />}
                     />
                   ) : null
                 )}
@@ -204,7 +205,7 @@ export function ConnectionFormScreen() {
 
         <View style={{ marginTop: space.lg }}>
           <GroupedList>
-            <Row title={t('dbclient.fieldReadOnly')} right={<Switch value={readOnly} onValueChange={setReadOnly} trackColor={{ true: colors.blue }} />} />
+            <Row title={t('dbclient.fieldReadOnly')} right={<RowSwitch value={readOnly} onValueChange={setReadOnly} />} />
           </GroupedList>
         </View>
 
