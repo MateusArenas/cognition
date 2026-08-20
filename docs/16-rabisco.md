@@ -893,9 +893,49 @@ comportamento consistente quando o gesto de fato é reconhecido), é uma limita�
 com toque sintético; quando um arrasto "não avança" mais depois de alguns passos, a resposta
 certa é começar de novo com passos maiores/mais espaçados, não desconfiar do código primeiro.
 
+## Etapa R7 — exportar e compartilhar (PNG, PDF, SVG, copiar)
+
+Pedido do usuário, junto com o mesmo pedido pro lado Mermaid (PDF pros diagramas — ver
+[12-persistencia-e-export.md](12-persistencia-e-export.md) §"PDF — Mermaid e Rabisco, mesmo
+caminho"). Até aqui o
+Rabisco não tinha NENHUMA saída — nem PNG. Botão "Compartilhar" novo na `NavBar`
+(`features/rabisco/ShareSheet.tsx`, mesmo padrão do `ShareSheet` de diagrama) com quatro
+opções, todas nascendo do mesmo `domain/rabisco/svg.ts` novo (`docToSvg(doc)`):
+
+- **`domain/rabisco/svg.ts`** — serializer novo que espelha `Canvas.tsx#ElementView` elemento
+  por elemento, reaproveitando a MESMA geometria de `domain/rabisco/geom.ts` que já alimenta o
+  Skia (`elementGeometry`, `bounds`, `dashPattern`) — só emite `<path>`/`<text>`/`<g
+  transform="rotate(deg cx cy)">` em vez de `<Path>`/`<Group>` do react-native-skia. Mesmo
+  "geometria uma vez, N renderizadores" que o resto do projeto já segue (runtime WebView dos
+  diagramas Mermaid, docs/06-canvas.md). Sem fundo (transparente) — quem rasteriza decide.
+- **Copiar SVG** — `docToSvg(doc)` direto pro clipboard (`expo-clipboard`), sem passar pelo
+  share sheet nativo — mesmo padrão do "Copiar texto" de diagrama.
+- **Arquivo SVG** — `exportarTexto(doc)`, já genérica (`domain/exportMeta.ts` já dizia
+  `.svg`/`image/svg+xml` pra `tipo: 'rabisco'` desde a Etapa R1, só que `serialize()` devolvia
+  um comentário Mermaid vazio pra esse caso — nunca SVG de verdade). `serialize()` continua só
+  sobre texto Mermaid por contrato (comentário no próprio arquivo já dizia isso); quem ganhou o
+  desvio pra `docToSvg` foi `exportarTexto()`, no `services/export.ts`.
+- **Imagem PNG** — sem WebView pra rasterizar (Rabisco é Skia nativo). `exportarRabiscoPng()`
+  pega o MESMO `docToSvg()` e usa `Skia.SVG.MakeFromString` + `Skia.Surface.MakeOffscreen` +
+  `canvas.drawSvg` + `encodeToBase64(ImageFormat.PNG)` — tudo síncrono, fora da árvore React,
+  sem depender de ref de canvas nem do zoom/pan da tela (sempre enquadra o conteúdo inteiro,
+  igual ao export SVG). Concretiza o que o roadmap já previa ("PNG via `makeImageSnapshot()` do
+  Skia") — só que rasterizando o SVG serializado em vez de tirar snapshot do canvas AO VIVO, pra
+  não depender de onde a câmera está apontando no momento do toque.
+- **Arquivo PDF** — `exportarPdf(docToSvg(doc), nome)`, a MESMA função usada pelo diagrama
+  Mermaid (`services/export.ts`) — embrulha o SVG num HTML mínimo e chama
+  `expo-print` (`Print.printToFileAsync`), que funciona no Expo Go sem build nem conta de loja.
+
+**Verificação**: `domain/rabisco/svg.test.ts` (fill/stroke sólido e hachura, rótulo preso em
+forma, rotação, escapamento de XML no texto, viewBox com a folga certa) mais `tsc`/`vitest`
+limpos nas telas — sem teste de simulador (nenhuma das quatro saídas passa por gesto).
+
+**Ainda pendente da Etapa R7** (não pedido nesta sessão): importar `.svg` de fora pra virar um
+doc Rabisco editável.
+
 ## Roadmap (R6 em diante — não construído ainda)
 
 - **R6** — assistente de IA (rota irmã de `app/api/diagrama+api.ts`, DSL de operações,
   auto-layout — nunca fetch direto pro provedor, como o protótipo HTML faz).
-- **R7** — exportar (PNG via `makeImageSnapshot()` do Skia, PDF), compartilhar, importar
+- **R7** — ~~exportar (PNG, PDF), compartilhar~~ feito (ver Etapa R7 acima); falta só importar
   `.svg` de fora.

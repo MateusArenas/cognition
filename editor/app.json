@@ -1,11 +1,12 @@
 {
   "expo": {
-    "name": "editor",
-    "slug": "editor",
+    "name": "Wasit",
+    "slug": "wasit",
+    "owner": "wasit",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "editor",
+    "scheme": "wasit",
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/expo.icon",
@@ -42,6 +43,18 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "ef2cacd3-9467-43a1-8f7f-33fd27b0f429"
+      }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/ef2cacd3-9467-43a1-8f7f-33fd27b0f429"
     }
   }
 }

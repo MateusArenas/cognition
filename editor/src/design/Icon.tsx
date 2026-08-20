@@ -58,6 +58,7 @@ import {
   SquareDashedMousePointer,
   Group as GroupIcon,
   Ungroup as UngroupIcon,
+  FileText,
 } from 'lucide-react-native';
 import { useTheme } from './useTheme';
 
@@ -128,6 +129,7 @@ const ICONS = {
   multiSelect: SquareDashedMousePointer,
   group: GroupIcon,
   ungroup: UngroupIcon,
+  document: FileText,
 } as const;
 
 export type IconName = keyof typeof ICONS;

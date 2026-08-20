@@ -10,6 +10,7 @@ interface Props {
   /** "Arquivo .mmd" ou "Arquivo .md" — o tipo do doc já resolvido por quem monta a tela. */
   textoLabel: string;
   onPng: () => void;
+  onPdf: () => void;
   onTexto: () => void;
   onCopiar: () => void;
 }
@@ -19,12 +20,12 @@ interface Props {
 // "Copiar texto" não passa pelo share sheet nativo — copia direto pro clipboard (mesmo padrão
 // já usado no bloco mermaid embutido do markdown, ver MermaidBlock.tsx).
 export const ShareSheet = forwardRef<BottomSheetModal, Props>(function ShareSheet(
-  { textoLabel, onPng, onTexto, onCopiar },
+  { textoLabel, onPng, onPdf, onTexto, onCopiar },
   ref
 ) {
   const { t } = useI18n();
   return (
-    <Sheet ref={ref} title={t('common.share')} snapPoints={['36%']}>
+    <Sheet ref={ref} title={t('common.share')} snapPoints={['44%']}>
       <GroupedList>
         <Row
           title={t('diagram.exportPng')}
@@ -32,6 +33,13 @@ export const ShareSheet = forwardRef<BottomSheetModal, Props>(function ShareShee
           left={<Icon name="image" size={20} />}
           navigable
           onPress={onPng}
+        />
+        <Row
+          title={t('diagram.exportPdf')}
+          subtitle={t('diagram.pdfDescription')}
+          left={<Icon name="document" size={20} />}
+          navigable
+          onPress={onPdf}
         />
         <Row title={t('diagram.sourceCode')} subtitle={textoLabel} left={<Icon name="code" size={20} />} navigable onPress={onTexto} />
         <Row title={t('diagram.copyText')} subtitle={t('diagram.copyToClipboard')} left={<Icon name="copy" size={20} />} onPress={onCopiar} />

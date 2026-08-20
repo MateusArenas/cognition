@@ -631,6 +631,8 @@
       zoomBy(msg.factor);
     } else if (msg.t === 'exportPng') {
       exportPng(msg.scale || 2);
+    } else if (msg.t === 'exportSvg') {
+      exportSvg();
     } else if (msg.t === 'validate') {
       validate(msg.code, msg.reqId);
     }
@@ -650,20 +652,26 @@
     });
   }
 
+  // As camadas de toque/seleção (.hitlayer, .sellayer) só ficam invisíveis por causa da
+  // regra `#host .hitbox{fill:transparent}` do <style> do HTML — que não viaja com o SVG
+  // quando ele é serializado sozinho pra virar imagem/arquivo. Sem essa regra, o <rect> do
+  // hitbox (sem fill próprio) cai no default do SVG, que é PRETO SÓLIDO — cobria tabelas
+  // inteiras de ER e qualquer seleção ativa saía como um retângulo preto no lugar do destaque
+  // azul. Removidas de uma CÓPIA (não do SVG ao vivo — apagar ali quebraria o toque até o
+  // próximo render): não fazem parte do diagrama, são scaffolding interno de interação.
+  // Compartilhada por exportPng (rasteriza) e exportSvg (exporta o texto puro) — mesma limpeza.
+  function cleanSvgString() {
+    if (!currentSVG) return null;
+    var clone = currentSVG.cloneNode(true);
+    var overlays = clone.querySelectorAll('.hitlayer, .sellayer');
+    for (var i = 0; i < overlays.length; i++) overlays[i].remove();
+    return new XMLSerializer().serializeToString(clone);
+  }
+
   function exportPng(scale) {
     if (!currentSVG) return;
     try {
-      // As camadas de toque/seleção (.hitlayer, .sellayer) só ficam invisíveis por causa da
-      // regra `#host .hitbox{fill:transparent}` do <style> do HTML — que não viaja com o SVG
-      // quando ele é serializado sozinho pra virar imagem. Sem essa regra, o <rect> do hitbox
-      // (sem fill próprio) cai no default do SVG, que é PRETO SÓLIDO — cobria tabelas inteiras
-      // de ER e qualquer seleção ativa saía como um retângulo preto no lugar do destaque azul.
-      // Removidas de uma CÓPIA (não do SVG ao vivo — apagar ali quebraria o toque até o próximo
-      // render): não fazem parte do diagrama, são scaffolding interno de interação.
-      var clone = currentSVG.cloneNode(true);
-      var overlays = clone.querySelectorAll('.hitlayer, .sellayer');
-      for (var i = 0; i < overlays.length; i++) overlays[i].remove();
-      var svgStr = new XMLSerializer().serializeToString(clone);
+      var svgStr = cleanSvgString();
       var svgBlobUrl = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgStr)));
       var img = new Image();
       img.onload = function () {
@@ -682,6 +690,19 @@
       img.src = svgBlobUrl;
     } catch (e) {
       postToRN({ t: 'error', message: 'Falha ao gerar PNG: ' + (e && e.message ? e.message : e) });
+    }
+  }
+
+  // Exporta o SVG como texto puro — vira arquivo .svg direto (services/export.ts) e também
+  // alimenta o export de PDF (expo-print renderiza HTML contendo esse SVG, ver
+  // docs/12-persistencia-e-export.md).
+  function exportSvg() {
+    try {
+      var svgStr = cleanSvgString();
+      if (!svgStr) { postToRN({ t: 'error', message: 'Nada pra exportar ainda.' }); return; }
+      postToRN({ t: 'svg', svg: svgStr });
+    } catch (e) {
+      postToRN({ t: 'error', message: 'Falha ao gerar SVG: ' + (e && e.message ? e.message : e) });
     }
   }
 

@@ -14,14 +14,14 @@
     "themeLight": "Claro",
     "themeDark": "Escuro",
     "about": "Sobre",
-    "appName": "Editor de Diagramas",
+    "appName": "Wasit",
     "appDescription": "Diagramas Mermaid e documentos Markdown",
     "version": "Versão"
   },
   "languages": { "pt-BR": "Português (Brasil)", "en": "English", "es": "Español" },
   "library": {
     "title": "Biblioteca",
-    "subtitle": "Editor de Diagramas",
+    "subtitle": "Wasit",
     "import": "Importar",
     "search": "Buscar por nome ou conteúdo",
     "newDocument": "Novo documento",
@@ -52,6 +52,7 @@
     "tabDiagram": "Diagrama", "tabElements": "Elementos", "tabCode": "Código",
     "fitToScreen": "Ajustar à tela", "backToDocumentNav": "‹ Documento", "backToDocument": "Voltar ao documento", "addElement": "Adicionar elemento",
     "exportPng": "Imagem PNG", "diagramAsIs": "O diagrama como está na tela", "sourceCode": "Código-fonte",
+    "exportPdf": "Arquivo PDF", "pdfDescription": "O diagrama pronto pra imprimir",
     "copyText": "Copiar texto", "copyToClipboard": "Cola direto na área de transferência",
     "emptyTitle": "Tela em branco", "emptySubtitle": "Toque em + para criar a primeira etapa.",
     "noNodesYet": "Nenhum nó ainda", "noElements": "Nenhum elemento ainda", "noGroupSection": "SEM GRUPO", "columnsCount": "%{count} colunas",
@@ -106,6 +107,10 @@
     "noFill": "Sem preenchimento", "colorSwatch": "Cor %{color}",
     "moreStrokeColors": "Mais cores de borda", "moreFillColors": "Mais cores de preenchimento",
     "sendToBack": "Enviar para trás (fundo)", "layerBackward": "Recuar uma camada", "layerForward": "Avançar uma camada", "bringToFront": "Trazer para frente (topo)",
-    "eyedropperTool": "Conta-gotas — escolher cor do quadro", "useColor": "Usar cor %{color}"
+    "eyedropperTool": "Conta-gotas — escolher cor do quadro", "useColor": "Usar cor %{color}",
+    "shareCopySvg": "Copiar SVG", "shareCopySvgDesc": "Cola em qualquer editor que aceite SVG",
+    "shareSvgFile": "Arquivo SVG", "shareSvgFileDesc": "O rabisco como está, em vetor",
+    "sharePngFile": "Imagem PNG", "sharePngFileDesc": "O rabisco como está, em imagem",
+    "sharePdfFile": "Arquivo PDF", "sharePdfFileDesc": "O rabisco pronto pra imprimir"
   }
 }

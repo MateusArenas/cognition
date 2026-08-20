@@ -13,6 +13,7 @@ export interface DiagramCanvasHandle {
   reveal: (fracaoTopo?: number) => void;
   zoomBy: (factor: number) => void;
   exportPng: (scale?: number) => Promise<string>;
+  exportSvg: () => Promise<string>;
   validate: (code: string) => Promise<{ ok: boolean; message?: string }>;
 }
 
@@ -44,6 +45,7 @@ export const DiagramCanvas = forwardRef<DiagramCanvasHandle, Props>(function Dia
   const [webviewError, setWebviewError] = useState<string | null>(null);
   const [demorou, setDemorou] = useState(false);
   const pngResolvers = useRef<Array<(base64: string) => void>>([]);
+  const svgResolvers = useRef<Array<(svg: string) => void>>([]);
   const validateResolvers = useRef<Map<string, (r: { ok: boolean; message?: string }) => void>>(new Map());
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -55,6 +57,11 @@ export const DiagramCanvas = forwardRef<DiagramCanvasHandle, Props>(function Dia
       new Promise<string>((resolve) => {
         pngResolvers.current.push(resolve);
         sendToWeb(webRef, { t: 'exportPng', scale });
+      }),
+    exportSvg: () =>
+      new Promise<string>((resolve) => {
+        svgResolvers.current.push(resolve);
+        sendToWeb(webRef, { t: 'exportSvg' });
       }),
     validate: (code) =>
       new Promise((resolve) => {
@@ -98,6 +105,9 @@ export const DiagramCanvas = forwardRef<DiagramCanvasHandle, Props>(function Dia
     else if (msg.t === 'png') {
       const resolver = pngResolvers.current.shift();
       resolver?.(msg.base64);
+    } else if (msg.t === 'svg') {
+      const resolver = svgResolvers.current.shift();
+      resolver?.(msg.svg);
     } else if (msg.t === 'validated') {
       const resolver = validateResolvers.current.get(msg.reqId);
       validateResolvers.current.delete(msg.reqId);

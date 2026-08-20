@@ -603,6 +603,91 @@ antes de reaplicá-la.
   borda). 195 testes no total (sem mudança de contagem — trocou 1 teste por 1). Verificação: só
   automatizada — fix de geometria pura, sem gesto nem interação envolvida; não precisou reabrir
   o simulador.
+- [x] **Etapa R6 — Splash com checagem de atualização OTA (EAS Update) + início do vínculo com
+  expo.dev** — pedido do usuário, fora do roteiro original: conta em expo.dev (`arenas_math`,
+  organização `wasit`), publicar via `eas update` (ou o comando atual equivalente na versão do
+  Expo do projeto). `expo-updates` instalado; `features/update/UpdateGate.tsx` segura a splash
+  nativa (plugin `expo-splash-screen` já configurado) na raiz de `app/_layout.tsx` — antes de
+  todo o resto — até checar (`checkForUpdateAsync`, timeout 4s), baixar (`fetchUpdateAsync`,
+  timeout 8s) e recarregar (`reloadAsync`) se houver uma atualização; se não houver, se a rede
+  falhar, ou se o timeout estourar, libera a tela com a versão já embarcada (nunca trava o
+  app). Expo Go e build de dev não suportam `expo-updates` — detectado via
+  `Constants.executionEnvironment === ExecutionEnvironment.StoreClient` e `__DEV__`, pulando
+  a checagem sem tentar (a API lançaria erro do jeito errado). `tsc --noEmit` limpo, 197 testes
+  (sem teste novo — não há lógica de domínio pura aqui, é só orquestração de API nativa).
+  **Concluído nesta etapa**: usuário rodou `eas login` localmente (pra não passar credencial
+  pelo chat); com a sessão logada, `expo.owner` setado pra `"wasit"` em `app.json`, `eas init
+  --force` criou e ligou o projeto `@wasit/editor` (https://expo.dev/accounts/wasit/projects/
+  editor, `extra.eas.projectId`), e `eas update:configure` preencheu `updates.url` e
+  `runtimeVersion: {policy: "appVersion"}` em `app.json`. `tsc --noEmit` limpo depois de cada
+  passo.
+  **Rebranding pra "Wasit" (pedido logo em seguida, "troque em tudo para esse nome")**:
+  `expo.name` → `"Wasit"`, `expo.slug`/`expo.scheme` → `"wasit"`, `package.json#name` →
+  `"wasit"`, `settings.appName`/`library.subtitle` nos três catálogos de i18n → `"Wasit"`. Como
+  o slug mudou e o CLI desta versão não tem comando de renomear projeto, `eas init --force` de
+  novo criou um projeto NOVO — `@wasit/wasit` (https://expo.dev/accounts/wasit/projects/wasit,
+  novo `projectId`) — e `eas update:configure` rodou de novo pra apontar `updates.url`/
+  `runtimeVersion` pro projeto novo. `@wasit/editor` (o projeto criado no passo anterior, sem
+  nenhum build/update publicado) ficou órfão no dashboard, sem custo — pode ser apagado
+  manualmente pelo usuário. Não mexido de propósito: `ios.bundleIdentifier`
+  (`com.arenas-math.editor`) — identificador técnico de loja, não visível ao usuário, trocar
+  sem necessidade vira "outro app" uma vez publicado; como nada foi publicado ainda dá pra
+  trocar sem custo se o usuário confirmar querer isso também. `tsc --noEmit` limpo, 197 testes
+  passando.
+  **Ainda pendente**: pelo menos um `eas build` (Android e/ou iOS) — só um build fora do Expo Go
+  recebe OTA de verdade; `eas build:configure` (gera `eas.json` com os profiles de build) ainda
+  não rodou, é o próximo passo natural antes do primeiro build. Build iOS exige conta Apple
+  Developer paga; Android não. Até o primeiro build existir, o `UpdateGate` continua um no-op
+  seguro em qualquer teste via Expo Go — ver docs/02-setup-e-estrutura.md §"Atualizações OTA e
+  publicação (EAS)". Verificação: só `tsc`/testes — não dá pra testar o fluxo de update de
+  verdade sem um build instalado fora do Expo Go, que ainda não existe.
+- [x] **Etapa R6.1 — Primeiro canal/branch de atualização (`hml`) e primeira publicação via
+  `eas update`** — pedido do usuário ("gere um update pra lá... quero que suba lá") mais
+  "crie um channel hml" no meio da mesma tarefa. `eas channel:create hml` criou o canal e a
+  branch `hml` (par 1:1, mesmo nome) em `@wasit/wasit`. `eas update --branch hml --platform
+  android` e depois `--platform ios` publicaram o JS atual como o primeiro grupo de update em
+  cada plataforma (ver links no EAS Dashboard nos logs desta etapa). Como esperado (nenhum
+  `eas build` existe ainda), o CLI avisou "No compatible builds found for the following
+  fingerprints" nas duas — a publicação fica arquivada no branch/canal, pronta pra ser
+  consumida assim que existir um build com `expo-updates` embutido apontando pro canal `hml`
+  (via `eas.json`, campo `channel`, que ainda não existe — `eas build:configure` não rodou).
+  **Achado real no processo**: `eas update --platform all` (o padrão) falha — `expo export`
+  tenta empacotar TAMBÉM pra web (porque `app.json` tem `web.output: "static"`) e a build web
+  quebra: `expo-sqlite/web/worker.ts` importa `./wa-sqlite/wa-sqlite.wasm`, que o bundler não
+  resolve (`Unable to resolve module`). Não é regressão desta sessão — é um problema
+  pré-existente de bundling pra web com `expo-sqlite`, e o app nunca teve alvo web de verdade
+  (só Expo Go/iOS/Android, ver topo do CHECKLIST). Contornado publicando `--platform android` e
+  `--platform ios` separados em vez de `all`; o bug em si não foi investigado/corrigido —
+  documentado aqui como limitação conhecida caso `web` volte a ser um alvo real algum dia.
+  Verificação: publicação real, confirmada pelos IDs/links de update retornados pelo CLI; sem
+  teste automatizado novo (orquestração de CLI, não lógica de domínio).
+- [x] **Etapa R7 (Rabisco) — exportar e compartilhar (PNG, PDF, SVG, copiar) + PDF pros
+  diagramas Mermaid** — nota de numeração: este "R7" é o roadmap PRÓPRIO do Rabisco em
+  [docs/16-rabisco.md](docs/16-rabisco.md) (R1-R7, escopo só do Rabisco) — diferente da
+  sequência "R6"/"R6.1" logo acima, que é sobre EAS/splash (app inteiro). Os dois "R" não são a
+  mesma numeração; ver a nota lá.
+  Pedido do usuário em duas partes: (1) Rabisco não tinha NENHUMA saída (nem PNG) — menu
+  "Compartilhar" novo (`features/rabisco/ShareSheet.tsx`) com copiar SVG, arquivo SVG, PNG e
+  PDF; (2) diagramas Mermaid ganham PDF no `ShareSheet` que já existia
+  (`features/diagram/ShareSheet.tsx`), ao lado de PNG/código-fonte/copiar. `domain/rabisco/
+  svg.ts` (novo) — `docToSvg(doc)` espelha `Canvas.tsx#ElementView` elemento por elemento,
+  reaproveitando a MESMA geometria de `domain/rabisco/geom.ts` que já alimenta o Skia
+  (`elementGeometry`/`bounds`/`dashPattern`), só emitindo markup SVG em vez de `<Path>`/
+  `<Group>` — é a fonte única por trás das quatro saídas do Rabisco. PDF é a MESMA função
+  (`exportarPdf(svg, nome)`, `services/export.ts`) pras duas telas — usa `expo-print`
+  (`Print.printToFileAsync`, HTML→PDF, funciona no Expo Go sem build nem conta de loja) — só
+  muda de onde vem o SVG: um `exportSvg` novo no bridge RN↔WebView do diagrama (mesma limpeza
+  de `.hitlayer`/`.sellayer` que já existia pro PNG, extraída pra `cleanSvgString()` em
+  `runtime.shell.html`/`runtime.html` — **lembrar de rodar `npm run runtime` de novo depois de
+  editar o `.shell.html`, ele é gerado**) ou `docToSvg(doc)` direto pro Rabisco. PNG do Rabisco
+  (`exportarRabiscoPng`) não tem WebView pra rasterizar — usa `Skia.SVG.MakeFromString` +
+  `Skia.Surface.MakeOffscreen` + `canvas.drawSvg` + `encodeToBase64`, síncrono, fora da árvore
+  React. `expo-print` instalado. 204 testes (era 197; +7 novos em `domain/rabisco/svg.test.ts`
+  — fill/hachura, rótulo preso em forma, rotação, escapamento de XML, viewBox). `tsc --noEmit`
+  limpo. Verificação: só automatizada — nenhuma das quatro saídas do Rabisco nem o PDF do
+  diagrama passa por gesto/gesture handler, então não precisou do simulador. **Pendente, fora
+  do pedido desta sessão**: importar `.svg` de fora pra virar Rabisco editável (resto da Etapa
+  R7 do roadmap original).
 
 ---
 

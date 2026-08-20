@@ -14,14 +14,14 @@
     "themeLight": "Claro",
     "themeDark": "Oscuro",
     "about": "Acerca de",
-    "appName": "Editor de Diagramas",
+    "appName": "Wasit",
     "appDescription": "Diagramas Mermaid y documentos Markdown",
     "version": "Versión"
   },
   "languages": { "pt-BR": "Português (Brasil)", "en": "English", "es": "Español" },
   "library": {
     "title": "Biblioteca",
-    "subtitle": "Editor de Diagramas",
+    "subtitle": "Wasit",
     "import": "Importar",
     "search": "Buscar por nombre o contenido",
     "newDocument": "Nuevo documento",
@@ -52,6 +52,7 @@
     "tabDiagram": "Diagrama", "tabElements": "Elementos", "tabCode": "Código",
     "fitToScreen": "Ajustar a la pantalla", "backToDocumentNav": "‹ Documento", "backToDocument": "Volver al documento", "addElement": "Agregar elemento",
     "exportPng": "Imagen PNG", "diagramAsIs": "El diagrama tal como está en pantalla", "sourceCode": "Código fuente",
+    "exportPdf": "Archivo PDF", "pdfDescription": "El diagrama listo para imprimir",
     "copyText": "Copiar texto", "copyToClipboard": "Se pega directamente en el portapapeles",
     "emptyTitle": "Lienzo en blanco", "emptySubtitle": "Toca + para crear el primer paso.",
     "noNodesYet": "Aún no hay nodos", "noElements": "Aún no hay elementos", "noGroupSection": "SIN GRUPO", "columnsCount": "%{count} columnas",
@@ -106,6 +107,10 @@
     "noFill": "Sin relleno", "colorSwatch": "Color %{color}",
     "moreStrokeColors": "Más colores de borde", "moreFillColors": "Más colores de relleno",
     "sendToBack": "Enviar al fondo", "layerBackward": "Retroceder una capa", "layerForward": "Avanzar una capa", "bringToFront": "Traer al frente",
-    "eyedropperTool": "Cuentagotas — elegir color del lienzo", "useColor": "Usar color %{color}"
+    "eyedropperTool": "Cuentagotas — elegir color del lienzo", "useColor": "Usar color %{color}",
+    "shareCopySvg": "Copiar SVG", "shareCopySvgDesc": "Se pega en cualquier editor compatible con SVG",
+    "shareSvgFile": "Archivo SVG", "shareSvgFileDesc": "El dibujo tal cual, en vector",
+    "sharePngFile": "Imagen PNG", "sharePngFileDesc": "El dibujo tal cual, como imagen",
+    "sharePdfFile": "Archivo PDF", "sharePdfFileDesc": "El dibujo listo para imprimir"
   }
 }

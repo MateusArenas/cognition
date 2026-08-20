@@ -1,3 +1,5 @@
+import { BottomSheetModal } from '@gorhom/bottom-sheet';
+import * as Clipboard from 'expo-clipboard';
 import { router } from 'expo-router';
 import { useMemo, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -13,11 +15,14 @@ import { useDoc } from '@/store/useDoc';
 import { addElement, bringForward, bringToFront, duplicateElements, groupElements, moveElement, moveElements, removeElement, resizeElement, rotateGroup, sendBackward, sendToBack, ungroupElements, updateElement } from '@/domain/rabisco/mutations';
 import { LABELABLE, LINEAR } from '@/domain/rabisco/geom';
 import { FONT_FAMILIES } from '@/domain/rabisco/palette';
+import { docToSvg } from '@/domain/rabisco/svg';
 import type { RabiscoArrowType, RabiscoBinding, RabiscoDoc, RabiscoElement, RabiscoFontFamily, RabiscoTextAlign } from '@/domain/types';
+import { exportarPdf, exportarRabiscoPng, exportarTexto } from '@/services/export';
 import { RabiscoCanvas, type Background, type RabiscoCanvasHandle } from './Canvas';
 import { Dock, type ShapeKind, type Tool } from './Dock';
 import { StyleBar } from './StyleBar';
 import { ColorPicker } from './ColorPicker';
+import { RabiscoShareSheet } from './ShareSheet';
 
 const BACKGROUNDS: { kind: Background; icon: 'square' | 'grid' | 'dot'; labelKey: string }[] = [
   { kind: 'none', icon: 'square', labelKey: 'rabisco.backgroundSolid' },
@@ -55,6 +60,7 @@ export function RabiscoScreen() {
   const background = BACKGROUNDS[backgroundIdx];
   const [colorPickerTarget, setColorPickerTarget] = useState<'stroke' | 'fill' | null>(null);
   const canvasRef = useRef<RabiscoCanvasHandle>(null);
+  const shareRef = useRef<BottomSheetModal>(null);
   const colorLiveSnapshot = useRef<string | null>(null);
   const usedColors = useMemo(() => {
     const set = new Set<string>();
@@ -256,6 +262,27 @@ export function RabiscoScreen() {
     announceLayer(before);
   }
 
+  // Compartilhar (Etapa R6.2, docs/16-rabisco.md): copiar SVG vai direto pro clipboard (mesmo
+  // padrão do "Copiar texto" de diagrama, DiagramScreen.tsx); os outros três passam pelo share
+  // sheet nativo. Todos partem do MESMO domain/rabisco/svg.ts — geometria uma vez, N saídas.
+  async function copiarSvg() {
+    shareRef.current?.dismiss();
+    await Clipboard.setStringAsync(docToSvg(doc));
+    show(t('common.copied'));
+  }
+  function exportarSvgArquivo() {
+    shareRef.current?.dismiss();
+    exportarTexto(doc);
+  }
+  function exportarPngArquivo() {
+    shareRef.current?.dismiss();
+    exportarRabiscoPng(doc);
+  }
+  function exportarPdfArquivo() {
+    shareRef.current?.dismiss();
+    exportarPdf(docToSvg(doc), doc.nome);
+  }
+
   const selectedEl = selectedId ? doc.elements.find((e) => e.id === selectedId) : null;
   // Grupo "de verdade" (botão Juntar já apertado antes) vs. seleção solta (laço/aditiva) — só o
   // primeiro caso mostra "Desagrupar" em vez de "Juntar". Checa que TODOS os selecionados
@@ -265,7 +292,11 @@ export function RabiscoScreen() {
 
   return (
     <View style={[styles.root, { backgroundColor: colors.bg }]}>
-      <NavBar title={doc.nome} left={{ label: t('common.backToLibrary'), onPress: () => router.back() }} />
+      <NavBar
+        title={doc.nome}
+        left={{ label: t('common.backToLibrary'), onPress: () => router.back() }}
+        right={{ label: t('common.share'), onPress: () => shareRef.current?.present() }}
+      />
       <View style={styles.canvasArea}>
         <RabiscoCanvas
           ref={canvasRef}
@@ -375,6 +406,14 @@ export function RabiscoScreen() {
         onChangeLive={colorPickerTarget === 'fill' ? setFillLive : setStrokeLive}
         onEndLive={endColorLive}
         onRequestClose={() => setColorPickerTarget(null)}
+      />
+
+      <RabiscoShareSheet
+        ref={shareRef}
+        onCopySvg={copiarSvg}
+        onSvgFile={exportarSvgArquivo}
+        onPngFile={exportarPngArquivo}
+        onPdfFile={exportarPdfArquivo}
       />
     </View>
   );

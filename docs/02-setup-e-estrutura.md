@@ -58,7 +58,7 @@ editor/src/
                 gallery.tsx, doc/[id].tsx — os dois últimos empilham por cima da tab bar
   design/       sistema de design iOS — ver 03-design-system.md
   domain/       TypeScript puro, zero dependência de UI — ver 04-dominio.md
-  features/     diagram/ code/ document/ gallery/ ai/ library/ settings/
+  features/     diagram/ code/ document/ gallery/ ai/ library/ settings/ rabisco/ update/
   store/        useDoc.ts useLibrary.ts useSettings.ts history.ts — ver 05-estado.md
   services/     storage.ts export.ts share.ts haptics.ts ai.ts
   i18n/         pt-BR.json en.json es.json index.ts I18nProvider.tsx
@@ -77,6 +77,57 @@ chaves de interface. Os catálogos são deliberadamente um JSON por idioma em `s
 persistida em `useSettings`; trocar em Ajustes atualiza a UI sem reiniciar o app. Português é o
 fallback para um idioma ainda não traduzido. Nenhum componente deve introduzir texto visível ou
 de acessibilidade sem incluir a chave equivalente nos três JSONs.
+
+## Atualizações OTA e publicação (EAS)
+
+Conta em expo.dev: usuário `arenas_math`, organização `wasit` — o projeto fica registrado sob a
+organização. `features/update/UpdateGate.tsx` segura a splash nativa (já configurada pelo
+plugin `expo-splash-screen` em `app.json`) logo na raiz de `app/_layout.tsx` (o primeiro
+provider de todos) até checar se há atualização OTA via `expo-updates`
+(`checkForUpdateAsync`/`fetchUpdateAsync`/`reloadAsync`); se houver, baixa e recarrega antes de
+liberar a tela — se não, ou se checar falhar/estourar o timeout (4s pra checagem, 8s pro
+download), libera com a versão já embarcada. Expo Go e build de dev não suportam
+`expo-updates` (a API lança erro) — detectado via `Constants.executionEnvironment ===
+ExecutionEnvironment.StoreClient` e `__DEV__`, pulando a checagem direto para não travar quem
+ainda testa pelo Expo Go (restrição do projeto, ver topo deste doc).
+
+**Projeto ligado ao EAS: `@wasit/wasit`.** Usuário logou localmente com `eas login` (pra não
+passar credencial pelo chat); com `expo.owner: "wasit"` e `expo.slug: "wasit"` em `app.json`,
+`eas init --force` criou e ligou `@wasit/wasit` (https://expo.dev/accounts/wasit/projects/wasit,
+id em `extra.eas.projectId`), e `eas update:configure` preencheu `updates.url`
+(`https://u.expo.dev/<projectId>`) e `runtimeVersion: {policy: "appVersion"}` em `app.json`.
+**Nome trocado em tudo** de "editor"/"Editor de Diagramas" para "Wasit": `expo.name` (nome
+exibido no aparelho — splash, ícone, listagem do Expo Go), `expo.slug` (identificador do
+projeto no EAS, agora `wasit`), `expo.scheme` (esquema de deep link, agora `wasit://`),
+`package.json#name`, e as chaves `settings.appName`/`library.subtitle` dos três catálogos de
+i18n (título em Ajustes › Sobre e o subtítulo abaixo de "Biblioteca" na tela inicial). O
+projeto antigo `@wasit/editor` (criado antes da troca de slug, sem nenhum build/update
+publicado) ficou órfão no dashboard — sem custo, mas pode ser apagado manualmente pelo usuário
+se quiser, já que o CLI desta versão não tem comando de exclusão.
+
+**Não mexido, de propósito:** `ios.bundleIdentifier` continua `"com.arenas-math.editor"` — é o
+identificador técnico da loja (Apple/Google), não é exibido a usuário, e uma vez publicado
+trocá-lo vira literalmente outro app pra fins de atualização/loja. Como isso ainda não foi
+publicado em lugar nenhum, dá pra trocar sem custo se o usuário confirmar querer isso também
+(ex.: `com.wasit.editor`/`com.wasit.app`) — só não foi assumido automaticamente.
+
+**Canal `hml` e primeira publicação.** `eas channel:create hml` criou o canal e a branch `hml`
+(par 1:1) em `@wasit/wasit`. `eas update --branch hml --platform android` e `--platform ios`
+publicaram o primeiro grupo de update em cada plataforma — sem build nenhum ainda pra
+consumi-los, então ficam arquivados esperando (o CLI avisa "No compatible builds found", que é
+o esperado). **`eas update --platform all` (o padrão) não funciona neste projeto**: `expo
+export` tenta empacotar pra web também (`app.json` tem `web.output: "static"`), e a build web
+quebra em `expo-sqlite/web/worker.ts` (`Unable to resolve module ./wa-sqlite/wa-sqlite.wasm`)
+— bug pré-existente do bundling pra web do `expo-sqlite`, não relacionado a nada desta sessão;
+o app nunca teve alvo web de verdade. Contornado publicando `android` e `ios` em comandos
+separados; publicações futuras devem fazer o mesmo até esse bug (se importar) ser investigado.
+
+**Ainda pendente:** o gate continua sem efeito real fora do Expo Go até existir pelo menos um
+build instalado com `expo-updates` embutido, configurado pra escutar o canal `hml` (ou outro) —
+`eas build:configure` (gera `eas.json` com os profiles, incluindo o campo `channel`) não rodou
+ainda, é o passo antes do primeiro `eas build`. Só builds fora do Expo Go recebem OTA de
+verdade; iOS exige conta Apple Developer paga, Android não. Até lá o gate é um no-op seguro
+(cai no `catch` e libera a tela normalmente).
 
 ## Estado atual (ver CHECKLIST.md para detalhe)
 

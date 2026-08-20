@@ -11,6 +11,7 @@ export type ToWeb =
   | { t: 'fit' }
   | { t: 'zoomBy'; factor: number }
   | { t: 'exportPng'; scale: number }
+  | { t: 'exportSvg' }
   | { t: 'validate'; code: string; reqId: string };
 
 // `sel` em 'tap' pode carregar um índice em vez do id real quando kind é 'edge'/'rel' — o
@@ -28,6 +29,7 @@ export type FromWeb =
   | { t: 'tap'; sel: Selection | null; duplo: boolean }
   | { t: 'error'; message: string }
   | { t: 'png'; base64: string }
+  | { t: 'svg'; svg: string }
   | { t: 'validated'; reqId: string; ok: boolean; message?: string }
   | { t: 'elements'; items: { id: string; texto: string }[] }
   | { t: 'zoom'; k: number };

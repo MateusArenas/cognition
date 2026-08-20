@@ -17,7 +17,7 @@ import { parseMermaid } from '@/domain/mermaid/parse';
 import { resolveTapSelection } from '@/domain/selection';
 import { setCode } from '@/domain/mutations/raw';
 import { hapticSelect } from '@/services/haptics';
-import { exportarPng, exportarTexto } from '@/services/export';
+import { exportarPdf, exportarPng, exportarTexto } from '@/services/export';
 import { exportExtension } from '@/domain/exportMeta';
 import { addEdge } from '@/domain/mutations/flow';
 import { addRelation } from '@/domain/mutations/er';
@@ -140,6 +140,12 @@ export function DiagramScreen() {
     shareRef.current?.dismiss();
     const base64 = await canvasRef.current?.exportPng(2);
     if (base64) await exportarPng(base64, doc.nome);
+  }
+
+  async function exportarComoPdf() {
+    shareRef.current?.dismiss();
+    const svg = await canvasRef.current?.exportSvg();
+    if (svg) await exportarPdf(svg, doc.nome);
   }
 
   function exportarComoTexto() {
@@ -314,6 +320,7 @@ export function DiagramScreen() {
         ref={shareRef}
         textoLabel={`Arquivo ${exportExtension(doc)}`}
         onPng={exportarComoPng}
+        onPdf={exportarComoPdf}
         onTexto={exportarComoTexto}
         onCopiar={copiarTexto}
       />

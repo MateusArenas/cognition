@@ -10,18 +10,23 @@ import { SheetChromeProvider, SheetChromeContainer } from '@/design/SheetChrome'
 import { ToastProvider } from '@/design/components/Toast';
 import { I18nProvider } from '@/i18n/I18nProvider';
 import { useSettings } from '@/store/useSettings';
+import { UpdateGate } from '@/features/update/UpdateGate';
 
 // Providers globais: tema, gestos, bottom sheet, teclado, toast, e o "chrome" que encolhe a
-// tela por trás de uma sheet aberta (§5.2). Ver docs/03-design-system.md.
+// tela por trás de uma sheet aberta (§5.2). Ver docs/03-design-system.md. UpdateGate é o
+// primeiro de todos — segura a splash nativa até checar/aplicar atualização OTA, ver
+// docs/12-persistencia-e-export.md.
 export default function RootLayout() {
   const hydrate = useSettings((state) => state.hydrate);
   useEffect(() => { void hydrate(); }, [hydrate]);
   return (
-    <ThemeProvider>
-      <I18nProvider>
-        <RootShell />
-      </I18nProvider>
-    </ThemeProvider>
+    <UpdateGate>
+      <ThemeProvider>
+        <I18nProvider>
+          <RootShell />
+        </I18nProvider>
+      </ThemeProvider>
+    </UpdateGate>
   );
 }
 

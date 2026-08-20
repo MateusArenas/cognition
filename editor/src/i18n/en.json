@@ -14,14 +14,14 @@
     "themeLight": "Light",
     "themeDark": "Dark",
     "about": "About",
-    "appName": "Diagram Editor",
+    "appName": "Wasit",
     "appDescription": "Mermaid diagrams and Markdown documents",
     "version": "Version"
   },
   "languages": { "pt-BR": "Português (Brasil)", "en": "English", "es": "Español" },
   "library": {
     "title": "Library",
-    "subtitle": "Diagram Editor",
+    "subtitle": "Wasit",
     "import": "Import",
     "search": "Search by name or content",
     "newDocument": "New document",
@@ -52,6 +52,7 @@
     "tabDiagram": "Diagram", "tabElements": "Elements", "tabCode": "Code",
     "fitToScreen": "Fit to screen", "backToDocumentNav": "‹ Document", "backToDocument": "Back to document", "addElement": "Add element",
     "exportPng": "PNG image", "diagramAsIs": "The diagram as shown on screen", "sourceCode": "Source code",
+    "exportPdf": "PDF file", "pdfDescription": "The diagram ready to print",
     "copyText": "Copy text", "copyToClipboard": "Pastes directly to the clipboard",
     "emptyTitle": "Blank canvas", "emptySubtitle": "Tap + to create the first step.",
     "noNodesYet": "No nodes yet", "noElements": "No elements yet", "noGroupSection": "NO GROUP", "columnsCount": "%{count} columns",
@@ -106,6 +107,10 @@
     "noFill": "No fill", "colorSwatch": "Color %{color}",
     "moreStrokeColors": "More stroke colors", "moreFillColors": "More fill colors",
     "sendToBack": "Send to back (background)", "layerBackward": "Move one layer back", "layerForward": "Move one layer forward", "bringToFront": "Bring to front (top)",
-    "eyedropperTool": "Eyedropper — pick a color from the canvas", "useColor": "Use color %{color}"
+    "eyedropperTool": "Eyedropper — pick a color from the canvas", "useColor": "Use color %{color}",
+    "shareCopySvg": "Copy SVG", "shareCopySvgDesc": "Pastes into any SVG-aware editor",
+    "shareSvgFile": "SVG file", "shareSvgFileDesc": "The drawing as-is, in vector form",
+    "sharePngFile": "PNG image", "sharePngFileDesc": "The drawing as-is, as an image",
+    "sharePdfFile": "PDF file", "sharePdfFileDesc": "The drawing ready to print"
   }
 }
