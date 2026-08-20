@@ -161,6 +161,7 @@
     "allowWriteActiveTitle": "Changes unlocked", "allowWriteActiveMessage": "This query can really insert, update, or delete rows. Turn the toggle off to go back to read-only.",
     "writeToggleRequired": "Turn on \"Allow data changes\" above to run INSERT, UPDATE, or DELETE.",
     "affectedRowsTitle": "%{count} row(s) affected", "affectedRowsTable": "in %{table}",
+    "columnTag": "COLUMN",
     "relationalModel": "Relational model", "keysOnlyHint": "PK, FK, and UNIQUE only.",
     "depthTitle": "Depth", "erdEmptyTitle": "Nothing to draw",
     "erdEmptySubtitle": "This database (or this neighborhood) has no tables to build a diagram from.",

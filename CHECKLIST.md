@@ -894,6 +894,16 @@ antes de reaplicá-la.
     com o toggle) — 31 e2e. Validado ao vivo de novo contra o Postgres real do
     `docker-compose.yml` depois dos testes automatizados (mesmo roteiro, `rowCount` do driver
     `pg` confirmado). App: `tsc --noEmit` limpo, 217 testes `vitest` continuam verdes.
+  - **Três retoques de UX pedidos depois de usar as folhas de linha/célula**: (1) folha "Ações
+    da linha" não dizia qual linha nem de qual tabela — ganhou `tag` (badge monoespaçado no
+    cabeçalho, prop que o `Sheet` já tinha mas ninguém usava) com `tabela · pk=valor`; (2) folha
+    de célula mostrava só o nome da coluna, sem deixar claro que É uma coluna — ganhou `tag`
+    "COLUNA"; (3) tocar fora de qualquer bottom sheet do app inteiro não fechava nada — o
+    `BottomSheetModalProvider` estava configurado mas sem `backdropComponent` nenhum, então a
+    área por trás da sheet não escurecia nem reagia ao toque (bug de verdade, não só falta de
+    polish — contra o comportamento nativo do iOS que toda sheet deveria ter). Corrigido no
+    `Sheet` (`design/components/Sheet.tsx`) com `BottomSheetBackdrop` — vale pro app inteiro,
+    não só o cliente de banco, já que é o MESMO componente atrás de toda sheet do app.
 
 ---
 

@@ -161,6 +161,7 @@
     "allowWriteActiveTitle": "Alterações liberadas", "allowWriteActiveMessage": "A consulta pode inserir, atualizar ou apagar linhas de verdade. Desligue o toggle pra voltar a só leitura.",
     "writeToggleRequired": "Ligue \"Permitir alterar dados\" acima para rodar INSERT, UPDATE ou DELETE.",
     "affectedRowsTitle": "%{count} linha(s) afetada(s)", "affectedRowsTable": "em %{table}",
+    "columnTag": "COLUNA",
     "relationalModel": "Modelo relacional", "keysOnlyHint": "PK, FK e UNIQUE apenas.",
     "depthTitle": "Profundidade", "erdEmptyTitle": "Nada para desenhar",
     "erdEmptySubtitle": "Este banco (ou esta vizinhança) não tem tabelas para gerar o diagrama.",

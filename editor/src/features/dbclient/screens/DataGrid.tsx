@@ -90,6 +90,18 @@ export function DataGrid({
     return key;
   }
 
+  // Contexto da linha selecionada pro `tag` do cabeçalho da folha (badge monoespaçado, já
+  // existia no Sheet mas ninguém usava) — "Ações da linha" sozinho não dizia QUAL linha nem DE
+  // QUAL tabela (pedido explícito do usuário: "tem que mostrar o id qual tabela se trata").
+  function rowSheetTag(): string | undefined {
+    if (selectedRow === null) return undefined;
+    const table = data.edicao.table;
+    if (!table) return undefined;
+    const key = keyFor(data.rows[selectedRow]);
+    const parts = Object.entries(key).map(([k, v]) => `${k}=${v}`);
+    return parts.length ? `${table} · ${parts.join(', ')}` : table;
+  }
+
   function openRow(ri: number) {
     setSelectedRow(ri);
     rowSheetRef.current?.present();
@@ -291,7 +303,7 @@ export function DataGrid({
         </View>
       ) : null}
 
-      <Sheet ref={rowSheetRef} title={t('dbclient.rowActions')} snapPoints={['40%']}>
+      <Sheet ref={rowSheetRef} title={t('dbclient.rowActions')} tag={rowSheetTag()} snapPoints={['40%']}>
         <GroupedList>
           <Row title={t('dbclient.copyRow')} onPress={() => selectedRow !== null && copyRow(selectedRow)} />
           {canMutate ? <Row title={t('dbclient.duplicateRow')} onPress={() => selectedRow !== null && duplicateRow(selectedRow)} /> : null}
@@ -302,7 +314,12 @@ export function DataGrid({
         </GroupedList>
       </Sheet>
 
-      <Sheet ref={cellSheetRef} title={selectedCell ? data.fields[selectedCell.colIdx]?.name ?? '' : ''} snapPoints={['40%']}>
+      <Sheet
+        ref={cellSheetRef}
+        title={selectedCell ? data.fields[selectedCell.colIdx]?.name ?? '' : ''}
+        tag={t('dbclient.columnTag')}
+        snapPoints={['40%']}
+      >
         <GroupedList>
           {canMutate && selectedCell && !data.edicao.primaryKey.includes(data.fields[selectedCell.colIdx].name) ? (
             <Row title={t('dbclient.editValue')} onPress={openEditValue} />

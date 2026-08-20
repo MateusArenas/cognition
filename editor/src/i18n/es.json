@@ -161,6 +161,7 @@
     "allowWriteActiveTitle": "Cambios habilitados", "allowWriteActiveMessage": "Esta consulta puede insertar, actualizar o eliminar filas de verdad. Apaga el interruptor para volver a solo lectura.",
     "writeToggleRequired": "Activa \"Permitir cambiar datos\" arriba para ejecutar INSERT, UPDATE o DELETE.",
     "affectedRowsTitle": "%{count} fila(s) afectada(s)", "affectedRowsTable": "en %{table}",
+    "columnTag": "COLUMNA",
     "relationalModel": "Modelo relacional", "keysOnlyHint": "Solo PK, FK y UNIQUE.",
     "depthTitle": "Profundidad", "erdEmptyTitle": "Nada para dibujar",
     "erdEmptySubtitle": "Esta base (o esta vecindad) no tiene tablas para generar el diagrama.",

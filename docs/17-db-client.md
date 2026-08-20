@@ -114,11 +114,15 @@ dbclient/
     LoginScreen · ConnectionsScreen · ConnectionFormScreen · DatabaseScreen · TableScreen
     DataGrid                grade COMPARTILHADA (Dados de TableScreen e resultado de QueryTab):
                             número de linha tocável (folha copiar/duplicar/excluir/editar
-                            registro inteiro), célula tocável abre folha de opções (nunca edita
-                            direto — editar valor/definir NULL, filtrar por esse valor, excluir
-                            esse valor = filtro `neq`, copiar), rodapé com total/página atual/
-                            total de páginas/tamanho de página, borda laranja quando o resultado
-                            não é editável (views, sem PK, ou SELECT com JOIN no console)
+                            registro inteiro — cabeçalho mostra o `tag` tabela+chave da linha,
+                            ex. "orders · id=5", não só "Ações da linha" sem dizer de qual
+                            linha), célula tocável abre folha de opções (nunca edita direto —
+                            editar valor/definir NULL, filtrar por esse valor, excluir esse
+                            valor = filtro `neq`, copiar — cabeçalho mostra o nome da coluna com
+                            `tag` "COLUNA", deixando claro o que está sendo tocado), rodapé com
+                            total/página atual/total de páginas/tamanho de página, borda laranja
+                            quando o resultado não é editável (views, sem PK, ou SELECT com JOIN
+                            no console)
     FiltersSheet             construtor de filtro por toque (coluna+operador de listas fechadas,
                             nunca texto livre — mesma regra de ouro do resto do app)
     RecordFormSheet          formulário de registro (criar E editar) com tipo/obrigatoriedade
