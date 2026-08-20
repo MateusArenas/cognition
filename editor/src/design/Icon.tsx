@@ -57,6 +57,7 @@ import {
   ChevronDown,
   SquareDashedMousePointer,
   Group as GroupIcon,
+  Ungroup as UngroupIcon,
 } from 'lucide-react-native';
 import { useTheme } from './useTheme';
 
@@ -126,6 +127,7 @@ const ICONS = {
   chevronDown: ChevronDown,
   multiSelect: SquareDashedMousePointer,
   group: GroupIcon,
+  ungroup: UngroupIcon,
 } as const;
 
 export type IconName = keyof typeof ICONS;

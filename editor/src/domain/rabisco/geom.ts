@@ -329,22 +329,17 @@ export function bindingAt(shape: RabiscoElement, p: { x: number; y: number }, al
   const g = bounds(shape, all), a = boundaryPoint(shape, p, all);
   return { id: shape.id, fx: (a.x - (g.x + g.w / 2)) / (g.w / 2 || 1), fy: (a.y - (g.y + g.h / 2)) / (g.h / 2 || 1) };
 }
-function bindPoint(shape: RabiscoElement, from: [number, number], b: RabiscoBinding | null, all: RabiscoElement[]): [number, number] {
+// SEMPRE dinâmico — recalcula onde a linha cruza a borda da forma em direção a `from` toda vez,
+// nunca tenta preservar um ponto fixo escolhido no passado. Etapa R5.2 tentou um meio-termo
+// (guardar o ponto exato de onde o usuário ligou, só recalculando quando o outro lado cruzava
+// pro lado OPOSTO) — usuário reportou que ainda não adaptava bem ("tem que se adaptar conforme
+// a posição de ambos ligados se encontra... não só a seta em si"): qualquer reposicionamento
+// que NÃO cruzasse esse limiar de 180° deixava a âncora births num ponto cada vez mais
+// artificial em relação à geometria atual. Sempre recalcular é mais simples E mais correto —
+// `RabiscoBinding.fx/fy` (calculado por `bindingAt` no momento de ligar) fica sem uso pra
+// posicionar (mantido no tipo/dados só por compatibilidade — nada mais lê esses dois campos).
+function bindPoint(shape: RabiscoElement, from: [number, number], all: RabiscoElement[]): [number, number] {
   const g = bounds(shape, all), cx = g.x + g.w / 2, cy = g.y + g.h / 2;
-  if (b && b.fx !== undefined && (b.fx || b.fy)) {
-    const ax = cx + b.fx * g.w / 2, ay = cy + (b.fy || 0) * g.h / 2;
-    // A âncora guardada (`ax,ay`) só continua válida se `from` ainda estiver do mesmo LADO dela
-    // em relação ao centro — produto escalar positivo. Se um dos dois elementos foi movido pro
-    // lado oposto depois de ligados (bug real reportado: reta subindo por dentro da forma pra
-    // alcançar uma âncora que ficou "pra trás"), o produto vira negativo — cai pro cálculo
-    // dinâmico abaixo, que acha o ponto de borda voltado de verdade pra `from`, em vez de
-    // insistir num lado que não faz mais sentido geometricamente.
-    const facingSameSide = (ax - cx) * (from[0] - cx) + (ay - cy) * (from[1] - cy) >= 0;
-    if (facingSameSide) {
-      const dx = ax - cx, dy = ay - cy, L = Math.hypot(dx, dy) || 1;
-      return [ax + (dx / L) * GAP, ay + (dy / L) * GAP];
-    }
-  }
   const c = { x: cx, y: cy };
   if (insideShape(shape, { x: from[0], y: from[1] }, all)) return [c.x, c.y];
   let lo = 0, hi = 1;
@@ -378,10 +373,25 @@ function headingAt(shape: RabiscoElement | null, pt: [number, number], all: Rabi
 function elbowRoute(a: [number, number], b: [number, number], ha: 'h' | 'v' | null, hb: 'h' | 'v' | null): [number, number][] {
   const dx = b[0] - a[0], dy = b[1] - a[1];
   if (Math.abs(dx) < 1 || Math.abs(dy) < 1) return [a, b];
-  const startH = ha ? ha === 'h' : (hb ? hb !== 'h' : Math.abs(dx) >= Math.abs(dy));
-  const pts: [number, number][] = startH
-    ? [a, [a[0] + dx / 2, a[1]], [a[0] + dx / 2, b[1]], b]
-    : [a, [a[0], a[1] + dy / 2], [b[0], a[1] + dy / 2], b];
+  let pts: [number, number][];
+  if (ha && hb && ha !== hb) {
+    // As DUAS pontas ancoradas, cada uma pedindo um eixo de saída/entrada DIFERENTE — bug real
+    // reportado (item 3/4): a versão antiga só olhava pro lado de PARTIDA pra escolher o
+    // formato do caminho inteiro (`startH` dependia só de `ha`), ignorando o que o lado de
+    // CHEGADA precisava — se ele queria entrar pelo eixo contrário, a última perna do caminho
+    // nunca batia com a borda onde a ponta estava ancorada ali, mesmo com o PONTO certo (a
+    // Etapa R5.2 já corrigia qual lado da forma vira âncora — isso aqui é uma camada diferente,
+    // é o FORMATO do caminho que ligava os dois lados). Um cotovelo só (um ângulo reto), na
+    // esquina que satisfaz os dois eixos ao mesmo tempo, resolve sem precisar de mais curvas.
+    pts = ha === 'v' ? [a, [a[0], b[1]], b] : [a, [b[0], a[1]], b];
+  } else {
+    // Mesmo eixo dos dois lados, ou só um lado (ou nenhum) ancorado — desvio de 3 segmentos
+    // (dogleg) pelo meio, na direção de quem tem uma preferência (comportamento de sempre).
+    const startH = ha ? ha === 'h' : (hb ? hb !== 'h' : Math.abs(dx) >= Math.abs(dy));
+    pts = startH
+      ? [a, [a[0] + dx / 2, a[1]], [a[0] + dx / 2, b[1]], b]
+      : [a, [a[0], a[1] + dy / 2], [b[0], a[1] + dy / 2], b];
+  }
   return pts.filter((q, i) => i === 0 || Math.hypot(q[0] - pts[i - 1][0], q[1] - pts[i - 1][1]) > 0.5);
 }
 
@@ -391,8 +401,8 @@ export function resolvedPoints(el: RabiscoElement, all: RabiscoElement[]): [numb
   const pts = el.points.map((q) => [el.x + q[0], el.y + q[1]] as [number, number]);
   if (!LINEAR.has(el.type) || pts.length < 2) return pts;
   const sb = bindTarget(el.startBinding, all), eb = bindTarget(el.endBinding, all);
-  if (sb) pts[0] = bindPoint(sb, pts[1], el.startBinding, all);
-  if (eb) pts[pts.length - 1] = bindPoint(eb, pts[pts.length - 2], el.endBinding, all);
+  if (sb) pts[0] = bindPoint(sb, pts[1], all);
+  if (eb) pts[pts.length - 1] = bindPoint(eb, pts[pts.length - 2], all);
   if (el.arrowType === 'elbow') {
     const a = pts[0], b = pts[pts.length - 1];
     return elbowRoute(a, b, headingAt(sb, a, all), headingAt(eb, b, all));
@@ -400,24 +410,20 @@ export function resolvedPoints(el: RabiscoElement, all: RabiscoElement[]): [numb
   return pts;
 }
 
-// Ângulo de apontamento da ponta da seta. Normalmente é a direção do último segmento
-// desenhado — reto/curvo não têm outra opção, é a única linha visível, e ela sempre bate com a
-// direção real (não muda com ancoragem). Cotovelo com a ponta ancorada é DIFERENTE: o
-// roteamento em ângulo reto (`elbowRoute`) escolhe o ponto de dobra pelo meio do caminho, sem
-// evitar passar por cima da própria forma-alvo quando a dobra cai do lado errado — bug real
-// reportado: seta ancorada no topo de uma forma saía apontando pra cima/lado, não pra dentro
-// dela. Só nesse caso (cotovelo + ancorado), ignora o último segmento e aponta pro CENTRO da
-// forma-alvo — funciona pra qualquer aresta (topo/base/lado) sem precisar saber qual é.
-export function arrowHeadAngle(el: RabiscoElement, all: RabiscoElement[], abs: [number, number][]): number {
+// Ângulo de apontamento da ponta da seta — sempre a direção do ÚLTIMO SEGMENTO desenhado. Reto/
+// curvo não têm outra opção (é a única linha visível). Cotovelo (ângulo reto) TAMBÉM sempre —
+// por construção, esse segmento só existe horizontal OU vertical (`elbowRoute`), nunca numa
+// diagonal torta, e as Etapas R5.2-R5.4 já garantem que ele sai alinhado com o lado da forma
+// onde a ponta está ancorada (a âncora em si é sempre recalculada pra encarar quem a está
+// puxando, e o formato do cotovelo respeita o eixo de saída/entrada dos dois lados). Uma versão
+// anterior desviava desse padrão pra apontar direto pro CENTRO da forma-alvo, só pro caso
+// cotovelo+ancorado — fazia sentido enquanto o roteamento podia produzir uma última perna torta
+// em relação à âncora (bug real, já corrigido nas etapas de cima); mantê-lo depois disso só
+// desalinhava a ponta ("v") do próprio traço numa diagonal nem sempre múltipla de 90°, deixando
+// ela com aparência torta — outro bug real reportado, revertido aqui.
+export function arrowHeadAngle(abs: [number, number][]): number {
   const [ax, ay] = abs[abs.length - 2];
   const [bx, by] = abs[abs.length - 1];
-  if (el.arrowType === 'elbow' && el.endBinding) {
-    const eb = bindTarget(el.endBinding, all);
-    if (eb) {
-      const eg = bounds(eb, all);
-      return Math.atan2(eg.y + eg.h / 2 - by, eg.x + eg.w / 2 - bx);
-    }
-  }
   return Math.atan2(by - ay, bx - ax);
 }
 
@@ -466,7 +472,7 @@ export function elementGeometry(el: RabiscoElement, all: RabiscoElement[]): Elem
 
     if (el.type === 'arrow') {
       const [bx, by] = abs[abs.length - 1];
-      const a = arrowHeadAngle(el, all, abs);
+      const a = arrowHeadAngle(abs);
       const [ax, ay] = abs[abs.length - 2];
       const L = Math.min(34, Math.max(10, Math.hypot(bx - ax, by - ay) * 0.28));
       const heads = pathBuilder();

@@ -96,8 +96,7 @@ export function rotateGroup(doc: RabiscoDoc, ids: string[], center: { x: number;
 
 // "Juntar" (botão de seleção múltipla, Etapa R5) — todo mundo em `ids` ganha o MESMO `groupId`
 // novo; a partir daí, tocar em qualquer um deles seleciona/move/rotaciona o grupo inteiro (ver
-// `groupMembers` em Canvas.tsx). Sem "desjuntar" nesta etapa — não foi pedido; desfazer (undo)
-// é o caminho pra voltar atrás.
+// `groupMembers` em Canvas.tsx).
 export function groupElements(doc: RabiscoDoc, ids: string[]): RabiscoDoc {
   if (ids.length < 2) return doc;
   const set = new Set(ids);
@@ -105,6 +104,19 @@ export function groupElements(doc: RabiscoDoc, ids: string[]): RabiscoDoc {
   const d = structuredClone(doc);
   for (const el of d.elements) {
     if (set.has(el.id)) { el.groupId = groupId; el.version += 1; }
+  }
+  return d;
+}
+
+// "Desagrupar" (Etapa R5.3) — contraparte de `groupElements`: limpa `groupId` de todo mundo em
+// `ids`, voltando cada um a ser um elemento solto. Só mexe em quem de fato tinha grupo (no-op
+// silencioso pros outros, e no-op total — devolve `doc` sem clonar — se ninguém tinha).
+export function ungroupElements(doc: RabiscoDoc, ids: string[]): RabiscoDoc {
+  const set = new Set(ids);
+  if (!doc.elements.some((el) => set.has(el.id) && el.groupId)) return doc;
+  const d = structuredClone(doc);
+  for (const el of d.elements) {
+    if (set.has(el.id) && el.groupId) { el.groupId = null; el.version += 1; }
   }
   return d;
 }

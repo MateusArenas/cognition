@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { blankRabisco } from '../mermaid/factory';
 import { defaultElementStyle } from './palette';
-import { addElement, bringForward, bringToFront, duplicateElements, groupElements, moveElement, moveElements, removeElement, resizeElement, rotateGroup, sendBackward, sendToBack, updateElement } from './mutations';
+import { addElement, bringForward, bringToFront, duplicateElements, groupElements, moveElement, moveElements, removeElement, resizeElement, rotateGroup, sendBackward, sendToBack, ungroupElements, updateElement } from './mutations';
 import type { RabiscoElement } from '../types';
 
 function novoTraco(): Omit<RabiscoElement, 'id'> {
@@ -126,6 +126,21 @@ describe('domain/rabisco/mutations', () => {
     d = groupElements(d, [a, b]);
     expect(d.elements[0].groupId).not.toBeNull();
     expect(d.elements[0].groupId).toBe(d.elements[1].groupId);
+  });
+
+  it('ungroupElements limpa o groupId de quem estava junto', () => {
+    let d = addElement(blankRabisco('t'), novoTraco());
+    d = addElement(d, novoTraco());
+    const [a, b] = d.elements.map((e) => e.id);
+    d = groupElements(d, [a, b]);
+    d = ungroupElements(d, [a, b]);
+    expect(d.elements[0].groupId).toBeNull();
+    expect(d.elements[1].groupId).toBeNull();
+  });
+
+  it('ungroupElements é no-op se ninguém dos ids tinha groupId', () => {
+    const d = addElement(blankRabisco('t'), novoTraco());
+    expect(ungroupElements(d, [d.elements[0].id])).toBe(d);
   });
 
   it('rotateGroup órbita a posição das formas e soma na própria rotação; linha/traço giram os pontos', () => {

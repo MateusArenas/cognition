@@ -237,48 +237,62 @@ describe('domain/rabisco/geom — ligação (binding)', () => {
     const abs = resolvedPoints(a, [a, target])!;
     const [ax, ay] = abs[abs.length - 2], [bx, by] = abs[abs.length - 1];
     const expected = Math.atan2(by - ay, bx - ax);
-    expect(arrowHeadAngle(a, [a, target], abs)).toBeCloseTo(expected, 10);
+    expect(arrowHeadAngle(abs)).toBeCloseTo(expected, 10);
   });
 
-  it('arrowHeadAngle cotovelo ancorado aponta pro centro do alvo, não pro último segmento — ' +
-    'bug real: roteamento em ângulo reto podia aproximar por baixo de uma forma ancorada no ' +
-    'topo, e a ponta saía apontando pra cima (pra longe) em vez de pra dentro da forma', () => {
-    const target = forma('rect', 200, 0, 100, 100, { id: 'target' });
-    // Construído à mão (não via `resolvedPoints`) pra isolar só o bug do roteamento em cotovelo,
-    // sem depender de qual lado `bindPoint` escolhe como âncora (Etapa R5.2, teste próprio
-    // abaixo) — a ponta está ancorada na borda de CIMA do alvo, mas o último segmento roteado
-    // aproxima POR BAIXO (situação que `elbowRoute` pode produzir mesmo com a âncora certa).
-    const endBinding = { id: 'target', fx: -0.2, fy: -1 };
-    const a = seta(0, 0, [[50, 320], [240, 0]], { arrowType: 'elbow', endBinding });
-    const abs: [number, number][] = [[50, 320], [240, 40], [240, 40], [240, 0]];
-    const angle = arrowHeadAngle(a, [a, target], abs);
-    // a ponta tem que apontar GERALMENTE pra baixo (pro centro do alvo, que fica abaixo da
-    // borda norte onde ela ancora) — não pra cima, que é o que o último segmento roteado dava
-    // antes da correção (a ~ -90°, oposto do esperado).
-    expect(Math.sin(angle)).toBeGreaterThan(0.5);
+  it('arrowHeadAngle de cotovelo ligado é sempre múltiplo de 90° — bug real: apontar pro ' +
+    'CENTRO da forma-alvo (versão anterior, Etapa R4) desalinhava a ponta ("v") do segmento ' +
+    'reto onde ela está grudada, deixando um dos dois traços do "v" com aparência torta; agora ' +
+    'segue o último segmento igual seta reta/curva — e esse segmento só existe horizontal ou ' +
+    'vertical por construção do cotovelo, então a ponta nunca fica numa diagonal torta', () => {
+    const src = forma('rect', 0, 200, 200, 50, { id: 'src' });
+    const target = forma('rect', 250, 0, 50, 200, { id: 'target' });
+    const a = seta(0, 0, [[100, 225], [275, 100]], {
+      arrowType: 'elbow',
+      startBinding: { id: 'src' },
+      endBinding: { id: 'target' },
+    });
+    const abs = resolvedPoints(a, [a, src, target])!;
+    const angle = arrowHeadAngle(abs);
+    // sin(2·ângulo) só é zero em múltiplos de 90° — checagem livre do problema de módulo perto
+    // da borda (89.999999 % 90 não fica perto de 0, mesmo sendo "essencialmente" 90°).
+    expect(Math.abs(Math.sin(angle * 2))).toBeLessThan(1e-9);
   });
 
-  it('resolvedPoints troca a âncora de lado quando o outro extremo passa pro lado oposto — ' +
-    'bug real relatado pelo usuário: mover pra uma posição "contra" fazia a linha atravessar a ' +
-    'forma por dentro pra alcançar a âncora antiga, grudada no lado errado', () => {
+  it('resolvedPoints sempre recalcula a âncora a partir da posição ATUAL do outro extremo — ' +
+    'bug real relatado pelo usuário duas vezes ("a seta ainda buga" / "a âncora... tem que se ' +
+    'adaptar conforme a posição de ambos"): guardar um ponto fixo escolhido no passado (mesmo ' +
+    'só trocando de lado quando cruzava 180°, tentativa da Etapa R5.2) nunca acompanhava direito ' +
+    'um reposicionamento contínuo — só recalcular do zero toda vez resolve de verdade', () => {
     const target = forma('rect', 0, 0, 100, 100, { id: 'target' });
-    const bindingAcima = bindingAt(target, { x: 50, y: -20 }, [target]); // âncora na borda de CIMA
-    expect(bindingAcima.fy).toBeCloseTo(-1, 1);
-    // O outro extremo da seta agora vem de BAIXO — lado oposto da âncora guardada.
-    const a = seta(0, 0, [[50, 500], [0, 0]], { endBinding: bindingAcima });
-    const pts = resolvedPoints(a, [a, target])!;
-    // A âncora tem que ter trocado pra borda de BAIXO (voltada pra quem está puxando a linha),
-    // não continuado presa no topo — senão o ponto resolvido ficaria em y≈0 (bem longe de onde
-    // a linha vem, do outro lado inteiro da forma).
-    expect(pts[1][1]).toBeGreaterThan(90);
+    const a = seta(0, 0, [[50, 500], [0, 0]], { endBinding: { id: 'target' } });
+    // De baixo: âncora tem que ficar perto da borda de BAIXO (y perto de 100).
+    expect(resolvedPoints(a, [a, target])![1][1]).toBeGreaterThan(90);
+    // O mesmo elemento, só que agora vindo de CIMA: âncora acompanha, vai pra borda de CIMA
+    // (y perto de 0) — nenhum estado guardado do cálculo anterior interfere.
+    const b = seta(0, 0, [[50, -100], [0, 0]], { endBinding: { id: 'target' } });
+    expect(resolvedPoints(b, [b, target])![1][1]).toBeLessThan(10);
   });
 
-  it('resolvedPoints mantém a âncora original quando o outro extremo NÃO mudou de lado', () => {
-    const target = forma('rect', 0, 0, 100, 100, { id: 'target' });
-    const bindingAcima = bindingAt(target, { x: 50, y: -20 }, [target]);
-    const a = seta(0, 0, [[50, -100], [0, 0]], { endBinding: bindingAcima }); // continua vindo de cima
-    const pts = resolvedPoints(a, [a, target])!;
-    expect(pts[1][1]).toBeLessThan(10);
+  it('resolvedPoints com arrowType elbow e as duas pontas ancoradas em eixos DIFERENTES usa um ' +
+    'cotovelo só que satisfaz os dois lados — bug real: antes só o lado de PARTIDA escolhia o ' +
+    'formato do caminho inteiro, ignorando o que o lado de CHEGADA precisava; se pedia o eixo ' +
+    'contrário, a última perna nunca batia com a borda ancorada ali', () => {
+    // Formas com proporções bem diferentes — larga-e-baixa vs. estreita-e-alta — fazem o MESMO
+    // ponto de chegada normalizar pra eixos diferentes em cada uma (`headingAt` compara contra
+    // a MEIA-largura/meia-altura de cada forma, não um valor absoluto), mesmo com a âncora
+    // dinâmica (Etapa R5.4) sempre voltada de verdade pra quem está do outro lado.
+    const src = forma('rect', 0, 200, 200, 50, { id: 'src' }); // larga e baixa
+    const target = forma('rect', 250, 0, 50, 200, { id: 'target' }); // estreita e alta
+    const a = seta(0, 0, [[100, 225], [275, 100]], {
+      arrowType: 'elbow',
+      startBinding: { id: 'src' },
+      endBinding: { id: 'target' },
+    });
+    const pts = resolvedPoints(a, [a, src, target])!;
+    expect(pts.length).toBe(3); // um cotovelo só: perna de partida + perna de chegada
+    expect(pts[0][0]).toBeCloseTo(pts[1][0], 5); // 1ª perna vertical (sai reto do topo do src)
+    expect(pts[1][1]).toBeCloseTo(pts[2][1], 5); // 2ª perna horizontal (entra reto no target)
   });
 });
 

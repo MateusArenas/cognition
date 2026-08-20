@@ -615,26 +615,50 @@ export function RabiscoCanvas({
       else if (t === 'eraser') runOnJS(endErase)();
     });
 
-  const panTwo = Gesture.Pan()
-    .minPointers(2)
-    .maxPointers(2)
-    .onStart(() => { 'worklet'; panBaseX.value = offsetX.value; panBaseY.value = offsetY.value; })
-    .onUpdate((e) => {
-      'worklet';
-      offsetX.value = panBaseX.value + e.translationX;
-      offsetY.value = panBaseY.value + e.translationY;
-    });
-
+  // Pinça sozinha cobre pan de 2 dedos TAMBÉM (não só zoom) — ver por quê no comentário do
+  // `pinchBaseFocalX/Y` abaixo. Um `panTwo` separado (`Gesture.Pan().minPointers(2)`) existia
+  // antes, rodando em `Gesture.Simultaneous` junto da pinça: os dois disparavam `onUpdate` pro
+  // MESMO toque de 2 dedos e escreviam em `offsetX/Y` com fórmulas incompatíveis, cada um por
+  // cima do outro a cada frame — bug real reportado ("dou zoom e ele buga, vai pra outro
+  // lugar"). Removido; a pinça sozinha, corrigida, já resolve os dois casos.
   const pinchBaseScale = useSharedValue(1);
   const pinchBaseX = useSharedValue(0);
   const pinchBaseY = useSharedValue(0);
+  // Ponto focal no INÍCIO do gesto (não o atual) — é o ponto de cena que tem que continuar
+  // grudado no dedo enquanto ele se move. Bug real corrigido: a fórmula antiga recalculava "que
+  // ponto de cena está sob o dedo" usando o focal ATUAL a cada frame contra a transform BASE,
+  // em vez de fixar esse ponto uma vez no início — se os dedos deslizassem (pinça + arrasto ao
+  // mesmo tempo, o caso comum de verdade), o ponto que devia ficar preso ao dedo derivava pro
+  // lado CONTRÁRIO ao movimento dos dedos a cada frame, "pulando pra outro lugar".
+  const pinchBaseFocalX = useSharedValue(0);
+  const pinchBaseFocalY = useSharedValue(0);
   const pinch = Gesture.Pinch()
-    .onStart(() => { 'worklet'; pinchBaseScale.value = scale.value; pinchBaseX.value = offsetX.value; pinchBaseY.value = offsetY.value; })
+    .onStart((e) => {
+      'worklet';
+      pinchBaseScale.value = scale.value;
+      pinchBaseX.value = offsetX.value;
+      pinchBaseY.value = offsetY.value;
+      pinchBaseFocalX.value = e.focalX;
+      pinchBaseFocalY.value = e.focalY;
+    })
     .onUpdate((e) => {
       'worklet';
+      // Bug real corrigido (item separado do de cima): ao soltar os dois dedos, eles quase nunca
+      // levantam no MESMO instante — por um ou dois frames sobra só 1 dedo tocando, e nesse
+      // meio-tempo `e.focalX/Y` deixa de ser a média dos 2 toques e vira a posição EXATA desse
+      // dedo sozinho — um salto discreto de coordenada, não um movimento contínuo. Sem essa
+      // guarda, esse salto ia direto pra fórmula do offset e a cena "pulava" bem na hora de
+      // soltar. Ignorar qualquer frame com menos de 2 dedos resolve — o próximo frame de
+      // verdade (2 dedos de novo, ou o gesto realmente terminando) volta a ficar contínuo.
+      if (e.numberOfPointers < 2) return;
       const next = Math.max(0.15, Math.min(6, pinchBaseScale.value * e.scale));
-      offsetX.value = e.focalX - ((e.focalX - pinchBaseX.value) / pinchBaseScale.value) * next;
-      offsetY.value = e.focalY - ((e.focalY - pinchBaseY.value) / pinchBaseScale.value) * next;
+      // Ponto de cena que estava sob o focal QUANDO O GESTO COMEÇOU — fixo, recalculado do
+      // mesmo jeito a cada frame, nunca a partir do focal atual (`e.focalX/Y`, que só entra na
+      // hora de posicionar esse ponto de novo, não na hora de descobrir QUAL ponto é).
+      const px = (pinchBaseFocalX.value - pinchBaseX.value) / pinchBaseScale.value;
+      const py = (pinchBaseFocalY.value - pinchBaseY.value) / pinchBaseScale.value;
+      offsetX.value = e.focalX - px * next;
+      offsetY.value = e.focalY - py * next;
       scale.value = next;
     });
 
@@ -686,7 +710,7 @@ export function RabiscoCanvas({
       if (success) runOnJS(tapAt)(e.x, e.y);
     });
 
-  const gesture = Gesture.Race(Gesture.Simultaneous(pinch, panTwo), panOne, Gesture.Exclusive(doubleTapOne, tapOne));
+  const gesture = Gesture.Race(pinch, panOne, Gesture.Exclusive(doubleTapOne, tapOne));
   const transform = useDerivedValue(() => [{ translateX: offsetX.value }, { translateY: offsetY.value }, { scale: scale.value }]);
 
   // ---- elementos visíveis, incluindo prévia ao vivo de mover/redimensionar/endpoint ----

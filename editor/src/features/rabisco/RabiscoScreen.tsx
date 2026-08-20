@@ -9,7 +9,7 @@ import { Field } from '@/design/components/Field';
 import { useToast } from '@/design/components/Toast';
 import { useTheme } from '@/design/useTheme';
 import { useDoc } from '@/store/useDoc';
-import { addElement, bringForward, bringToFront, duplicateElements, groupElements, moveElement, moveElements, removeElement, resizeElement, rotateGroup, sendBackward, sendToBack, updateElement } from '@/domain/rabisco/mutations';
+import { addElement, bringForward, bringToFront, duplicateElements, groupElements, moveElement, moveElements, removeElement, resizeElement, rotateGroup, sendBackward, sendToBack, ungroupElements, updateElement } from '@/domain/rabisco/mutations';
 import { LABELABLE, LINEAR } from '@/domain/rabisco/geom';
 import { FONT_FAMILIES } from '@/domain/rabisco/palette';
 import type { RabiscoArrowType, RabiscoBinding, RabiscoDoc, RabiscoElement, RabiscoFontFamily, RabiscoTextAlign } from '@/domain/types';
@@ -86,6 +86,10 @@ export function RabiscoScreen() {
   function joinSelected() {
     if (selectedIds.length < 2) return;
     apply((d) => groupElements(d as RabiscoDoc, selectedIds));
+  }
+  function ungroupSelected() {
+    if (selectedIds.length < 2) return;
+    apply((d) => ungroupElements(d as RabiscoDoc, selectedIds));
   }
   function resizeEl(id: string, box: { x: number; y: number; w: number; h: number }) {
     apply((d) => resizeElement(d as RabiscoDoc, id, box));
@@ -251,6 +255,11 @@ export function RabiscoScreen() {
   }
 
   const selectedEl = selectedId ? doc.elements.find((e) => e.id === selectedId) : null;
+  // Grupo "de verdade" (botão Juntar já apertado antes) vs. seleção solta (laço/aditiva) — só o
+  // primeiro caso mostra "Desagrupar" em vez de "Juntar". Checa que TODOS os selecionados
+  // compartilham o mesmo `groupId` não-nulo, não só o primeiro.
+  const firstGroupId = selectedIds.length > 1 ? doc.elements.find((e) => e.id === selectedIds[0])?.groupId : null;
+  const isGroup = !!firstGroupId && selectedIds.every((id) => doc.elements.find((e) => e.id === id)?.groupId === firstGroupId);
 
   return (
     <View style={[styles.root, { backgroundColor: colors.bg }]}>
@@ -302,7 +311,11 @@ export function RabiscoScreen() {
               <Chip icon="pencil" accessibilityLabel="Editar texto" onPress={() => requestTextEdit(selectedId!)} />
             ) : null}
             {selectedIds.length > 1 ? (
-              <Chip icon="group" accessibilityLabel="Juntar" onPress={joinSelected} />
+              isGroup ? (
+                <Chip icon="ungroup" accessibilityLabel="Desagrupar" onPress={ungroupSelected} />
+              ) : (
+                <Chip icon="group" accessibilityLabel="Juntar" onPress={joinSelected} />
+              )
             ) : null}
             <Chip icon="copy" accessibilityLabel="Duplicar" onPress={duplicateSelected} />
             <Chip icon="trash" accessibilityLabel="Excluir" onPress={deleteSelected} />

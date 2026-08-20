@@ -637,11 +637,185 @@ visualmente. A cobertura de teste, porém, exercita a EXATA geometria relatada p
 presa de um lado, outro extremo movido pro lado oposto) de forma determinística — mais precisa
 que uma inspeção visual de screenshot pra esse tipo de bug geométrico.
 
+## Etapa R5.3 — pinça pulando de lugar, desagrupar, cotovelo com eixos conflitantes
+
+Pedido do usuário em 4 partes; as duas últimas eram o MESMO bug visto de dois ângulos: "a seta
+ainda buga, ficou com uma aresta errada" (com uma captura de tela) + "a âncora que NÃO tem a
+seta [a ponta de trás, não a cabeça] também tem que se adaptar... não só a seta em si".
+
+- **Zoom de pinça "bugando, indo pra outro lugar"**: causa raiz DUPLA em `Canvas.tsx`.
+  1. Um `panTwo` (`Gesture.Pan().minPointers(2).maxPointers(2)`) rodava dentro de
+     `Gesture.Simultaneous(pinch, panTwo)` — qualquer toque de 2 dedos disparava o `onUpdate`
+     dos DOIS simultaneamente, e cada um escrevia em `offsetX.value`/`offsetY.value` com uma
+     fórmula totalmente incompatível com a do outro, um sobrescrevendo o outro a cada frame.
+     Removido — a pinça corrigida (item 2 abaixo) já cobre pan de 2 dedos sozinha, não precisa
+     de um handler à parte.
+  2. A fórmula da pinça tinha um bug de verdade, independente do conflito acima: ela recalculava
+     "qual ponto de CENA está sob o dedo agora" usando o focal ATUAL (`e.focalX/Y`) a cada frame,
+     comparado contra a transform BASE (capturada uma vez no início) — em vez de FIXAR esse
+     ponto uma única vez, no início do gesto, e só usar o focal atual depois pra REPOSICIONAR
+     esse ponto já identificado. Na prática, isso só dava o resultado certo quando os dedos
+     ficavam perfeitamente parados no mesmo lugar enquanto beliscavam — o caso comum de verdade
+     (pinçar E arrastar ao mesmo tempo, dedos deslizando) fazia o ponto que devia ficar grudado
+     ao dedo derivar pro lado CONTRÁRIO ao movimento a cada frame, "pulando" visualmente. Fix:
+     `pinchBaseFocalX`/`pinchBaseFocalY` novos, capturados uma vez em `onStart` — usados só pra
+     descobrir QUAL ponto de cena é o alvo (fixo pro resto do gesto); o focal ATUAL (`e.focalX/Y`)
+     entra só na hora de posicionar esse ponto de novo a cada frame, papéis que a versão antiga
+     confundia ao usar a mesma variável (`e.focalX`) pros dois.
+- **Botão "Desagrupar"**: contraparte de "Juntar" (Etapa R5). `ungroupElements(doc, ids)`
+  (mutação pura, `domain/rabisco/mutations.ts`) limpa `groupId` de quem tinha, no-op silencioso
+  pros que já estavam soltos. No HUD (`RabiscoScreen.tsx`), o mesmo espaço do botão agora troca
+  de ícone/ação conforme a seleção atual seja ou não um grupo "de verdade": `isGroup` checa que
+  TODOS os `selectedIds` compartilham o MESMO `groupId` não-nulo — não só
+  `selectedIds.length > 1` (que também é verdade pra uma seleção solta por laço/aditiva, onde o
+  botão certo continua sendo "Juntar"). +2 testes.
+- **Cotovelo com as duas pontas ancoradas em EIXOS DIFERENTES** — a camada que faltava dos dois
+  bugs de seta reportados juntos: `elbowRoute` (`domain/rabisco/geom.ts`) só olhava pro
+  `ha` (heading do lado de PARTIDA) pra decidir o FORMATO do caminho inteiro — a linha
+  `const startH = ha ? ha === 'h' : ...` nunca considerava `hb` (heading do lado de CHEGADA)
+  quando `ha` já estava definido. Se as duas pontas estavam ancoradas em formas que pedem eixos
+  DIFERENTES (ex.: sai pela borda de BAIXO — vertical — de uma forma, entra pela borda ESQUERDA —
+  horizontal — de outra), o caminho de 3 segmentos que só respeita `ha` faz a ÚLTIMA perna bater
+  no eixo ERRADO em relação à borda onde a ponta de chegada está ancorada — mesmo com o PONTO de
+  ancoragem certinho (isso é uma camada diferente do bug da Etapa R5.2, que resolve qual LADO da
+  forma vira âncora, não o FORMATO do caminho que liga as duas âncoras já escolhidas). Fix:
+  quando `ha` e `hb` são os dois conhecidos e DIFERENTES, usa um cotovelo de UMA perna só (não o
+  desvio de 3 segmentos de sempre) — a esquina que fica exatamente no cruzamento das duas retas
+  (`a.x,b.y` ou `b.x,a.y`, dependendo de qual eixo é qual) satisfaz os dois lados ao mesmo tempo,
+  sem precisar de curva nenhuma a mais. Nenhuma mudança pro caso de mesmo eixo nos dois lados
+  (ainda usa o desvio de 3 segmentos) nem pro caso de só um lado (ou nenhum) ancorado — os
+  testes antigos desses casos continuam passando sem alteração. +1 teste.
+- **+3 testes no total** (196): `ungroupElements` limpa quem tinha grupo / no-op se ninguém
+  tinha; `resolvedPoints` com cotovelo e headings diferentes nas duas pontas usa um cotovelo só
+  que satisfaz os dois eixos.
+
+**Verificação**: (1) só análise matemática — pinça de verdade exige toque MULTI-TOUCH genuíno
+(dois dedos simultâneos com distância variável), que `cliclick` não simula; a correção foi
+verificada refazendo a álgebra da fórmula à mão com um exemplo numérico concreto (fingers
+drifting durante o gesto), não ao vivo no simulador. (2) confirmado ao vivo: grupo de 4 formas
+selecionado, botão "Desagrupar" aparecendo com o ícone certo (diferente de "Juntar"), apertado, e
+depois — usando um pequeno ARRASTO em vez de um toque parado pra deselecionar de forma
+confiável (toque parado puro se mostrou intermitente nesta sessão) — confirmado que tocar em UM
+membro sozinho não volta a selecionar o grupo inteiro; o ícone do HUD volta a mostrar "Juntar",
+provando que o `groupId` foi mesmo limpo, não só a seleção momentânea. (3)+(4) só teste
+automatizado — a MESMA linha do popover de formas do Dock da Etapa R5.2 (onde se escolhe "seta"
+antes de desenhar) de novo não respondeu a toque sintético nesta sessão, mesmo com o botão que
+ABRE esse popover, e o resto de toda a UI (incluindo o botão "Desagrupar" acima), respondendo
+normalmente nos mesmos minutos — reforça que é um alvo específico com algum problema de
+toque sintético no simulador, não um problema geral de toque nem um bug no código do Dock (a
+estrutura do `Pressable` ali é idêntica à de outros botões que funcionaram).
+
+## Etapa R5.4 — pinça pulando ao SOLTAR os dedos, âncora de seta virou sempre dinâmica
+
+Pedido do usuário em 2 partes.
+
+- **Pinça pulando bem na hora de soltar os dedos** — bug DIFERENTE do da Etapa R5.3 (aquele
+  acontecia DURANTE o gesto, por causa do `panTwo` conflitando com a pinça e por um erro na
+  fórmula do ponto focal; este acontece bem no INSTANTE de soltar). Causa raiz: dois dedos quase
+  nunca levantam exatamente no mesmo frame — por 1 ou 2 frames sobra só 1 dedo tocando ainda, e
+  nesse meio-tempo o `e.focalX`/`e.focalY` do `Gesture.Pinch()` deixa de ser a MÉDIA dos 2
+  toques e vira a posição EXATA desse dedo sozinho — um SALTO discreto de coordenada de tela,
+  não um movimento contínuo. Como a fórmula do offset usa `e.focalX/Y` diretamente, esse salto ia
+  direto pra cena, aparecendo como "buga, vai pra outro lugar" bem no momento de soltar. Fix: uma
+  guarda simples no início do `onUpdate` — `if (e.numberOfPointers < 2) return;` — ignora
+  qualquer frame onde a contagem de dedos caiu abaixo de 2; o próximo frame de verdade (2 dedos
+  de novo, ou o gesto realmente terminando) volta a ficar contínuo.
+- **Âncora de seta "ainda não está legal"** — depois de DUAS tentativas de meio-termo (Etapa
+  R5.2: só troca de lado quando cruza 180°, produto escalar; Etapa R5.3: corrige o FORMATO do
+  cotovelo quando os dois lados pedem eixos diferentes), o usuário confirmou que **guardar
+  qualquer estado do passado, mesmo condicionalmente, nunca acompanha direito um reposicionamento
+  contínuo**: "a âncora... tem que se adaptar conforme a posição de ambos ligados se encontra...
+  não só a seta em si". Essa é uma mudança de FUNDO, não mais um remendo em cima do anterior:
+  `bindPoint` (`domain/rabisco/geom.ts`) parou de tentar preservar `fx`/`fy` guardado no
+  binding — não tem mais nenhuma condição "se ainda está do mesmo lado, mantém"; SEMPRE
+  recalcula do zero onde a linha cruza a borda da forma em direção ao outro extremo, a cada
+  resolução (mesma busca binária que já existia como fallback pra quando não havia `fx`/`fy`
+  salvo — virou o único caminho, não mais um caso especial). `RabiscoBinding.fx`/`fy` ficam sem
+  uso pra POSICIONAR — `bindingAt()` continua calculando os dois (mantidos no tipo/dados só por
+  compatibilidade, e ainda testados como valores corretos), só que nada mais os LÊ pra desenhar
+  a linha.
+  - **Efeito colateral nos testes**: o teste da Etapa R5.3 (cotovelo com eixos conflitantes nas
+    duas pontas) dependia de um binding "forçado" via `bindingAt()` num ponto deliberadamente
+    diferente de onde a âncora dinâmica naturalmente cairia — com `bindPoint` sempre dinâmico,
+    esse forçamento deixou de ter efeito (os dois lados passaram a resolver pra âncoras que
+    naturalmente se encaram, quase sempre no MESMO eixo). Reescrito com duas formas de
+    proporção bem diferente (uma larga-e-baixa, outra estreita-e-alta) — mesmo com âncora 100%
+    dinâmica e mutuamente voltada uma pra outra, `headingAt()` (que compara contra a
+    meia-largura/meia-altura de CADA forma, não um valor absoluto) ainda classifica os dois
+    lados em eixos diferentes, preservando o cenário de conflito que o fix da R5.3 resolve — sem
+    precisar fingir uma âncora artificial. Os 2 testes da Etapa R5.2 (troca de lado / mantém
+    quando não muda) foram consolidados num só — não faz mais sentido testar "preserva vs.
+    troca" como comportamentos distintos quando é sempre o mesmo cálculo; o teste novo mostra o
+    MESMO elemento resolvendo pra bordas diferentes conforme o outro extremo muda de posição, o
+    que é agora simplesmente o comportamento normal, não um caso especial.
+- **195 testes no total** (a suíte perdeu 1 no total líquido: -2 pela consolidação da R5.2, +1
+  pela reescrita da R5.3 que continua existindo, sem teste novo pro `numberOfPointers` — é
+  fiação de gesto que depende de multi-touch real).
+
+**Verificação**: (1) só análise matemática — pinça de verdade exige dois toques simultâneos com
+contagem de dedos variável no meio do gesto, que `cliclick` (um só ponteiro de mouse) não simula
+de jeito nenhum; a correção foi confirmada relendo com cuidado a documentação do
+`Gesture.Pinch()` do `react-native-gesture-handler` sobre `numberOfPointers` e o comportamento
+conhecido de perda de precisão do foco em transições de contagem de dedos, não por reprodução ao
+vivo. (2) só teste automatizado — a MESMA linha do popover de formas do Dock (Etapas R5.2 e
+R5.3) não respondeu a toque sintético NESTA sessão pela terceira vez seguida, com o resto de toda
+a UI (incluindo o próprio botão que abre esse popover, e o botão "Desagrupar" da etapa anterior)
+respondendo normalmente nos mesmos minutos — o padrão reforça que é uma limitação específica de
+ambiente/toque sintético nesse alvo, não um problema geral nem um bug no código (a estrutura é
+idêntica à de outros `Pressable` que funcionaram a sessão inteira).
+
+## Etapa R5.5 — ponta da seta em cotovelo desalinhada (torta) da própria linha
+
+Usuário confirmou a Etapa R5.4 funcionando bem num aparelho de verdade ("muito bom", com
+screenshot mostrando um cotovelo limpo entre duas formas) e reportou um último detalhe visual:
+a ponta ("v") de uma seta em cotovelo ligada numa forma aparecia numa diagonal levemente torta —
+"não pode se inclinar meio grau... tem que ficar arredondado exemplo 90, 180... se não uma parte
+do vezinho fica torta".
+
+**Causa raiz**: `arrowHeadAngle` (`domain/rabisco/geom.ts`) ainda carregava o desvio introduzido
+na Etapa R4 — pra seta em cotovelo COM a ponta ligada a uma forma, ignorava a direção do ÚLTIMO
+SEGMENTO desenhado e apontava direto pro CENTRO da forma-alvo (`Math.atan2(centro.y - by,
+centro.x - bx)`), uma diagonal que quase nunca cai num múltiplo exato de 90°. Isso fazia sentido
+NA ÉPOCA: o roteamento em cotovelo (`elbowRoute`) podia produzir uma última perna que se
+aproximava do alvo pelo lado ERRADO (bug real da R4), e apontar pro centro "escondia" esse
+problema de roteamento fazendo a ponta pelo menos apontar pra dentro da forma, mesmo com o
+TRAÇO chegando torto.
+
+Só que as Etapas R5.2, R5.3 e R5.4 resolveram esse problema NA RAIZ, em camadas sucessivas:
+- **R5.2**: a âncora em si sempre recalcula pra encarar de verdade quem está puxando a linha
+  (nunca mais fica presa numa borda que já não faz sentido geometricamente).
+- **R5.3**: o FORMATO do cotovelo (quantos segmentos, em que eixo) sempre respeita o que os DOIS
+  lados precisam, não só o de partida.
+- **R5.4**: a âncora virou 100% dinâmica — nem o "meio-termo" da R5.2 (só troca de lado ao
+  cruzar 180°) sobrou.
+
+Com essas três camadas certas, o segmento FINAL de uma seta em cotovelo agora É sempre
+horizontal ou vertical por construção (nunca uma diagonal) — e sempre entra pela borda certa. O
+desvio "aponta pro centro" da R4, que existia justamente pra disfarçar um roteamento ainda
+errado, virou a ÚNICA fonte de desalinhamento que sobrava: pegava um traço que já chegava
+certinho, num ângulo limpo (0°/90°/180°/270°), e desenhava a pontinha numa diagonal torta em
+cima dele — a "parte do vezinho torta" que o usuário viu.
+
+**Fix**: removido o caso especial inteiro. `arrowHeadAngle` sempre segue a direção do último
+segmento agora — reto, curvo ou cotovelo, ligada ou não — exatamente como reto/curvo sempre
+fizeram. A função ficou mais simples também: só precisa de `abs` (os pontos já resolvidos), não
+mais de `el`/`all` (que só existiam pra resolver o alvo da ligação, agora sem uso).
+
+**Teste**: o antigo, que checava explicitamente o desvio "aponta pro centro", foi reescrito pra
+checar a garantia NOVA — `arrowHeadAngle` de um cotovelo ligado nos dois lados é sempre múltiplo
+de 90°, verificado via `sin(2·ângulo) ≈ 0` (zero só acontece em múltiplos de 90°; evita o
+problema comum de checar `ângulo % 90` perto da borda, onde `89.999999 % 90` não fica perto de
+0 mesmo sendo essencialmente 90°). 195 testes no total, sem mudança de contagem.
+
+**Verificação**: só automatizada — é uma correção de geometria pura (`Math.atan2` sobre pontos já
+resolvidos), sem gesto nem interação nenhuma envolvida; não precisou abrir o simulador de novo
+pra essa etapa.
+
 ## Ícones novos
 
 `hand`, `eraser`, `pointer`, `square`, `circle`, `moveUpRight`, `slash`, `grid`, `dot`,
 `pipette`, `spline`, `route`, `alignLeft`, `alignCenter`, `alignRight`, `bringToFront`,
-`sendToBack`, `chevronUp`, `chevronDown`, `multiSelect`, `group` adicionados a `design/Icon.tsx`,
+`sendToBack`, `chevronUp`, `chevronDown`, `multiSelect`, `group`, `ungroup` adicionados a `design/Icon.tsx`,
 um por vez, seguindo a convenção já documentada lá (escolher o equivalente lucide mais próximo do
 protótipo — ou, pra alinhamento/camadas/seleção múltipla/agrupar, que não têm equivalente no
 protótipo, o ícone lucide mais direto pro significado — nunca inventar SVG novo).
