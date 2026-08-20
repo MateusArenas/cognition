@@ -3,7 +3,7 @@ import { Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-n
 import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { useTheme } from '@/design/useTheme';
-import { tokenize, type TokenType } from './highlight';
+import { tokenize, type Token, type TokenType } from './highlight';
 
 const monoFont = Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' });
 
@@ -20,15 +20,22 @@ interface Props {
   editable?: boolean;
   /** Altura da CodeKeyboardBar — reservada como padding extra no fim do conteúdo rolável. */
   bottomInset?: number;
+  /** Tokenizador alternativo (ex.: SQL do console de banco) — default é o de Mermaid. */
+  tokenizer?: (code: string) => Token[];
+  /** Paleta alternativa, casada com o tokenizador acima — default é COLORS (Mermaid). */
+  palette?: Record<'dark' | 'light', Record<TokenType, string>>;
 }
 
 // Técnica de sobreposição: um <Text> colorido embaixo e um <TextInput> transparente por cima,
 // com só o cursor visível (§12). Funciona só se as duas caixas tiverem exatamente a mesma
-// métrica — por isso `metrics` é compartilhado entre as duas, nunca duplicado.
-export function CodeEditor({ code, onChangeText, onFocus, onBlur, editable = true, bottomInset = 0 }: Props) {
+// métrica — por isso `metrics` é compartilhado entre as duas, nunca duplicado. `tokenizer`/
+// `palette` são plugáveis (default Mermaid) pra reaproveitar esta MESMA sobreposição — e todo
+// o trabalho de teclado/scroll já resolvido abaixo — no console SQL livre (dbclient/lib/
+// sql-highlight.ts), em vez de duplicar o componente inteiro por uma troca de linguagem.
+export function CodeEditor({ code, onChangeText, onFocus, onBlur, editable = true, bottomInset = 0, tokenizer = tokenize, palette: paletteProp }: Props) {
   const { colors, scheme } = useTheme();
-  const tokens = useMemo(() => tokenize(code), [code]);
-  const palette = COLORS[scheme];
+  const tokens = useMemo(() => tokenizer(code), [code, tokenizer]);
+  const palette = (paletteProp ?? COLORS)[scheme];
 
   // `height` é o valor animado (negativo quando o teclado está aberto) que a própria lib
   // reporta em iOS E Android de forma normalizada (useResizeMode força adjustResize no
