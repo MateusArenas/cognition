@@ -1389,9 +1389,16 @@ redescobertas do zero:
   a causa raiz, mas duas ficam como melhoria real achada no caminho: `TerminalCanvas.tsx` passava
   `source={{ html, baseUrl: '' }}` como objeto inline pro `WebView` — identidade nova a cada
   render, e react-native-webview recarrega o conteúdo inteiro (perde a sessão do xterm.js) sempre
-  que isso muda, mesmo com `html` idêntico; corrigido com `useMemo`/`memo()`. `setEnabled(false)`
-  do keyboard-controller (rodada 4) também fica — evita medição de layout nativa desnecessária
-  num input dentro de WebView. Lição pro futuro: bug que só reproduz com o Metro rodando do lado
-  e nunca deixa rastro (sem crash log, sem exceção) — suspeitar do ambiente de dev (atalhos de
-  teclado do Metro CLI/Xcode/Simulator competindo pelo foco) antes de aprofundar no código.
-  Detalhe em [docs/20-ssh-mobile.md](docs/20-ssh-mobile.md). `tsc`/`vitest` (358) seguem limpos.
+  que isso muda, mesmo com `html` idêntico; corrigido com `useMemo`/`memo()`. Lição pro futuro:
+  bug que só reproduz com o Metro rodando do lado e nunca deixa rastro (sem crash log, sem
+  exceção) — suspeitar do ambiente de dev (atalhos de teclado do Metro CLI/Xcode/Simulator
+  competindo pelo foco) antes de aprofundar no código. Detalhe em
+  [docs/20-ssh-mobile.md](docs/20-ssh-mobile.md). `tsc`/`vitest` (358) seguem limpos.
+- [x] **Sexta rodada — KeyBar não subia com o teclado.** Na `TerminalScreen`, a barra de
+  atalhos/snippets ficava presa no rodapé quando o teclado abria, porque o `setEnabled(false)`
+  deixado pela rodada 4 desligava o rastreamento nativo de teclado da tela inteira (inclusive
+  pra qualquer `KeyboardStickyView`). Removido esse efeito; `KeyBar` passou a ficar dentro de
+  `KeyboardStickyView` com `offset={{ closed: -insets.bottom, opened: 0 }}`, mesmo padrão já
+  usado em `features/code/CodeKeyboardBar.tsx` (iOS e Android, mesma lib). Confirmado ao vivo no
+  simulador iOS: abre/fecha o teclado, a barra sobe/desce grudada, sem gap. Detalhe em
+  [docs/20-ssh-mobile.md](docs/20-ssh-mobile.md). `tsc`/`vitest` (358) seguem limpos.

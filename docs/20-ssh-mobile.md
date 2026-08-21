@@ -328,17 +328,26 @@ pena manter, achadas como efeito colateral real da investigação, não como pal
 a identidade do objeto muda, e react-native-webview recarrega o conteúdo inteiro (perde a sessão
 do xterm.js) mesmo com o `html` idêntico. Corrigido com `useMemo(() => ({ html, baseUrl: '' }),
 [html])` e o componente virou `memo(forwardRef(...))` — evita re-render à toa quando
-`TerminalScreen` muda por outro motivo. `setEnabled(false)` do keyboard-controller (rodada 4)
-também fica — evita uma medição de layout nativa desnecessária num input dentro de WebView, ainda
-que não fosse o que causava o reload. `preload={false}` (rodada 4) e a remoção de
+`TerminalScreen` muda por outro motivo. `preload={false}` (rodada 4) e a remoção de
 `hideKeyboardAccessoryView`/`keyboardDisplayRequiresUserAction` (rodada 3) também ficam — nenhuma
 delas quebra nada, e continuam sendo mudanças defensivas razoáveis mesmo sem serem a causa raiz
-deste bug específico.
+deste bug específico. `setEnabled(false)` do keyboard-controller (rodada 4) **não ficou** —
+removido na rodada 6 (abaixo) porque conflitava com `KeyboardStickyView`.
 
 **Lição registrada**: quando um "bug" só reproduz num ambiente de desenvolvimento (simulador +
 Metro rodando ao lado) e nunca deixa rastro (sem crash log, sem exceção JS), vale suspeitar do
 próprio ambiente de dev antes de aprofundar no código — Metro CLI, Xcode, e o próprio Simulator
 têm atalhos de teclado globais que competem com o foco do teclado real do app sendo testado.
+
+*Rodada 6 — KeyBar não subia com o teclado.* Sintoma separado, sem relação com as rodadas 1-5: na
+`TerminalScreen`, a barra de atalhos/snippets (`KeyBar`) ficava presa no rodapé quando o teclado
+abria, em vez de subir junto — porque o `setEnabled(false)` deixado pela rodada 4 desligava o
+rastreamento nativo de teclado do `KeyboardProvider` nesta tela inteira, o que também desabilitava
+qualquer `KeyboardStickyView` que viesse a usar. Removido esse efeito e a `KeyBar` passou a ficar
+dentro de `<KeyboardStickyView offset={{ closed: -insets.bottom, opened: 0 }}>`, mesmo padrão já
+comprovado em `features/code/CodeKeyboardBar.tsx` (funciona em iOS e Android, mesma lib, sem
+código nativo condicional). Confirmado ao vivo no simulador iOS: teclado abre, `KeyBar` sobe
+grudada nele sem gap; teclado fecha, `KeyBar` volta pro rodapé na posição original.
 
 `themes.ts` — 5 paletas portadas do protótipo (Nordeste escuro/Dracula/Solarizado escuro/One
 Dark/Padrão do sistema), no formato `ITheme` do xterm.js. Preferência de tema/fonte fica em

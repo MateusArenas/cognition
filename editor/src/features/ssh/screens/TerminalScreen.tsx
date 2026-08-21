@@ -2,7 +2,8 @@ import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, Pressable, StyleSheet, Text, View } from 'react-native';
-import { useKeyboardContext } from 'react-native-keyboard-controller';
+import { KeyboardStickyView } from 'react-native-keyboard-controller';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AlertDialog } from '@/design/components/AlertDialog';
 import { GroupedList } from '@/design/components/GroupedList';
 import { Icon } from '@/design/Icon';
@@ -29,7 +30,7 @@ export function TerminalScreen() {
   const { colors, space } = useTheme();
   const { t } = useI18n();
   const { themeId, fontSize, hydrate: hydrateSshSettings, setThemeId, setFontSize } = useSshSettings();
-  const { setEnabled: setKeyboardControllerEnabled } = useKeyboardContext();
+  const insets = useSafeAreaInsets();
 
   const [host, setHost] = useState<SshHost | null>(null);
   const [status, setStatus] = useState<StatusEvent['state']>('connecting');
@@ -44,19 +45,6 @@ export function TerminalScreen() {
   useEffect(() => {
     void hydrateSshSettings();
   }, [hydrateSshSettings]);
-
-  // O reload relatado ao digitar no terminal era o atalho de teclado do próprio Metro CLI ('r' =
-  // reload) disparando sem querer porque o foco do teclado do Mac estava no terminal em vez do
-  // Simulator — nada de errado no app. Mesmo assim, `setEnabled(false)` aqui continua valendo a
-  // pena: o `KeyboardProvider` global (app/_layout.tsx) mede o layout do input focado toda vez
-  // que o teclado de verdade abre, e o input focado nesta tela é o textarea escondido do
-  // xterm.js, DENTRO de uma WebView, sem nó nenhum na shadow tree do Fabric pro nativo medir —
-  // desliga o rastreamento nativo só enquanto esta tela está montada, evitando essa medição
-  // inútil (e potencialmente frágil) sem afetar o resto do app.
-  useEffect(() => {
-    setKeyboardControllerEnabled(false);
-    return () => setKeyboardControllerEnabled(true);
-  }, [setKeyboardControllerEnabled]);
 
   useEffect(() => {
     if (!hostId) return;
@@ -180,7 +168,14 @@ export function TerminalScreen() {
         right={{ label: '•••', onPress: () => menuRef.current?.present() }}
       />
       <TerminalCanvas ref={canvasRef} onReady={onCanvasReady} onInput={onCanvasInput} onResize={onCanvasResize} />
-      <KeyBar onKey={onKey} onSnippets={() => snippetsRef.current?.present()} />
+      {/* Mesmo padrão de features/code/CodeKeyboardBar.tsx: KeyboardStickyView cola sem gap —
+          offset:closed usa -insets.bottom porque o wrap (View comum, sem margin) já reserva
+          esse espaço no flex normal; sem o -insets.bottom aqui, a barra ficaria deslocada pra
+          baixo da posição correta quando o teclado está fechado. offset:opened = 0 cola direto
+          acima do teclado. Funciona em iOS e Android (mesma lib, sem código nativo condicional). */}
+      <KeyboardStickyView offset={{ closed: -insets.bottom, opened: 0 }}>
+        <KeyBar onKey={onKey} onSnippets={() => snippetsRef.current?.present()} />
+      </KeyboardStickyView>
 
       <Sheet ref={menuRef} title={host?.label ?? t('ssh.terminal.title')}>
         <GroupedList>
