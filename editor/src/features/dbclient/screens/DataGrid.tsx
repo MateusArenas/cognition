@@ -13,7 +13,7 @@ import { Icon } from '@/design/Icon';
 import { useTheme } from '@/design/useTheme';
 import { useToast } from '@/design/components/Toast';
 import { useI18n } from '@/i18n/I18nProvider';
-import { isApiError } from '../api/http';
+import { isApiError } from '@/api/http';
 import { applyMutations } from '../api/services';
 import type { ColumnMeta, FilterInput, RowsResult } from '../types';
 import { FiltersSheet, type FilterDraft } from './FiltersSheet';

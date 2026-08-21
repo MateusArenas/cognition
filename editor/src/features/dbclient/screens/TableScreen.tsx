@@ -14,7 +14,7 @@ import { useTheme } from '@/design/useTheme';
 import { useToast } from '@/design/components/Toast';
 import { useI18n } from '@/i18n/I18nProvider';
 import { exportarSqlTexto } from '@/services/export';
-import { isApiError } from '../api/http';
+import { isApiError } from '@/api/http';
 import { rows as fetchRows, tableDdl, tableDetail, tableErd } from '../api/services';
 import { tokenizeSql, SQL_COLORS } from '../lib/sql-highlight';
 import type { FilterInput, RowsResult, TableDetail } from '../types';

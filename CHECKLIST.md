@@ -961,6 +961,75 @@ antes de reaplicá-la.
     do botão — os dois são a mesma faixa de UI (busca + filtro), fazia sentido morarem juntos.
     Os pills de filtro ATIVO continuam numa segunda linha (`flexWrap`), só o gatilho "abrir
     editor de filtro novo" que virou ícone. `tsc --noEmit` limpo, 217 testes `vitest` verdes.
+- [x] **Etapa Auth — rework completo de autenticação: JWT accessToken/refreshToken, multi-conta,
+  app inteiro atrás do login** — pedido grande do usuário, decidido via 4 perguntas diretas
+  (login trava o app inteiro, não só a aba Banco de Dados; a senha é salva junto com os tokens
+  pra permitir re-login silencioso; sem SMTP disponível, `MailService` cai pro log; login aceita
+  e-mail OU username). Detalhe completo em [docs/18-autenticacao.md](docs/18-autenticacao.md).
+  - **Backend**: `User` ganha `username`; dois modelos novos, `Session` (refresh token com hash,
+    rotação + detecção de reuso — token já rotacionado reapresentado revoga TODAS as sessões do
+    usuário) e `PasswordResetToken` (mesmo padrão de hash). Rotas novas em `/auth`: `register`,
+    `login` (campo `identifier`, breaking change em 2 e2e specs existentes, atualizados),
+    `refresh`, `me`, `logout`, `forgot-password`, `reset-password`. `JwtAuthGuard` distingue
+    `TOKEN_EXPIRED` de `UNAUTHENTICATED` (bug real corrigido no caminho: checagem por
+    `instanceof TokenExpiredError` falhava silenciosamente por duplicação de `jsonwebtoken` no
+    monorepo — trocado por `.name === 'TokenExpiredError'`). `MailService` novo com fallback de
+    log. Migration escrita à mão (`prisma migrate dev` não roda neste sandbox) — **aplicada e
+    validada ao vivo contra o Postgres real** do `docker-compose.yml`, schema conferido via
+    `psql`, roteiro completo (registro → login por username → refresh → reuso rejeitado →
+    esqueci senha) rodado via `curl` contra o backend de verdade. `auth.e2e-spec.ts` novo, 19
+    casos (multi-dispositivo, anti-enumeração no esqueci-senha, sessões revogadas após reset) +
+    3 specs unitárias novas — 51 unitários/50 e2e no backend, tudo verde.
+  - **App**: `expo-secure-store` novo; `store/useAuthStore.ts` (multi-conta, uma chave SecureStore
+    por conta — não um blob único, evita o teto de ~2KB do Android Keystore); `api/http.ts`
+    migrou de `features/dbclient/` pra `editor/src/api/` (deixou de ser só do cliente de banco) e
+    ganhou o interceptor de refresh (único refresh em voo mesmo com requisições concorrentes,
+    **validado ao vivo** com um backend real de `JWT_EXPIRES_IN=2s`: uma requisição isolada
+    refresca e repete sozinha, 3 concorrentes disparam um único refresh); `features/auth/`
+    (`AuthContext` com `resolveSession` — token salvo → refresh → re-login silencioso com a
+    senha salva, mesmo caminho usado pela splash e por "trocar de conta"; telas Login/Criar
+    conta/Esqueci senha/Redefinir senha, `TintedButton`/`Banner`/`Field`/`GroupedList`, nunca
+    `Chip`); `app/(auth)/` novo; splash unificada numa `AppGate` só (checagem de update E
+    bootstrap de auth em paralelo, sem dois seguradores de splash independentes brigando — bug
+    que existia no design anterior, corrigido antes de acontecer); `app/_layout.tsx` ganha
+    `Stack.Protected` com as rotas logadas/não-logadas explícitas. Removido:
+    `LoginScreen`/`DbClientRoot` do cliente de banco (redundante agora), `dbAuthToken` de
+    `useSettings`. Ajustes ganha seção "Conta" (trocar de conta, sair). i18n: namespace `auth`
+    novo (30 chaves × 3 idiomas) + teste novo de completude entre catálogos (varre a árvore
+    inteira, antes só havia checagem pontual). `tsc --noEmit` limpo (só um erro pré-existente e
+    não-relacionado em `Canvas.tsx`, confirmado já quebrado numa instalação limpa do HEAD antes
+    de qualquer mudança desta entrega — duplicação de `@types/react` nesta monorepo, fora de
+    escopo consertar aqui). 226 testes `vitest` verdes (era 217).
+  - **Três bugs reais achados rodando o app de verdade no simulador** (não visíveis em
+    `tsc`/`vitest`/`expo export` sozinhos — só apareciam com o Metro servindo pro app de fato).
+    Todos vêm da mesma raiz: este é um monorepo com npm workspaces, e há dependências órfãs na
+    raiz (`@radix-ui/*`/`@visx/*`, nem declaradas em `editor/package.json` nem `backend/
+    package.json`, presentes desde antes desta sessão) que empurram `react`/`babel-preset-expo`
+    pra raiz do monorepo em vez de aninhados em `editor/node_modules` — qualquer `npm install`
+    pode reproduzir isso de novo (detalhe completo na memória do agente,
+    `project_monorepo_dependency_hoisting_hazards`). (1) `babel-preset-expo` na raiz não
+    conseguia `require.resolve('expo-router')` (só existe em `editor/node_modules`) — o plugin
+    de rotas nunca registrava, `EXPO_ROUTER_APP_ROOT` nunca virava string de verdade, Metro
+    quebrava com "First argument of `require.context` should be a string". Corrigido copiando
+    `babel-preset-expo` pra dentro de `editor/node_modules` (fix só em `node_modules`, não
+    commitável — pode precisar repetir se `npm install` reindexar a raiz de novo). (2)
+    `react`/`react-dom`/`scheduler` duplicados (raiz vs. `editor/node_modules`, versões
+    diferentes) — Metro empacotava as duas cópias, "Invalid hook call... more than one copy of
+    React" TRAVANDO o app de verdade na tela de splash. `resolver.extraNodeModules` não bastou
+    (React 19 tem `exports` no `package.json`, o que faz o Metro ignorar
+    `extraNodeModules`) — corrigido com `resolver.resolveRequest` em `editor/metro.config.js`,
+    forçando essas três libs pra cópia física certa sempre. Mesmo problema derrubava 2 dos 4
+    testes `jest-expo`/RTL (`ActionBar.test.tsx`) — confirmado pré-existente (já quebrado num
+    `npm ci` limpo do HEAD, antes de qualquer mudança desta sessão); `moduleNameMapper` em
+    `editor/jest.config.js` resolveu 3 dos 4 antes-quebrados, `ActionBar.test.tsx` continua
+    falhando por outro motivo ainda não identificado (também pré-existente). (3) `(auth)` não
+    tinha `_layout.tsx` próprio — `Stack.Protected` com `<Stack.Screen name="(auth)" />` só
+    funciona se o grupo tiver seu próprio navigator (como `(tabs)` já tinha via `Tabs`), senão
+    vira aviso "No route named "(auth)" exists in nested children". `app/(auth)/_layout.tsx`
+    novo resolve. **Validado de ponta a ponta no simulador de verdade** (screenshot da tela de
+    Login renderizando certinha, "Wasit" · "Entre para continuar" · campo de URL do backend
+    pré-preenchido · contas salvas · links de criar conta/esqueci senha) depois dos três fixes,
+    sem warning nenhum no log do Metro.
 
 ---
 

@@ -9,7 +9,7 @@ import { RowSwitch } from '@/design/components/RowSwitch';
 import { useTheme } from '@/design/useTheme';
 import { useToast } from '@/design/components/Toast';
 import { useI18n } from '@/i18n/I18nProvider';
-import { isApiError } from '../api/http';
+import { isApiError } from '@/api/http';
 import { createConnection, deleteConnection, getConnection, testConnection, updateConnection } from '../api/services';
 import { baseConfigFor, DRIVERS, driverByClient, getPath, setPath, type DriverField } from '../drivers';
 import { FormField } from './FormField';

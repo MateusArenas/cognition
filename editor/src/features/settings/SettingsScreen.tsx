@@ -1,8 +1,9 @@
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import Constants from 'expo-constants';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { AlertDialog } from '@/design/components/AlertDialog';
 import { GroupedList } from '@/design/components/GroupedList';
 import { Icon } from '@/design/Icon';
 import { NavBar } from '@/design/components/NavBar';
@@ -10,6 +11,8 @@ import { Row } from '@/design/components/Row';
 import { Segmented } from '@/design/components/Segmented';
 import { Sheet } from '@/design/components/Sheet';
 import { useTheme } from '@/design/useTheme';
+import { useToast } from '@/design/components/Toast';
+import { useAuth } from '@/features/auth/AuthContext';
 import { useI18n } from '@/i18n/I18nProvider';
 import { SUPPORTED_LANGUAGES, type AppLanguage } from '@/i18n';
 import { useSettings } from '@/store/useSettings';
@@ -19,9 +22,14 @@ import { useSettings } from '@/store/useSettings';
 export default function SettingsScreen() {
   const { colors, space, mode, setMode } = useTheme();
   const { language, t } = useI18n();
+  const { show } = useToast();
   const setLanguage = useSettings((state) => state.setLanguage);
+  const { user, accounts, activeAccountId, switchAccount, logout } = useAuth();
   const tabBarHeight = useBottomTabBarHeight();
   const languageSheetRef = useRef<BottomSheetModal>(null);
+  const accountsSheetRef = useRef<BottomSheetModal>(null);
+  const [confirmLogout, setConfirmLogout] = useState(false);
+  const otherAccounts = accounts.filter((a) => a.id !== activeAccountId);
   const themeOptions = [
     { value: 'auto', label: t('settings.themeAuto') },
     { value: 'light', label: t('settings.themeLight') },
@@ -32,6 +40,21 @@ export default function SettingsScreen() {
     <View style={[styles.root, { backgroundColor: colors.bg }]}>
       <NavBar title={t('settings.title')} />
       <ScrollView contentContainerStyle={{ padding: space.lg, paddingBottom: space.lg + tabBarHeight }}>
+        {user ? (
+          <>
+            <Text style={[styles.sectionTitle, { color: colors.labelSecondary }]}>{t('settings.account')}</Text>
+            <View style={{ marginBottom: space.xl }}>
+              <GroupedList>
+                <Row title={user.name} subtitle={user.email} />
+                {otherAccounts.length ? (
+                  <Row title={t('settings.switchAccount')} navigable onPress={() => accountsSheetRef.current?.present()} />
+                ) : null}
+                <Row title={t('settings.logout')} onPress={() => setConfirmLogout(true)} />
+              </GroupedList>
+            </View>
+          </>
+        ) : null}
+
         <Text style={[styles.sectionTitle, { color: colors.labelSecondary }]}>{t('settings.appearance')}</Text>
         <View style={{ marginBottom: space.xl }}>
           <Text style={[styles.preferenceLabel, { color: colors.label }]}>{t('settings.theme')}</Text>
@@ -56,6 +79,40 @@ export default function SettingsScreen() {
           <Row title={t('settings.version')} right={<Text style={{ color: colors.labelSecondary }}>{Constants.expoConfig?.version ?? '—'}</Text>} />
         </GroupedList>
       </ScrollView>
+
+      <Sheet ref={accountsSheetRef} title={t('settings.switchAccount')} snapPoints={['40%']}>
+        <GroupedList>
+          {otherAccounts.map((a) => (
+            <Row
+              key={a.id}
+              title={a.name}
+              subtitle={a.email}
+              onPress={async () => {
+                accountsSheetRef.current?.dismiss();
+                const ok = await switchAccount(a.id);
+                if (!ok) show(t('settings.switchAccountError'));
+              }}
+            />
+          ))}
+        </GroupedList>
+      </Sheet>
+
+      <AlertDialog
+        visible={confirmLogout}
+        title={t('settings.logoutConfirmTitle')}
+        onRequestClose={() => setConfirmLogout(false)}
+        buttons={[
+          { label: t('common.cancel'), role: 'cancel', onPress: () => setConfirmLogout(false) },
+          {
+            label: t('settings.logout'),
+            role: 'destructive',
+            onPress: () => {
+              setConfirmLogout(false);
+              void logout();
+            },
+          },
+        ]}
+      />
 
       <Sheet ref={languageSheetRef} title={t('settings.language')} snapPoints={['40%']}>
         <GroupedList>

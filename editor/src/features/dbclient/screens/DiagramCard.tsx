@@ -14,7 +14,7 @@ import { useI18n } from '@/i18n/I18nProvider';
 import type { DiagramCanvasHandle } from '@/features/diagram/canvas/DiagramCanvas';
 import { ShareSheet } from '@/features/diagram/ShareSheet';
 import { exportarMermaidTexto, exportarPdf, exportarPng } from '@/services/export';
-import { isApiError } from '../api/http';
+import { isApiError } from '@/api/http';
 import { MermaidView } from './MermaidView';
 
 interface Props {

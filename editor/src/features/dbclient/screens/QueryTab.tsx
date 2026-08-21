@@ -9,7 +9,7 @@ import { Icon } from '@/design/Icon';
 import { useTheme } from '@/design/useTheme';
 import { useI18n } from '@/i18n/I18nProvider';
 import { CodeEditor } from '@/features/code/CodeEditor';
-import { isApiError } from '../api/http';
+import { isApiError } from '@/api/http';
 import { getConnection, runQuery } from '../api/services';
 import { tokenizeSql, SQL_COLORS } from '../lib/sql-highlight';
 import type { RowsResult } from '../types';

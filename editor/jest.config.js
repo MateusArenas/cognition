@@ -10,5 +10,13 @@ module.exports = {
   // precisa de transform nenhum, e é o mesmo código, só empacotado diferente.
   moduleNameMapper: {
     '^lucide-react-native$': '<rootDir>/node_modules/lucide-react-native/dist/cjs/lucide-react-native.js',
+    // Monorepo com npm workspaces: react/react-dom/scheduler acabam instalados em dois lugares
+    // (raiz do monorepo E aqui) — sem isso, um componente resolve uma cópia e o
+    // react-test-renderer resolve outra, quebrando o dispatcher singleton do React ("Invalid
+    // hook call... more than one copy of React"). Mesmo motivo do fix em metro.config.js
+    // (`resolver.extraNodeModules`), só que pro lado dos testes.
+    '^react$': '<rootDir>/node_modules/react',
+    '^react-dom$': '<rootDir>/node_modules/react-dom',
+    '^scheduler$': '<rootDir>/node_modules/scheduler',
   },
 };

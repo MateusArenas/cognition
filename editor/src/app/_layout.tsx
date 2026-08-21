@@ -8,25 +8,27 @@ import { ThemeProvider } from '@/design/ThemeProvider';
 import { useTheme } from '@/design/useTheme';
 import { SheetChromeProvider, SheetChromeContainer } from '@/design/SheetChrome';
 import { ToastProvider } from '@/design/components/Toast';
+import { AppGate } from '@/features/app-gate/AppGate';
+import { useAuth } from '@/features/auth/AuthContext';
 import { I18nProvider } from '@/i18n/I18nProvider';
 import { useSettings } from '@/store/useSettings';
-import { UpdateGate } from '@/features/update/UpdateGate';
 
 // Providers globais: tema, gestos, bottom sheet, teclado, toast, e o "chrome" que encolhe a
-// tela por trás de uma sheet aberta (§5.2). Ver docs/03-design-system.md. UpdateGate é o
-// primeiro de todos — segura a splash nativa até checar/aplicar atualização OTA, ver
-// docs/12-persistencia-e-export.md.
+// tela por trás de uma sheet aberta (§5.2). Ver docs/03-design-system.md. AppGate é o primeiro
+// de todos — segura a splash nativa até checar/aplicar atualização OTA E validar a sessão
+// (GET /auth/me, com refresh automático) rodarem, sempre no cold start. Ver
+// docs/18-autenticacao.md.
 export default function RootLayout() {
   const hydrate = useSettings((state) => state.hydrate);
   useEffect(() => { void hydrate(); }, [hydrate]);
   return (
-    <UpdateGate>
+    <AppGate>
       <ThemeProvider>
         <I18nProvider>
           <RootShell />
         </I18nProvider>
       </ThemeProvider>
-    </UpdateGate>
+    </AppGate>
   );
 }
 
@@ -52,12 +54,28 @@ function RootShell() {
   );
 }
 
+// Duas stacks — logada e não-logada — decididas por `status` (features/auth/AuthContext.tsx).
+// Enumeração explícita das rotas hoje existentes em vez de mover tudo pra um grupo `(app)`
+// novo: mesmo resultado, diff bem menor (nenhum arquivo de rota muda de lugar).
 function AppChrome() {
   const { scheme, colors } = useTheme();
+  const { status } = useAuth();
   return (
     <SheetChromeContainer>
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }} />
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
+        <Stack.Protected guard={status === 'authenticated'}>
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="gallery" />
+          <Stack.Screen name="doc/[id]" />
+          <Stack.Screen name="db/connection" />
+          <Stack.Screen name="db/[id]/index" />
+          <Stack.Screen name="db/[id]/[table]" />
+        </Stack.Protected>
+        <Stack.Protected guard={status !== 'authenticated'}>
+          <Stack.Screen name="(auth)" />
+        </Stack.Protected>
+      </Stack>
     </SheetChromeContainer>
   );
 }

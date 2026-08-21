@@ -7,7 +7,7 @@ import { Sheet } from '@/design/components/Sheet';
 import { TintedButton } from '@/design/components/TintedButton';
 import { useTheme } from '@/design/useTheme';
 import { useI18n } from '@/i18n/I18nProvider';
-import { isApiError } from '../api/http';
+import { isApiError } from '@/api/http';
 import type { ColumnMeta } from '../types';
 import { FormField } from './FormField';
 

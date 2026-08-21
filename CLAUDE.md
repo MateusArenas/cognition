@@ -25,7 +25,9 @@ coisa: um bloco ` ```mermaid ` num `.md` abre no canvas com todas as ferramentas
 atualizado. Uma segunda tab, separada dos documentos, é um **cliente de banco de dados**
 (estilo DBeaver/TablePlus) — conecta em bancos de verdade (Postgres/MySQL/SQLite/SQL Server),
 explora tabelas, edita linhas e desenha o diagrama entidade-relacionamento, tudo pelo celular.
-Ver [docs/17-db-client.md](docs/17-db-client.md).
+Ver [docs/17-db-client.md](docs/17-db-client.md). **O app inteiro fica atrás de login** (JWT
+accessToken/refreshToken, multi-conta) antes de mostrar qualquer tab — ver
+[docs/18-autenticacao.md](docs/18-autenticacao.md).
 
 O app real vive em [`editor/`](editor/). A especificação funcional completa dos documentos
 Mermaid/Markdown/Rabisco (a fonte de verdade para qualquer detalhe fino, código exato incluído)
@@ -72,6 +74,7 @@ Para saber **o que já foi construído e o que falta**, o ponto de retomada é o
 | [15-diagramas.md](docs/15-diagramas.md) | Os 5 fluxos em Mermaid do projeto | referência |
 | [16-rabisco.md](docs/16-rabisco.md) | Canvas Skia nativo, roadmap R1-R5 do desenho livre | Etapas R1-R2 ✅ |
 | [17-db-client.md](docs/17-db-client.md) | Cliente de banco de dados: app + backend NestJS/Knex/Prisma/CASL | Etapa DB1 ✅ |
+| [18-autenticacao.md](docs/18-autenticacao.md) | Login/registro/refresh/recuperação de senha, JWT accessToken+refreshToken, multi-conta, app inteiro atrás do gate | Etapa Auth ✅ |
 
 ## Como este projeto foi construído
 

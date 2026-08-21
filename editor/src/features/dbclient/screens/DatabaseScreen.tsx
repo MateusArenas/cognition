@@ -8,7 +8,7 @@ import { Row } from '@/design/components/Row';
 import { Segmented } from '@/design/components/Segmented';
 import { useTheme } from '@/design/useTheme';
 import { useI18n } from '@/i18n/I18nProvider';
-import { isApiError } from '../api/http';
+import { isApiError } from '@/api/http';
 import { schemaErd, tables } from '../api/services';
 import type { TableRef } from '../types';
 import { DiagramCard } from './DiagramCard';
