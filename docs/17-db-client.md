@@ -37,6 +37,15 @@ Decisão confirmada com o usuário — não é redundância, são dois problemas
   exatamente o ponto forte do Prisma — e roda sobre um **Postgres via Docker**
   (`docker-compose.yml` na raiz do monorepo), separado de qualquer banco-alvo.
 
+**Regra de ouro, sem exceção: criar/alterar tabela do NOSSO sistema é sempre Prisma (schema +
+migration em `backend/prisma/`), nunca Knex.** Knex não cria, não altera e não migra tabela
+nenhuma — ele só CONECTA e CONSULTA um banco-alvo que o usuário configurou em runtime (schema
+de terceiros, desconhecido em tempo de build, é por isso que existe). Qualquer dado novo que o
+BACKEND EM SI precisa guardar (uma tabela, uma coluna, um índice) entra em
+`backend/prisma/schema.prisma` (espelhado em `schema.test.prisma`, ver "Testes" abaixo) e vira
+uma migration nova em `backend/prisma/migrations/` — o mesmo caminho que `User`/`Session`/
+`PasswordResetToken`/`Role`/`Permission`/`Connection` já seguem.
+
 ## Regra de ouro: nada que o usuário digita vira SQL
 
 A mesma regra do domínio original do resto do app (`docs/04-dominio.md`), adaptada: em vez de
