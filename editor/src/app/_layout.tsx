@@ -1,6 +1,7 @@
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { Stack } from 'expo-router';
 import { useEffect } from 'react';
+import { Alert } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
@@ -11,7 +12,13 @@ import { ToastProvider } from '@/design/components/Toast';
 import { AppGate } from '@/features/app-gate/AppGate';
 import { useAuth } from '@/features/auth/AuthContext';
 import { I18nProvider } from '@/i18n/I18nProvider';
+import { consumeLastFatal } from '@/services/crashLog';
+import { installFatalErrorLogger } from '@/services/installFatalErrorLogger';
 import { useSettings } from '@/store/useSettings';
+
+// O mais cedo possível — antes de qualquer componente montar — pra pegar até erro fatal que
+// acontece durante o boot. Ver services/installFatalErrorLogger.ts.
+installFatalErrorLogger();
 
 // Providers globais: tema, gestos, bottom sheet, teclado, toast, e o "chrome" que encolhe a
 // tela por trás de uma sheet aberta (§5.2). Ver docs/03-design-system.md. AppGate é o primeiro
@@ -21,6 +28,17 @@ import { useSettings } from '@/store/useSettings';
 export default function RootLayout() {
   const hydrate = useSettings((state) => state.hydrate);
   useEffect(() => { void hydrate(); }, [hydrate]);
+  // Mostra o último erro fatal capturado no boot ANTERIOR (installFatalErrorLogger.ts grava
+  // antes do reload acontecer) — é o jeito de ver o que derrubou o terminal SSH sem crash log
+  // nativo (o processo não morre, só o JS reinicia) e sem conseguir reproduzir via automação.
+  useEffect(() => {
+    const fatal = consumeLastFatal();
+    if (!fatal) return;
+    Alert.alert(
+      'Último erro fatal (rodada anterior)',
+      `${fatal.at}\n\n${fatal.message}${fatal.stack ? `\n\n${fatal.stack.slice(0, 1200)}` : ''}`,
+    );
+  }, []);
   return (
     <AppGate>
       <ThemeProvider>
@@ -41,7 +59,14 @@ function RootShell() {
   const { colors } = useTheme();
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.bg }}>
-      <KeyboardProvider>
+      {/* preload=false: o `preload` (default true, só iOS) pré-aquece o rastreamento nativo do
+          teclado antes do primeiro foco pra reduzir latência — suspeito forte do crash nativo
+          (SIGSEGV em ReanimatedModuleProxy::installTurboModule, achado em crash log real,
+          ~/Library/Logs/DiagnosticReports) relatado pelo usuário ao digitar no terminal SSH: o
+          preload dispara instalação do proxy de animação do Fabric antes do UIManager estar
+          pronto. Ver docs/20-ssh-mobile.md — troca "abre o teclado 1 frame mais devagar da
+          primeira vez" por "não crasha". */}
+      <KeyboardProvider preload={false}>
         <BottomSheetModalProvider>
           <ToastProvider>
             <SheetChromeProvider>

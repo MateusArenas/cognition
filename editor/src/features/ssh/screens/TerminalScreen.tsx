@@ -2,6 +2,7 @@ import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useKeyboardContext } from 'react-native-keyboard-controller';
 import { AlertDialog } from '@/design/components/AlertDialog';
 import { GroupedList } from '@/design/components/GroupedList';
 import { Icon } from '@/design/Icon';
@@ -28,6 +29,7 @@ export function TerminalScreen() {
   const { colors, space } = useTheme();
   const { t } = useI18n();
   const { themeId, fontSize, hydrate: hydrateSshSettings, setThemeId, setFontSize } = useSshSettings();
+  const { setEnabled: setKeyboardControllerEnabled } = useKeyboardContext();
 
   const [host, setHost] = useState<SshHost | null>(null);
   const [status, setStatus] = useState<StatusEvent['state']>('connecting');
@@ -42,6 +44,19 @@ export function TerminalScreen() {
   useEffect(() => {
     void hydrateSshSettings();
   }, [hydrateSshSettings]);
+
+  // O reload relatado ao digitar no terminal era o atalho de teclado do próprio Metro CLI ('r' =
+  // reload) disparando sem querer porque o foco do teclado do Mac estava no terminal em vez do
+  // Simulator — nada de errado no app. Mesmo assim, `setEnabled(false)` aqui continua valendo a
+  // pena: o `KeyboardProvider` global (app/_layout.tsx) mede o layout do input focado toda vez
+  // que o teclado de verdade abre, e o input focado nesta tela é o textarea escondido do
+  // xterm.js, DENTRO de uma WebView, sem nó nenhum na shadow tree do Fabric pro nativo medir —
+  // desliga o rastreamento nativo só enquanto esta tela está montada, evitando essa medição
+  // inútil (e potencialmente frágil) sem afetar o resto do app.
+  useEffect(() => {
+    setKeyboardControllerEnabled(false);
+    return () => setKeyboardControllerEnabled(true);
+  }, [setKeyboardControllerEnabled]);
 
   useEffect(() => {
     if (!hostId) return;
@@ -108,16 +123,28 @@ export function TerminalScreen() {
     return () => sub.remove();
   }, [sessionId]);
 
-  function onCanvasReady(cols: number, rows: number) {
-    applyAppearance();
-    getSshSocket().emit('resize', { sessionId, cols, rows });
-  }
-  function onCanvasInput(b64: string) {
-    getSshSocket().emit('data', { sessionId, b64 });
-  }
-  function onCanvasResize(cols: number, rows: number) {
-    getSshSocket().emit('resize', { sessionId, cols, rows });
-  }
+  // useCallback nos três — TerminalCanvas é memo() (ver TerminalCanvas.tsx) justamente pra não
+  // re-renderizar (e não recarregar a WebView) em toda renderização desta tela; passar função
+  // nova a cada render aqui anularia o memo() na mesma hora.
+  const onCanvasReady = useCallback(
+    (cols: number, rows: number) => {
+      applyAppearance();
+      getSshSocket().emit('resize', { sessionId, cols, rows });
+    },
+    [applyAppearance, sessionId],
+  );
+  const onCanvasInput = useCallback(
+    (b64: string) => {
+      getSshSocket().emit('data', { sessionId, b64 });
+    },
+    [sessionId],
+  );
+  const onCanvasResize = useCallback(
+    (cols: number, rows: number) => {
+      getSshSocket().emit('resize', { sessionId, cols, rows });
+    },
+    [sessionId],
+  );
   function onKey(seq: string) {
     getSshSocket().emit('data', { sessionId, b64: base64EncodeAscii(seq) });
   }
@@ -153,19 +180,6 @@ export function TerminalScreen() {
         right={{ label: '•••', onPress: () => menuRef.current?.present() }}
       />
       <TerminalCanvas ref={canvasRef} onReady={onCanvasReady} onInput={onCanvasInput} onResize={onCanvasResize} />
-      {/* Bug real reportado pelo usuário (2 rodadas): o app fechava e recarregava sozinho ao
-          digitar no teclado de verdade (não dá pra reproduzir isso com a KeyBar — ela não tem
-          letras). Causa raiz achada na 2ª rodada, em código-fonte, não por reprodução ao vivo:
-          `TerminalCanvas.tsx` usava `hideKeyboardAccessoryView`/`keyboardDisplayRequiresUserAction`
-          do react-native-webview, que fazem method swizzling de um seletor PRIVADO do WebKit
-          (`_elementDidFocus:...`, ver comentário em TerminalCanvas.tsx) disparado toda vez que o
-          textarea escondido do xterm.js ganha foco — exatamente o momento em que o usuário começa
-          a digitar. Removidas as duas props; `onContentProcessDidTerminate` agora recarrega a
-          WebView sozinho se isso (ou qualquer outro crash nativo do processo da WebView)
-          acontecer de novo, em vez de deixar o app inteiro reiniciar sem explicação. A remoção
-          anterior do `KeyboardStickyView` (rodada 1) não resolveu sozinha — fica removida por ora
-          (KeyBar na posição flex normal, não acompanha o teclado) até confirmar que esta causa
-          era de fato a raiz; ver docs/20-ssh-mobile.md. */}
       <KeyBar onKey={onKey} onSnippets={() => snippetsRef.current?.present()} />
 
       <Sheet ref={menuRef} title={host?.label ?? t('ssh.terminal.title')}>

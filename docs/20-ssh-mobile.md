@@ -266,6 +266,80 @@ supostamente deveria ter travado. Se o usuário testar de novo e ainda reproduzi
 é o `ResizeObserver`/`FitAddon.fit()` em `terminal.shell.html` ou o `KeyboardProvider` global em
 `app/_layout.tsx`.
 
+*Rodada 4 — usuário confirmou que ainda reproduz mesmo com a rodada 3 aplicada. Desta vez achada
+causa raiz em CRASH LOG DE VERDADE, não só em código-fonte.* `~/Library/Logs/DiagnosticReports/
+Retired/Expo Go-*.ips` no Mac que roda o simulador tinha 3 crashes reais do "Expo Go" (mesmo
+processo que hospeda o app em desenvolvimento), todos com o **mesmo stack trace exato**: SIGSEGV
+(`EXC_BAD_ACCESS`, `KERN_INVALID_ADDRESS at 0x20`) em
+`reanimated::ReanimatedModuleProxy::initializeLayoutAnimationsProxy()` ->
+`initializeFabric()` -> `-[ReanimatedModule installTurboModule]` -> `UIManager::setAnimationDelegate`.
+Isso é a instalação do TurboModule do Reanimated tentando conectar no `UIManager` do Fabric — e o
+único lugar do app que depende disso globalmente (fora do que já foi mexido nas rodadas 1-2) é o
+`KeyboardProvider` (`react-native-keyboard-controller`) que envolve o app inteiro em
+`app/_layout.tsx`. O componente tem uma prop `preload` (default `true`, só iOS) que "pré-aquece"
+o rastreamento nativo do teclado antes do primeiro foco pra reduzir latência — trabalho nativo
+adiantado que pode competir com o UIManager do Fabric ainda não estar pronto, batendo exatamente
+com o stack trace. Corrigido: `<KeyboardProvider preload={false}>` em `app/_layout.tsx` — troca
+"teclado abre 1 frame mais rápido da primeira vez" por "não crasha".
+
+Descartadas no caminho, registradas pra não repetir a investigação: (1) mismatch de versão entre
+o binário do Expo Go instalado (`54.0.7`) e o pacote `expo` do projeto (`54.0.37`) — descartado
+porque `npx expo install --check` confirma que `54.0.7` é de fato a versão de Expo Go esperada
+pra esse SDK, reinstalar do zero reinstala a mesma versão; (2) atualizar
+`react-native-keyboard-controller` de `1.18.5` pra `1.22.4` (a mudança no changelog "initialize
+`_props` in Fabric component view constructors" parecia promissora) — **não fazer isso**: o
+próprio `expo start` avisa que `1.18.5` é a versão esperada pro SDK 54, e o Expo Go **não
+recompila módulo nativo nenhum a partir do `node_modules` do projeto** — ele já vem com um
+binário nativo fixo por versão de SDK, então usar uma versão JS diferente da que o Expo Go
+espera quebra a ponte JS↔nativo (reproduzido ao vivo: erro fatal
+`_bindings.KeyboardControllerNative.getConstants is not a function`, tela toda travada). Fica
+pinado em `1.18.5`.
+
+**Nota separada, não relacionada ao bug em si**: no meio dessa investigação, uma reinstalação do
+Expo Go no simulador ficou corrompida (mesmo erro `getConstants is not a function`, mesmo com
+`node_modules` idêntico ao commitado) — resolvido desinstalando (`xcrun simctl uninstall booted
+host.exp.Exponent`) e deixando o `expo start` baixar e instalar de novo. Se esse erro aparecer
+sem eu ter mexido em dependência nenhuma, é isso: reinstalar o Expo Go primeiro antes de suspeitar
+de código.
+
+Ainda **não confirmado por reprodução direta do crash em si** (mesma limitação de automação das
+rodadas anteriores — nenhuma tentativa de simulador conseguiu ecoar caractere real na WebView),
+mas esta é a causa de maior confiança até agora: é a primeira vez que a investigação partiu de um
+crash log real e batido 3x com o mesmo stack trace, não de inferência por código-fonte.
+
+*Rodada 5 — causa raiz de verdade, e não era bug nenhum no app.* Usuário confirmou reprodução de
+novo mesmo com a rodada 4 aplicada — nova instrumentação (`crashLog.ts`/`installFatalErrorLogger.ts`,
+grava o último erro fatal via `ErrorUtils.setGlobalHandler` de forma **síncrona**, `setItemSync`,
+pra sobreviver mesmo se o erro matar o contexto JS logo em seguida) não capturou nada, e nenhum
+crash log novo apareceu. Isso já indicava que não era nem crash nativo nem exceção JS fatal — e o
+usuário percebeu sozinho: **o "reload" era o atalho de teclado do próprio Metro CLI** (`r` =
+reload app, um dos vários atalhos de tecla solta que o `expo start` escuta no terminal onde ele
+roda). Quando o foco do teclado do Mac estava na janela do terminal (rodando `expo start --ios`)
+em vez do Simulator, digitar "clear" mandava c-l-e-a-**r** pro Metro CLI, não pro app — e o `r`
+sozinho já dispara reload. Bate 100% com todos os sintomas: nunca teve crash log (não tinha
+crash), nunca teve erro JS capturável (não tinha exceção), e "clea" travando exatamente antes do
+"r" na screenshot do usuário (rodada 4) é o "r" sendo consumido pelo Metro, nunca chegando no
+textarea do xterm.js.
+
+**Nenhuma das correções das rodadas 1-4 foi a causa raiz**, mas duas delas continuam valendo a
+pena manter, achadas como efeito colateral real da investigação, não como palpite:
+`TerminalCanvas.tsx` passava `source={{ html, baseUrl: '' }}` como objeto **inline** pro `WebView`
+— toda vez que o componente re-renderiza (por qualquer motivo do componente pai, não só digitação)
+a identidade do objeto muda, e react-native-webview recarrega o conteúdo inteiro (perde a sessão
+do xterm.js) mesmo com o `html` idêntico. Corrigido com `useMemo(() => ({ html, baseUrl: '' }),
+[html])` e o componente virou `memo(forwardRef(...))` — evita re-render à toa quando
+`TerminalScreen` muda por outro motivo. `setEnabled(false)` do keyboard-controller (rodada 4)
+também fica — evita uma medição de layout nativa desnecessária num input dentro de WebView, ainda
+que não fosse o que causava o reload. `preload={false}` (rodada 4) e a remoção de
+`hideKeyboardAccessoryView`/`keyboardDisplayRequiresUserAction` (rodada 3) também ficam — nenhuma
+delas quebra nada, e continuam sendo mudanças defensivas razoáveis mesmo sem serem a causa raiz
+deste bug específico.
+
+**Lição registrada**: quando um "bug" só reproduz num ambiente de desenvolvimento (simulador +
+Metro rodando ao lado) e nunca deixa rastro (sem crash log, sem exceção JS), vale suspeitar do
+próprio ambiente de dev antes de aprofundar no código — Metro CLI, Xcode, e o próprio Simulator
+têm atalhos de teclado globais que competem com o foco do teclado real do app sendo testado.
+
 `themes.ts` — 5 paletas portadas do protótipo (Nordeste escuro/Dracula/Solarizado escuro/One
 Dark/Padrão do sistema), no formato `ITheme` do xterm.js. Preferência de tema/fonte fica em
 `features/ssh/store/useSshSettings.ts` — **local no aparelho** (mesmo padrão hydrate/persist de

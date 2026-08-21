@@ -1357,3 +1357,41 @@ redescobertas do zero:
   privada por seletor), e é o único ponto do código que reage especificamente a foco/teclado numa
   WebView. Detalhe em [docs/20-ssh-mobile.md](docs/20-ssh-mobile.md). `tsc`/`vitest` seguem
   limpos.
+- [x] **Quarta rodada, usuário confirmou de novo que reproduz mesmo com a rodada 3 aplicada** —
+  desta vez achei crash log DE VERDADE (`~/Library/Logs/DiagnosticReports/Retired/Expo Go-*.ips`
+  no Mac que roda o simulador): 3 crashes reais, mesmo stack trace exato — SIGSEGV em
+  `ReanimatedModuleProxy::initializeLayoutAnimationsProxy()` -> `installTurboModule` ->
+  `UIManager::setAnimationDelegate`. Aponta pro `KeyboardProvider` (`react-native-keyboard-
+  controller`) global em `app/_layout.tsx`, que tem uma prop `preload` (default `true`, iOS) que
+  pré-aquece o rastreamento nativo do teclado — trabalho nativo adiantado que pode competir com o
+  Fabric ainda não estar pronto. Corrigido: `preload={false}`. Descartei no caminho, sem aplicar:
+  (1) mismatch de versão Expo Go (`54.0.7`) vs pacote `expo` (`54.0.37`) — não é isso,
+  `expo install --check` confirma `54.0.7` correto; (2) atualizar `react-native-keyboard-
+  controller` `1.18.5`->`1.22.4` — **quebra o app**: Expo Go não recompila nativo a partir do
+  `node_modules` do projeto, ele já vem fixo por SDK, e uma versão JS diferente da esperada
+  (`1.18.5` é a certa pro SDK 54) derruba a ponte JS↔nativo inteira (`getConstants is not a
+  function`, tela travada) — fica pinado em `1.18.5`. Efeito colateral registrado: uma
+  reinstalação do Expo Go no meio do caminho ficou corrompida com o mesmo erro; resolvido
+  desinstalando (`xcrun simctl uninstall booted host.exp.Exponent`) e deixando reinstalar do
+  zero. Ainda não confirmado por reprodução direta do crash em si (mesma limitação de automação),
+  mas é a primeira vez que a causa vem de um crash log real batido 3x, não de inferência por
+  código. Detalhe em [docs/20-ssh-mobile.md](docs/20-ssh-mobile.md).
+- [x] **Quinta rodada — causa raiz de verdade, e não era bug nenhum no app.** Usuário confirmou
+  reprodução de novo mesmo com a rodada 4 aplicada. Adicionei captura de erro fatal persistente
+  (`crashLog.ts`/`installFatalErrorLogger.ts`, grava síncrono via `setItemSync` pra sobreviver a
+  um contexto JS morrendo) pra ver o erro real no próximo boot — não capturou nada, e nenhum
+  crash log novo apareceu. O próprio usuário resolveu: **o "reload" era o atalho de teclado do
+  Metro CLI** (`r` = reload), disparado porque o foco do teclado do Mac estava na janela do
+  terminal (`expo start --ios`) em vez do Simulator — digitar "clear" mandava c-l-e-a-**r** pro
+  Metro, e o "r" sozinho já recarrega o app. Bate 100% com tudo: nunca teve crash log (não tinha
+  crash), nunca teve erro JS capturável (não tinha exceção), "clea" travando bem antes do "r" na
+  screenshot da rodada 4 é o "r" sendo consumido pelo Metro. Nenhuma correção das rodadas 1-4 era
+  a causa raiz, mas duas ficam como melhoria real achada no caminho: `TerminalCanvas.tsx` passava
+  `source={{ html, baseUrl: '' }}` como objeto inline pro `WebView` — identidade nova a cada
+  render, e react-native-webview recarrega o conteúdo inteiro (perde a sessão do xterm.js) sempre
+  que isso muda, mesmo com `html` idêntico; corrigido com `useMemo`/`memo()`. `setEnabled(false)`
+  do keyboard-controller (rodada 4) também fica — evita medição de layout nativa desnecessária
+  num input dentro de WebView. Lição pro futuro: bug que só reproduz com o Metro rodando do lado
+  e nunca deixa rastro (sem crash log, sem exceção) — suspeitar do ambiente de dev (atalhos de
+  teclado do Metro CLI/Xcode/Simulator competindo pelo foco) antes de aprofundar no código.
+  Detalhe em [docs/20-ssh-mobile.md](docs/20-ssh-mobile.md). `tsc`/`vitest` (358) seguem limpos.
