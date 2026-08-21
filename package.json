@@ -4,5 +4,9 @@
   "workspaces": [
     "editor",
     "backend"
-  ]
+  ],
+  "scripts": {
+    "postinstall": "node scripts/ensure-babel-preset-expo.js",
+    "fix:babel-preset-expo": "node scripts/ensure-babel-preset-expo.js"
+  }
 }

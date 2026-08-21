@@ -53,6 +53,33 @@ o `editor/package-lock.json` antigo foi removido por ficar órfão/desatualizado
 `npm install -w editor` (ou `-w backend`) instala só as deps daquele workspace; `npm install`
 sem `-w` na raiz instala os dois.
 
+## Hazard real de hoisting: `babel-preset-expo` precisa estar dentro de `editor/node_modules`
+
+Dependências órfãs na raiz deste monorepo (`@radix-ui/*`/`@visx/*`, nem declaradas em
+`editor/package.json` nem `backend/package.json`, presentes desde antes de qualquer trabalho
+recente — ver a memória do agente `project_monorepo_dependency_hoisting_hazards`) puxam sua
+própria versão de `react`, o que empurra `babel-preset-expo` pra `node_modules` da RAIZ em vez
+de aninhado em `editor/node_modules`. De lá, o preset não consegue `require.resolve('expo-
+router')` (só existe em `editor/node_modules` — a resolução do Node só anda pra CIMA a partir
+de onde o pacote que fez o `require` mora, nunca pro lado, pro `node_modules` de outro
+workspace) — o plugin de rotas do Expo Router nunca registra, `process.env.EXPO_ROUTER_APP_ROOT`
+nunca vira string de verdade, e o Metro quebra com "First argument of `require.context` should
+be a string". **Já aconteceu duas vezes na mesma sessão** — a segunda vez depois de um
+`npx expo install` comum (qualquer install pode reembaralhar o hoisting de novo).
+
+`editor/metro.config.js` já resolve o mesmo tipo de problema pra `react`/`react-dom`/
+`scheduler` via `resolver.resolveRequest`, mas isso NÃO ajuda aqui: a resolução do preset do
+Babel acontece dentro do `@babel/core`, antes do Metro sequer começar a transformar qualquer
+arquivo — o resolver do Metro nunca entra em cena.
+
+**Correção automática**: `scripts/ensure-babel-preset-expo.js` (na raiz) copia
+`babel-preset-expo` pra dentro de `editor/node_modules` sempre que não estiver lá — registrado
+como `postinstall` em `package.json` (raiz), roda sozinho depois de QUALQUER `npm install`.
+Rodar à mão se precisar: `npm run fix:babel-preset-expo`. Se um dia o Metro voltar a quebrar com
+esse erro exato, é sinal de que o `postinstall` não rodou (ex.: `npm install --ignore-scripts`)
+— rode o comando acima e reinicie o Metro com `--clear` (a cache de transform pode ter
+persistido o resultado quebrado de antes do fix).
+
 ## Hook de pre-push (roda a suíte inteira antes de deixar passar)
 
 `.githooks/pre-push` (versionado, na raiz) roda backend (unitário + e2e) e editor (vitest)

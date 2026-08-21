@@ -1181,6 +1181,15 @@ redescobertas do zero:
     nunca usado antes neste código, funcionou de primeira), "Mais" abrindo o menu da tabela com
     os switches refletindo o estado real do documento, "Exportar CSV…" mostrando o seletor de
     separador e a prévia calculada.
+- [x] **Correção automática pro hazard de hoisting do `babel-preset-expo`** — pedido do usuário
+  depois do bug (Metro quebrando com "First argument of `require.context` should be a string")
+  se repetir DUAS vezes na mesma sessão: `scripts/ensure-babel-preset-expo.js` novo, rodado como
+  `postinstall` (`package.json` raiz) — reaplica sozinho a cópia de `babel-preset-expo` pra
+  dentro de `editor/node_modules` sempre que o hoisting a tirar de lá, depois de QUALQUER `npm
+  install`. Também disponível à mão via `npm run fix:babel-preset-expo`. Testado de ponta a
+  ponta: removi `editor/node_modules/babel-preset-expo`, rodei `npm install` na raiz, confirmei
+  que o `postinstall` restaurou sozinho e que o Metro voltou a bundlar sem erro. Detalhe completo
+  em [docs/02-setup-e-estrutura.md](docs/02-setup-e-estrutura.md).
 - [x] **Bug real no editor de Tabelas: grade vazando por baixo da Toolbar** — usuário reportou
   com screenshot ("parece bugado... sobrepondo a visão"). Causa: `flex: 1` não propaga altura
   confiável através de um `ScrollView` horizontal contendo `FlashList` vertical por dentro —
