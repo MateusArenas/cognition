@@ -15,7 +15,7 @@ export interface ApiErrorBody {
 
 // Endereço fixo do backend — não é mais configurável pelo usuário (tirado da tela de Login a
 // pedido explícito: um único backend, sem precisar digitar/lembrar endereço nenhum).
-export const API_BASE_URL = 'http://localhost:3333/api/v1';
+export const API_BASE_URL = 'http://187.77.250.138:3333/api/v1';
 
 export const http = axios.create({ baseURL: API_BASE_URL, timeout: 30000 });
 

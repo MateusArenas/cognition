@@ -1402,3 +1402,19 @@ redescobertas do zero:
   usado em `features/code/CodeKeyboardBar.tsx` (iOS e Android, mesma lib). Confirmado ao vivo no
   simulador iOS: abre/fecha o teclado, a barra sobe/desce grudada, sem gap. Detalhe em
   [docs/20-ssh-mobile.md](docs/20-ssh-mobile.md). `tsc`/`vitest` (358) seguem limpos.
+- [x] **Backend aponta pro IP `187.77.250.138` + publicação EAS Update ficou consumível pelo
+  Expo Go** — pedido do usuário: trocar `API_BASE_URL` (`src/api/http.ts`) de `localhost:3333`
+  pro IP dado, mesma porta (era `localhost`, só funcionava no simulador rodando no mesmo Mac do
+  backend), e publicar um update no EAS pra testar pelo Expo Go. Publicar como já era feito
+  (canal/branch `hml`, `--platform ios`/`--platform android` separados, ver Etapa R6.1) saiu com
+  `runtimeVersion: "1.0.0"` (política `appVersion`) — confirmei batendo direto no manifesto
+  (`curl -H "expo-runtime-version: exposdk:54.0.0"`) que isso dá 404: o Expo Go só pede update
+  pro runtime do seu próprio SDK (`exposdk:54.0.0`), nunca por versão de app. Como o projeto
+  ainda roda inteiro dentro do que o Expo Go já embarca nativamente (nenhum build/dev client
+  customizado existe), troquei `app.json#runtimeVersion.policy` pra `"sdkVersion"` e publiquei
+  de novo — manifesto passou a responder `200` pro Expo Go. **Isso deixa de ser válido no dia em
+  que entrar código nativo fora do Expo Go** (ponto natural pro primeiro `eas build`/dev client),
+  quando a política precisa voltar pra `appVersion`/`fingerprint`. Detalhe registrado em
+  [docs/02-setup-e-estrutura.md](docs/02-setup-e-estrutura.md). Verificação: `tsc --noEmit`
+  (mesma exceção pré-existente do Rabisco, não relacionada), publicação real confirmada pelos
+  IDs de update e pelo `curl` batendo `200` no manifesto.

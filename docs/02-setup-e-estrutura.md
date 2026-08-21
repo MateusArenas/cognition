@@ -174,12 +174,30 @@ quebra em `expo-sqlite/web/worker.ts` (`Unable to resolve module ./wa-sqlite/wa-
 o app nunca teve alvo web de verdade. Contornado publicando `android` e `ios` em comandos
 separados; publicações futuras devem fazer o mesmo até esse bug (se importar) ser investigado.
 
-**Ainda pendente:** o gate continua sem efeito real fora do Expo Go até existir pelo menos um
-build instalado com `expo-updates` embutido, configurado pra escutar o canal `hml` (ou outro) —
-`eas build:configure` (gera `eas.json` com os profiles, incluindo o campo `channel`) não rodou
-ainda, é o passo antes do primeiro `eas build`. Só builds fora do Expo Go recebem OTA de
-verdade; iOS exige conta Apple Developer paga, Android não. Até lá o gate é um no-op seguro
-(cai no `catch` e libera a tela normalmente).
+**Ainda pendente:** o gate (`UpdateGate.tsx`, a checagem via API `expo-updates` DENTRO do app já
+instalado) continua sem efeito real fora do Expo Go até existir pelo menos um build instalado com
+`expo-updates` embutido, configurado pra escutar o canal `hml` (ou outro) — `eas build:configure`
+(gera `eas.json` com os profiles, incluindo o campo `channel`) não rodou ainda, é o passo antes do
+primeiro `eas build`. Só builds fora do Expo Go recebem OTA de verdade por esse caminho; iOS exige
+conta Apple Developer paga, Android não. Até lá o gate é um no-op seguro (cai no `catch` e libera
+a tela normalmente).
+
+**`runtimeVersion.policy` trocado de `"appVersion"` pra `"sdkVersion"`.** A primeira publicação
+(`eas update --branch hml`) saiu com `runtimeVersion: "1.0.0"` (política `appVersion`) —
+funcionaria só num build customizado futuro que declarasse essa mesma versão, e **nunca** seria
+alcançável abrindo o link/QR da branch direto pelo Expo Go, porque o Expo Go sempre pede
+atualização pro runtime `exposdk:54.0.0` (o SDK que ele roda), nunca pra `"1.0.0"` — confirmado
+batendo direto no manifesto (`curl -H "expo-runtime-version: exposdk:54.0.0" ...` devolvia 404
+"no available update"). Como o projeto ainda roda 100% dentro do conjunto de módulos nativos que
+o próprio Expo Go já embarca (nenhum prebuild/dev client customizado existe), a política virou
+`"sdkVersion"`: `eas update` passa a publicar com `runtimeVersion: "exposdk:54.0.0"`, que o Expo
+Go reconhece e carrega direto (abrindo `exp://u.expo.dev/<projectId>?channel-name=hml`, ou o QR
+equivalente do dashboard) — **sem precisar do `expo start` rodando**. Confirmado com o mesmo
+`curl` retornando `200` e um manifesto válido depois da troca. **Isso deixa de valer no dia em
+que o projeto ganhar código nativo fora do que o Expo Go já tem** (a própria etapa que motivaria o
+primeiro `eas build`/dev client) — nesse momento a política volta a precisar ser `appVersion` (ou
+`fingerprint`), e essa mudança deve ser feita junto com a criação do primeiro build custom, não
+antes.
 
 ## Estado atual (ver CHECKLIST.md para detalhe)
 
