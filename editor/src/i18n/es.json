@@ -3,10 +3,15 @@
   "common": {
     "cancel": "Cancelar", "delete": "Eliminar", "add": "Agregar", "ok": "OK", "backToLibrary": "‹ Biblioteca",
     "undo": "Deshacer", "redo": "Rehacer", "duplicate": "Duplicar", "edit": "Editar", "copy": "Copiar", "copied": "Copiado",
-    "close": "Cerrar", "share": "Compartir", "export": "Exportar", "ai": "IA", "color": "Color", "zoomIn": "Acercar", "zoomOut": "Alejar", "cancelSelection": "Cancelar selección", "closePanel": "Cerrar panel", "save": "Guardar"
+    "close": "Cerrar", "share": "Compartir", "export": "Exportar", "ai": "IA", "color": "Color", "zoomIn": "Acercar", "zoomOut": "Alejar", "cancelSelection": "Cancelar selección", "closePanel": "Cerrar panel", "save": "Guardar", "showPassword": "Mostrar contraseña", "hidePassword": "Ocultar contraseña"
   },
   "settings": {
     "title": "Ajustes",
+    "account": "Cuenta",
+    "switchAccount": "Cambiar de cuenta",
+    "switchAccountError": "No se pudo entrar a esa cuenta. Intenta de nuevo desde el login.",
+    "logout": "Cerrar sesión",
+    "logoutConfirmTitle": "¿Cerrar sesión de esta cuenta?",
     "appearance": "Apariencia",
     "language": "Idioma",
     "theme": "Tema",

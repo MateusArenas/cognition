@@ -194,7 +194,7 @@ export function ConnectionFormScreen() {
                     value={fieldValue(f)}
                     onChangeText={(v) => setFieldValue(f, v)}
                     placeholder={f.placeholder}
-                    secureTextEntry={f.type === 'password'}
+                    secureToggle={f.type === 'password'}
                     keyboardType={f.type === 'number' ? 'number-pad' : 'default'}
                     autoCapitalize="none"
                   />

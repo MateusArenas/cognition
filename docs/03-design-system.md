@@ -104,6 +104,14 @@ lib). Confirmado ao vivo no simulador, antes/depois: sem a correção, o sheet f
 snap de 45% e o teclado cobria o campo por completo; com ela, o sheet expande sozinho e o campo
 focado fica visível acima do teclado (o quanto expande, ver o refinamento logo abaixo).
 
+**`Field` ganhou o prop `secureToggle`** (pedido do usuário: "quero que o input de senha tenha
+o olhinho do lado e ao apertar aparece a senha") — em vez de `secureTextEntry` fixo, todo campo
+de senha do app (login, criar conta, redefinir senha, senha de conexão de banco) usa
+`secureToggle`, que renderiza um ícone de olho (`eye`/`eyeOff`, ver `design/Icon.tsx`) dentro do
+próprio campo, à direita, alternando a visibilidade em estado interno (começa oculto). Chaves
+`common.showPassword`/`common.hidePassword` nos 3 catálogos de i18n (rótulo de acessibilidade
+do botão).
+
 **Refinamento pedido pelo usuário: o sheet só devia crescer até quase 100% se o conteúdo
 justificasse — e, quando crescesse tanto, tinha que respeitar a safe area do status bar.** A
 primeira versão do fix acima usava `snapPoints={['45%', '92%']}` fixos, e o algoritmo do

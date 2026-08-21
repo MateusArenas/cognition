@@ -1035,6 +1035,15 @@ antes de reaplicá-la.
     nascem com `baseURL` fixado, nada mais lido do estado a cada requisição). `useSettings.ts`
     perdeu `dbApiBaseUrl`/`setDbApiBaseUrl` inteiramente — só guarda idioma/tema agora. `tsc
     --noEmit` limpo, 226 testes `vitest` verdes.
+  - **Ajuste seguinte, pedido do usuário**: "olhinho" nos campos de senha — `Field` (design
+    system) ganhou o prop `secureToggle`, que troca `secureTextEntry` fixo por um ícone
+    `eye`/`eyeOff` dentro do campo alternando visibilidade (estado interno, começa oculto).
+    Aplicado nos 3 campos de senha do fluxo de auth (Login, Criar conta, Redefinir senha) e no
+    campo de senha de conexão de banco (`ConnectionFormScreen`, via `FormField`, que só repassa
+    props pro `Field`). Chaves `common.showPassword`/`hidePassword` novas nos 3 catálogos i18n
+    (rótulo de acessibilidade do botão). Ver [docs/03-design-system.md](docs/03-design-system.md).
+    `tsc --noEmit` limpo (só o erro pré-existente de `@types/react` duplicado em `Canvas.tsx`,
+    já documentado, sem relação com esta mudança), 226 testes `vitest` verdes.
 
 ---
 

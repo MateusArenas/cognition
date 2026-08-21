@@ -3,10 +3,15 @@
   "common": {
     "cancel": "Cancel", "delete": "Delete", "add": "Add", "ok": "OK", "backToLibrary": "‹ Library",
     "undo": "Undo", "redo": "Redo", "duplicate": "Duplicate", "edit": "Edit", "copy": "Copy", "copied": "Copied",
-    "close": "Close", "share": "Share", "export": "Export", "ai": "AI", "color": "Color", "zoomIn": "Zoom in", "zoomOut": "Zoom out", "cancelSelection": "Cancel selection", "closePanel": "Close panel", "save": "Save"
+    "close": "Close", "share": "Share", "export": "Export", "ai": "AI", "color": "Color", "zoomIn": "Zoom in", "zoomOut": "Zoom out", "cancelSelection": "Cancel selection", "closePanel": "Close panel", "save": "Save", "showPassword": "Show password", "hidePassword": "Hide password"
   },
   "settings": {
     "title": "Settings",
+    "account": "Account",
+    "switchAccount": "Switch account",
+    "switchAccountError": "Couldn't sign in to that account. Try again from the login screen.",
+    "logout": "Log out",
+    "logoutConfirmTitle": "Log out of this account?",
     "appearance": "Appearance",
     "language": "Language",
     "theme": "Theme",

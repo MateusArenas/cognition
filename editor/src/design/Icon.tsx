@@ -61,6 +61,8 @@ import {
   FileText,
   Database,
   Play,
+  Eye,
+  EyeOff,
 } from 'lucide-react-native';
 import { useTheme } from './useTheme';
 
@@ -134,6 +136,8 @@ const ICONS = {
   document: FileText,
   database: Database,
   play: Play,
+  eye: Eye,
+  eyeOff: EyeOff,
 } as const;
 
 export type IconName = keyof typeof ICONS;
