@@ -1418,3 +1418,24 @@ redescobertas do zero:
   [docs/02-setup-e-estrutura.md](docs/02-setup-e-estrutura.md). Verificação: `tsc --noEmit`
   (mesma exceção pré-existente do Rabisco, não relacionada), publicação real confirmada pelos
   IDs de update e pelo `curl` batendo `200` no manifesto.
+- [x] **URL do backend por `.env` (dev/hml/production), sem fallback hardcoded** — pedido do
+  usuário: parar de hardcodar `API_BASE_URL` em `src/api/http.ts`, ler de um `.env` por
+  ambiente (`.env.development` → `localhost:3333`, `.env.hml` → `187.77.250.138:3333`,
+  `.env.production` → **de propósito vazio**, backend ainda não existe), `expo start` local
+  puxando `.env.development` sozinho, publicação em `hml`/`production` puxando o `.env`
+  correspondente, e se a URL não estiver definida no ambiente que gerou o bundle, alertar em vez
+  de cair num valor errado por acidente. `http.ts` passou a ler
+  `process.env.EXPO_PUBLIC_API_URL` e dispara `Alert.alert('Configuração ausente', ...)` +
+  `console.error` no boot se estiver vazia — sem fallback silencioso. **Achado real no
+  processo**: `eas update`/`expo export` força `NODE_ENV` pra `'production'` sempre que não é
+  `--dev` (lido direto do código do CLI instalado) e não deixa sobrepor — então o mecanismo
+  automático `.env.$NODE_ENV` do Expo nunca diferencia `hml` de `production`, os dois caem no
+  mesmo `.env.production`. Contornado com `editor/scripts/eas-update.mjs`: lê o `.env.<nome>`
+  manualmente e pré-popula o `process.env` do processo que chama `eas update` — `@expo/env` não
+  sobrescreve variável já definida (documentado no próprio pacote), então o valor pré-populado
+  vence. `npm run update:hml`/`npm run update:production` (novos) publicam `ios`+`android` já
+  com esse mecanismo. Verificado com `expo export` direto e `grep` no bundle exportado pros três
+  casos (dev, override manual simulando hml, `--dev`) antes de publicar de verdade — republiquei
+  `hml` com o mecanismo novo, confirmado que a URL certa chegou no bundle. Detalhe completo em
+  [docs/02-setup-e-estrutura.md](docs/02-setup-e-estrutura.md). `tsc --noEmit` limpo (mesma
+  exceção do Rabisco).

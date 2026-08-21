@@ -199,6 +199,44 @@ primeiro `eas build`/dev client) — nesse momento a política volta a precisar 
 `fingerprint`), e essa mudança deve ser feita junto com a criação do primeiro build custom, não
 antes.
 
+**URL do backend por ambiente — três `.env.*` em `editor/`, nunca hardcoded no código.**
+`src/api/http.ts` lê `process.env.EXPO_PUBLIC_API_URL` (prefixo `EXPO_PUBLIC_` é o que o Metro
+sabe inlinar no bundle, convenção do próprio Expo) e monta `API_BASE_URL` a partir dela; **não
+existe mais um valor hardcoded de fallback** — se a variável não estiver definida no ambiente que
+gerou o bundle, o app dispara `Alert.alert('Configuração ausente', ...)` assim que o módulo
+carrega (e loga no Metro/console), em vez de silenciosamente apontar pro backend errado.
+
+- `.env.development` → `http://localhost:3333` — só funciona no simulador rodando no mesmo Mac
+  que o backend.
+- `.env.hml` → `http://187.77.250.138:3333` — IP real, alcançável por um device de verdade rodando
+  Expo Go.
+- `.env.production` → **de propósito sem `EXPO_PUBLIC_API_URL`** ainda (nem o backend de produção
+  existe); publicar usando este ambiente antes de preencher a variável é esperado disparar o
+  alerta — é o comportamento correto, não um bug.
+
+**`expo start` usa `.env.development` de graça** (NODE_ENV=development é o padrão do CLI nesse
+caso, e o Expo já sabe carregar `.env.$NODE_ENV` sozinho) — nenhum script extra precisou mudar.
+
+**`eas update`/`expo export`, por outro lado, NÃO dá pra guiar só com NODE_ENV.** Achado real
+lendo o código do CLI instalado (`node_modules/@expo/cli/build/src/export/exportApp.js`): o
+comando **força** `NODE_ENV` pra `'development'` (com `--dev`) ou `'production'` (sempre que não
+tem `--dev`) e "não permite sobrepor" — ou seja, tanto publicar em `hml` quanto em `production`
+cai no MESMO `NODE_ENV=production`, e o mecanismo automático de `.env.$NODE_ENV` do Expo nunca
+consegue diferenciar os dois. `editor/scripts/eas-update.mjs` existe só por causa disso: lê o
+`.env.<nome>` pedido manualmente e pré-popula essas variáveis no `process.env` do processo que
+chama `eas update` — `@expo/env` (o carregador de `.env` do próprio Expo) documenta explicitamente
+que não sobrescreve uma variável já definida no ambiente, então o valor pré-populado aqui vence
+sobre o que `.env.production` traria por padrão. Confirmado batendo em `expo export` direto
+(`--no-minify --no-bytecode`) e conferindo com `grep` que a URL certa aparece no bundle exportado,
+nos três casos (`expo start`/dev, override manual simulando hml, `--dev` simulando o caminho de
+desenvolvimento).
+
+Scripts em `package.json`: `npm run update:hml` (`node scripts/eas-update.mjs hml hml`) e
+`npm run update:production` (idem, canal/branch `production` — **ainda não existe no EAS**,
+precisa de `eas channel:create production` primeiro, o mesmo passo que criou `hml`). Os dois
+rodam `runtime`/`ssh-terminal` antes (mesmo pré-requisito de sempre) e publicam pra `ios`+
+`android` separados (mesmo motivo do bug de bundling pra `web` já documentado acima).
+
 ## Estado atual (ver CHECKLIST.md para detalhe)
 
 `domain/` está implementado (Etapa 1). Todo o resto existe como arquivo stub com um

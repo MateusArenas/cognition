@@ -1,4 +1,5 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios';
+import { Alert } from 'react-native';
 import { useAuthStore } from '@/store/useAuthStore';
 
 // Instância única do app inteiro (não mais só "do cliente de banco" — a autenticação passou a
@@ -14,8 +15,20 @@ export interface ApiErrorBody {
 }
 
 // Endereço fixo do backend — não é mais configurável pelo usuário (tirado da tela de Login a
-// pedido explícito: um único backend, sem precisar digitar/lembrar endereço nenhum).
-export const API_BASE_URL = 'http://187.77.250.138:3333/api/v1';
+// pedido explícito: um único backend, sem precisar digitar/lembrar endereço nenhum). Vem de
+// EXPO_PUBLIC_API_URL, inlinado pelo Metro a partir do .env do ambiente certo (.env.development
+// local, .env.hml/.env.production ao publicar — ver docs/02-setup-e-estrutura.md e os scripts
+// "update:hml"/"update:production" em package.json). Sem alternativa hardcoded aqui de propósito
+// — um ambiente sem `.env` configurado tem que quebrar visivelmente, não apontar por acidente
+// pro backend de outro ambiente.
+const envApiUrl = process.env.EXPO_PUBLIC_API_URL;
+if (!envApiUrl) {
+  const msg = 'EXPO_PUBLIC_API_URL não definida para este ambiente — falta o .env correspondente (ver docs/02-setup-e-estrutura.md). O app não vai conseguir falar com o backend.';
+  console.error('[http]', msg);
+  Alert.alert('Configuração ausente', msg);
+}
+
+export const API_BASE_URL = `${envApiUrl ?? ''}/api/v1`;
 
 export const http = axios.create({ baseURL: API_BASE_URL, timeout: 30000 });
 
