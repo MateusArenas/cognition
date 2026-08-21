@@ -185,5 +185,27 @@ perfeitamente parado, "Mais" abrindo o menu da tabela com os switches refletindo
 do documento (cabeçalho ligado, quebra de texto desligada), "Exportar CSV…" mostrando o seletor
 de separador e a prévia calculada corretamente.
 
+## Bug real achado depois, ao vivo: grade vazando por baixo da Toolbar
+
+Usuário reportou que os botões da barra inferior (Desfazer/Refazer/Linha/Coluna/Ordenar)
+apareciam "por cima" da grade, sobrepondo a última linha visível — "parece bugado". Confirmado
+com screenshot: dava pra ver linhas de coluna da grade continuando visualmente dentro da área
+da Toolbar. Causa raiz: `flex: 1` sozinho não propaga uma altura confiável através de um
+`ScrollView` HORIZONTAL contendo uma `FlashList` VERTICAL por dentro — a `FlashList` não tinha
+teto real nenhum, só uma suposição de flex que o `ScrollView` no meio do caminho não repassava
+direito, deixando o conteúdo desenhar além da área que a `Toolbar` (um filho flex normal, logo
+abaixo) reservava pra si.
+
+Corrigido em `Grid.tsx`: mede a altura real do container com `onLayout` e aplica como número
+fixo (`style={{ height }}`) no `Animated.ScrollView` e no `View` de conteúdo — trava um teto de
+verdade que a `FlashList` por dentro respeita, em vez de depender de flex propagando através da
+fronteira do `ScrollView`. Aproveitado o mesmo pedido pra dar uma cara mais "Apple/iPhone" na
+`Toolbar`: virou um painel de vidro fosco (`BlurView`, como o `.bottom{backdrop-filter:blur
+(20px)}` do protótipo já pedia) com cantos arredondados no topo e sombra sutil pra cima —
+continua um filho flex normal (não `position:absolute`), então a grade automaticamente ganha só
+o espaço que sobra, sem precisar de nenhuma medição/repasse de altura entre os dois
+componentes. **Confirmado ao vivo**: antes a linha 16 vazava atrás da barra; depois do fix, a
+grade para de desenhar limpa antes da linha 15, com corte visual correto acima do painel.
+
 `npx tsc --noEmit` limpo (só o erro pré-existente e não-relacionado de `Canvas.tsx`, já
 documentado) e `npx vitest run` verde.

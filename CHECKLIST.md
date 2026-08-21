@@ -1181,3 +1181,12 @@ redescobertas do zero:
     nunca usado antes neste código, funcionou de primeira), "Mais" abrindo o menu da tabela com
     os switches refletindo o estado real do documento, "Exportar CSV…" mostrando o seletor de
     separador e a prévia calculada.
+- [x] **Bug real no editor de Tabelas: grade vazando por baixo da Toolbar** — usuário reportou
+  com screenshot ("parece bugado... sobrepondo a visão"). Causa: `flex: 1` não propaga altura
+  confiável através de um `ScrollView` horizontal contendo `FlashList` vertical por dentro —
+  `Grid.tsx` agora mede a altura real com `onLayout` e trava um número fixo no `ScrollView`.
+  Aproveitado o pedido de "algo legal, estilo Apple/iPhone": `Toolbar.tsx` virou um painel de
+  vidro fosco (`BlurView`, cantos arredondados no topo, sombra sutil — o `.bottom{backdrop-
+  filter:blur(20px)}` que o protótipo `tabelas.html` já tinha e não tinha sido portado ainda).
+  Confirmado ao vivo: linha 15 agora é a última visível com corte limpo, sem vazamento nenhum.
+  Detalhe em [docs/19-tabelas-csv.md](docs/19-tabelas-csv.md). `tsc`/`vitest` (345) verdes.
