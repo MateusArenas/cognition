@@ -38,7 +38,12 @@ function GridRowImpl({ r, cells, colWidths, isHeaderRow, wrap, scrollX, sel, eva
           {
             width: GUTTER_W,
             height: wrap ? ROW_H_WRAP : ROW_H,
-            backgroundColor: gutterOn ? colors.blue : colors.surface2,
+            // `colors.bg` (preto de verdade no escuro), não `surface2` — precisa continuar
+            // OPACO (é o que faz o gutter "cobrir" as células passando por baixo dele durante o
+            // scroll horizontal, ver comentário do zIndex/elevation abaixo), mas casando com o
+            // fundo da célula vazia (agora transparente) em vez de destacar um bloco cinza à
+            // parte.
+            backgroundColor: gutterOn ? colors.blue : colors.bg,
             borderColor: colors.separator,
           },
           gutterStyle,

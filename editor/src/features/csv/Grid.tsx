@@ -95,7 +95,7 @@ export function Grid({ cells, colWidths, headerRow, wrap, sel, onPressCell, onLo
                 />
               )}
               ListFooterComponent={
-                <View style={[styles.addRow, { backgroundColor: colors.surface2, borderColor: colors.separator }]} onTouchEnd={onAddRow}>
+                <View style={[styles.addRow, { backgroundColor: colors.bg, borderColor: colors.separator }]} onTouchEnd={onAddRow}>
                   <View style={[styles.addRowGutter, { width: GUTTER_W }]} />
                 </View>
               }

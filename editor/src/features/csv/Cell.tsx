@@ -18,7 +18,13 @@ interface Props {
 
 function CellImpl({ text, width, isNum, isErr, isHeader, selected, inRange, wrap, onPress, onLongPress }: Props) {
   const { colors } = useTheme();
-  const bg = selected ? colors.blue + '33' : inRange ? colors.blue + '1A' : isHeader ? colors.green + '1F' : colors.surface;
+  // Célula vazia/sem seleção fica TRANSPARENTE — deixa o fundo (preto de verdade no escuro) do
+  // Grid aparecer, só as linhas divisórias (borderColor) marcam a grade. Preencher toda célula
+  // com `colors.surface` (cinza médio) cobria a tela inteira de um bloco cinza uniforme — nada
+  // parecido com o visual "linhas sobre fundo" que Numbers/planilhas da Apple usam; cor de
+  // preenchimento fica reservada só pros estados que realmente importam (selecionado, dentro do
+  // intervalo, cabeçalho), pedido do usuário depois de ver o resultado ao vivo.
+  const bg = selected ? colors.blue + '33' : inRange ? colors.blue + '1A' : isHeader ? colors.green + '1F' : 'transparent';
   return (
     <Pressable
       onPress={onPress}

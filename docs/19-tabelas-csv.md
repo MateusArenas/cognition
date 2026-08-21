@@ -207,5 +207,23 @@ o espaço que sobra, sem precisar de nenhuma medição/repasse de altura entre o
 componentes. **Confirmado ao vivo**: antes a linha 16 vazava atrás da barra; depois do fix, a
 grade para de desenhar limpa antes da linha 15, com corte visual correto acima do painel.
 
+## Ajuste seguinte, pedido do usuário: cor da grade estilo Apple, não "cinza claro"
+
+Usuário reportou que o cinza da grade "não ficou bom" no tema escuro, pedindo uma "pegada de
+cores estilo Apple". Causa: `Cell.tsx` preenchia TODA célula vazia com `colors.surface` (cinza
+médio, `#1C1C1E`) — como quase a tela inteira é grade, isso virava um bloco cinza uniforme
+cobrindo tudo, nada parecido com o visual "linhas de grade sobre fundo liso" que o Numbers (e o
+resto do design system deste app) usa. Corrigido: célula vazia/sem seleção vira `transparent`
+(deixa `colors.bg` — preto de verdade no escuro — do `Grid.tsx` aparecer, só as bordas
+hairline marcam a grade); cor de preenchimento fica reservada só pros estados que realmente
+comunicam algo (selecionada = azul translúcido, dentro do intervalo = azul mais fraco,
+cabeçalho = verde translúcido, igual já era). Cabeçalho de coluna e gutter (`HeaderRow.tsx`/
+`GridRow.tsx`) também trocaram `colors.surface2` por `colors.bg` — continuam OPACOS (precisam
+cobrir as células passando por baixo durante o scroll horizontal, ver seção da Toolbar acima),
+só que agora casam com o fundo em vez de destacar como um bloco cinza à parte; a letra/número
+sozinho (`labelSecondary`) já comunica "isto é cabeçalho", sem precisar de preenchimento cheio.
+Confirmado ao vivo: grade inteira em preto sólido, só linhas finas + cor nos estados que
+importam.
+
 `npx tsc --noEmit` limpo (só o erro pré-existente e não-relacionado de `Canvas.tsx`, já
 documentado) e `npx vitest run` verde.

@@ -1190,3 +1190,10 @@ redescobertas do zero:
   filter:blur(20px)}` que o protótipo `tabelas.html` já tinha e não tinha sido portado ainda).
   Confirmado ao vivo: linha 15 agora é a última visível com corte limpo, sem vazamento nenhum.
   Detalhe em [docs/19-tabelas-csv.md](docs/19-tabelas-csv.md). `tsc`/`vitest` (345) verdes.
+- [x] **Ajuste seguinte, pedido do usuário: cor da grade estilo Apple** — "cinza claro pra tema
+  escuro não ficou bom". `Cell.tsx` preenchia toda célula vazia com `colors.surface`, virando um
+  bloco cinza uniforme cobrindo a tela inteira. Trocado por `transparent` (mostra o preto de
+  verdade do `Grid.tsx` por trás, só as linhas hairline marcam a grade) — cor fica só pros
+  estados que importam (selecionada/intervalo/cabeçalho). `HeaderRow.tsx`/`GridRow.tsx` também
+  trocaram `surface2` por `colors.bg` (continuam opacos, só casam com o fundo). Confirmado ao
+  vivo. Detalhe em [docs/19-tabelas-csv.md](docs/19-tabelas-csv.md). `tsc`/`vitest` (345) verdes.

@@ -21,13 +21,19 @@ interface Props {
 // usuário rola pra baixo) mas dentro do ScrollView horizontal (rola junto com as colunas). Só o
 // canto (corner) recebe o mesmo translateX que o gutter de cada linha recebe (Row.tsx) — os
 // dois cancelam o scroll horizontal, ficando visualmente parados nos dois eixos.
+//
+// Fundo `colors.bg` (preto de verdade no escuro), não `surface2` — pedido do usuário depois de
+// ver ao vivo: um cinza médio uniforme cobrindo cabeçalho+gutter+células vazias não tinha nada
+// de "planilha estilo Apple" (Numbers usa linhas de grade sobre fundo liso, cor só nos estados
+// que importam). Continua OPACO onde precisa (canto/gutter cobrem células passando por baixo no
+// scroll) — só a letra/número em `labelSecondary` marca "isto é cabeçalho", não um bloco cheio.
 export function HeaderRow({ colWidths, scrollX, selectedCol, onPressCol, onLongPressCol, onResizeEnd, onAddCol }: Props) {
   const { colors } = useTheme();
   const cornerStyle = useAnimatedStyle(() => ({ transform: [{ translateX: scrollX.value }] }));
 
   return (
-    <View style={[styles.row, { backgroundColor: colors.surface2, borderBottomColor: colors.separator }]}>
-      <Animated.View style={[styles.corner, { width: GUTTER_W, backgroundColor: colors.surface2, borderColor: colors.separator }, cornerStyle]} />
+    <View style={[styles.row, { backgroundColor: colors.bg, borderBottomColor: colors.separator }]}>
+      <Animated.View style={[styles.corner, { width: GUTTER_W, backgroundColor: colors.bg, borderColor: colors.separator }, cornerStyle]} />
       {colWidths.map((w, c) => (
         <ColHeaderCell
           key={c}
@@ -39,7 +45,7 @@ export function HeaderRow({ colWidths, scrollX, selectedCol, onPressCol, onLongP
           onResizeEnd={(width) => onResizeEnd(c, width)}
         />
       ))}
-      <Pressable onPress={onAddCol} style={[styles.add, { backgroundColor: colors.surface2 }]} accessibilityRole="button">
+      <Pressable onPress={onAddCol} style={[styles.add, { backgroundColor: colors.bg }]} accessibilityRole="button">
         <Text style={{ color: colors.blue, fontSize: 19, fontWeight: '300' }}>+</Text>
       </Pressable>
     </View>
@@ -88,7 +94,7 @@ function ColHeaderCell({
     });
 
   return (
-    <Animated.View style={[styles.colCell, { backgroundColor: on ? colors.blue : colors.surface2, borderColor: colors.separator }, style]}>
+    <Animated.View style={[styles.colCell, { backgroundColor: on ? colors.blue : colors.bg, borderColor: colors.separator }, style]}>
       <Pressable style={styles.colCellPress} onPress={onPress} onLongPress={onLongPress}>
         <Text style={{ color: on ? '#fff' : colors.labelSecondary, fontSize: 12, fontWeight: '500' }}>{colName(c)}</Text>
       </Pressable>
