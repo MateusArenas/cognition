@@ -372,8 +372,10 @@ SEED_ADMIN_EMAIL=voce@exemplo.com SEED_ADMIN_PASSWORD=escolha-uma-senha npm run 
 npm run start:dev       # http://localhost:3333/api/v1, Swagger em /api/docs
 
 # 3. App — a tela de Login (fora das tabs, docs/18-autenticacao.md) já aponta pro backend.
-#    Endereço é fixo (`API_BASE_URL` em editor/src/api/http.ts, não mais configurável na tela) —
-#    troque essa constante pro IP da máquina na LAN (não localhost) se testar num celular físico.
+#    Endereço vem de EXPO_PUBLIC_API_URL, um .env por ambiente em editor/ (.env.development
+#    aponta pro localhost, só funciona no simulador rodando na mesma máquina do backend — ver
+#    docs/02-setup-e-estrutura.md §"URL do backend por ambiente"). Testando num celular físico,
+#    edite editor/.env.development pro IP da máquina na LAN.
 cd ../editor && npm run ios   # ou android/start
 ```
 
@@ -382,3 +384,39 @@ usuário — sem isso, ninguém consegue nem `POST /users`, porque essa rota já
 CASL de `create User`, que ninguém tem até existir um admin. Idempotente (pode rodar de novo
 sem duplicar); sem as variáveis de ambiente, usa `admin@exemplo.com` / `troque-esta-senha`
 (troque no primeiro login).
+
+## Deploy em VPS
+
+`backend/Dockerfile` (multi-stage: builda com devDependencies, roda com o `node_modules`
+completo copiado do estágio de build — de propósito, ver comentário no próprio Dockerfile:
+`prisma`/`ts-node` são devDependencies mas `prisma migrate deploy`/`npm run db:seed` precisam
+rodar dentro do container já em produção) + o serviço `backend` em `docker-compose.yml` (raiz do
+monorepo) são o caminho pra subir numa VPS de verdade — o `docker-compose.yml` de antes só tinha
+o Postgres.
+
+```bash
+# Na VPS, com Docker + Docker Compose instalados:
+git clone <repo> && cd cognition
+cp backend/.env.example backend/.env
+# Edite backend/.env: JWT_SECRET, JWT_REFRESH_SECRET, APP_SECRET (nunca os valores de exemplo
+# em produção), SEED_ADMIN_EMAIL/SEED_ADMIN_PASSWORD (senha forte, não o padrão), SMTP_* se
+# quiser e-mail de verdade pro fluxo de "esqueci minha senha". DATABASE_URL pode ficar como está
+# no .env.example — o serviço `backend` do compose SOBRESCREVE essa variável pra apontar pro
+# nome do serviço `db` (DNS interno do compose), não `localhost` (ver docker-compose.yml).
+
+docker compose up -d --build     # sobe Postgres + backend
+docker compose exec backend npx prisma migrate deploy   # cria as tabelas (idempotente)
+docker compose exec backend npm run db:seed             # cria o primeiro admin (idempotente)
+
+# Confirma: http://<ip-da-vps>:3333/api/docs (Swagger) deve responder.
+```
+
+Porta `3333` fica exposta publicamente pelo `ports: ['3333:3333']` do serviço — pra uma VPS de
+verdade exposta na internet (não só numa rede local/VPN), colocar um reverse proxy com HTTPS na
+frente (Caddy/nginx/Traefik) é recomendado mas **não é feito aqui** — fica de fora desta entrega
+por falta de domínio configurado no momento; documentado como pendência, não esquecido.
+
+Depois de confirmar o backend respondendo, aponte o app pra ele: `editor/.env.hml` (ou
+`.env.production`, dependendo do canal) leva `EXPO_PUBLIC_API_URL=http://<ip-da-vps>:3333` — ver
+docs/02-setup-e-estrutura.md §"URL do backend por ambiente" pra como isso chega no bundle
+publicado (`npm run update:hml`/`update:production` em `editor/`).

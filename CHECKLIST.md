@@ -1439,3 +1439,52 @@ redescobertas do zero:
   `hml` com o mecanismo novo, confirmado que a URL certa chegou no bundle. Detalhe completo em
   [docs/02-setup-e-estrutura.md](docs/02-setup-e-estrutura.md). `tsc --noEmit` limpo (mesma
   exceção do Rabisco).
+- [x] **Deploy do backend numa VPS + seed pronta pra produção** — pedido do usuário: confirmei
+  que `admin@exemplo.com` (`backend/prisma/seed.ts`) NÃO era criado automaticamente ao rodar o
+  backend (é `npm run db:seed`, comando à parte); ele pediu pra deixar isso pronto pra quando
+  subir numa VPS de verdade. `backend/Dockerfile` (já existia, nunca tinha sido usado por um
+  `docker-compose` de verdade) mudou o estágio de runtime pra reaproveitar o `node_modules`
+  COMPLETO do estágio de build (antes rodava `npm install --omit=dev` de novo, cortando
+  `prisma`/`ts-node` — devDependencies, mas necessárias pra rodar `prisma migrate deploy`/
+  `npm run db:seed` DENTRO do container já em produção via `docker compose exec`; nesta escala,
+  uma VPS/um serviço, manter as devDependencies na imagem é mais simples que um estágio à parte
+  só pra migração). `docker-compose.yml` (raiz, antes só tinha o Postgres) ganhou o serviço
+  `backend` (build a partir de `backend/`, `env_file: backend/.env`, `DATABASE_URL` sobrescrita
+  pra apontar pro nome do serviço `db` — dentro da rede do compose não é `localhost` —, porta
+  `3333` publicada, `depends_on: db` com `condition: service_healthy`). `backend/.env.example`
+  ganhou `SEED_ADMIN_EMAIL`/`SEED_ADMIN_PASSWORD` documentadas (a seed já suportava essas duas
+  variáveis, só não estavam no exemplo). `docs/17-db-client.md` ganhou a seção "Deploy em VPS"
+  com o roteiro completo (`git clone` → `.env` → `docker compose up -d --build` → `migrate
+  deploy` → `db:seed` → conferir `/api/docs`) e a nota de que reverse proxy/HTTPS fica de fora
+  desta entrega por falta de domínio configurado (pendência registrada, não esquecida); também
+  corrigi uma referência já desatualizada na seção "Como rodar" (`API_BASE_URL` hardcoded em
+  `http.ts` — mudou pra `.env`/`EXPO_PUBLIC_API_URL` na etapa anterior desta sessão, ver item
+  acima).
+
+  **Testado de ponta a ponta de verdade, não só lido** — rodei `docker compose up -d --build`
+  local (Postgres do próprio `docker-compose.yml`) e achei 4 bugs reais que o Dockerfile nunca
+  tinha exposto antes (comentário nele mesmo já avisava "nunca foi usado pra publicar de
+  verdade"), todos corrigidos:
+  1. `npm install` quebrava compilando `better-sqlite3` (binding nativo, usado nos testes e2e) —
+     `node:20-slim` não tem Python/compilador; `apt-get install python3 make g++` no estágio de
+     build resolveu.
+  2. `npx prisma generate` quebrava — `prisma.config.ts` lê `DATABASE_URL` via `env()` e falha
+     ao carregar o config (mesmo só pra gerar o client, sem abrir conexão nenhuma) se a variável
+     não existe; um `DATABASE_URL` placeholder só nesse passo do build resolveu.
+  3. `CMD`/`start:prod` apontavam pra `dist/src/main.js` — `nest build` (via `tsconfig.build.json`
+     com `rootDir: "src"`) gera `dist/main.js`, sem o `src/` no meio. Corrigido nos dois lugares
+     (`Dockerfile` e `package.json#start:prod` — o segundo nunca tinha sido testado também).
+  4. `npm run db:seed` (ts-node) quebrava com "Unknown file extension .ts" — `tsconfig.json`
+     não estava copiado pro estágio de runtime, então o ts-node não conseguia se registrar como
+     loader de `.ts`. Copiado junto.
+  Also achado (warning, não erro fatal, mas corrigido): Prisma avisando "failed to detect the
+  libssl/openssl version... Defaulting to openssl-1.1.x" — `openssl` também faltava na imagem
+  (`node:20-slim` não vem com ele); instalado nos dois estágios.
+
+  Depois dos 4 fixes: `docker compose up -d --build` subiu Postgres+backend limpo,
+  `docker compose exec backend npx prisma migrate deploy` e `docker compose exec backend npm run
+  db:seed` rodaram sem erro contra o Postgres real do compose (seed reportou
+  `admin@exemplo.com` já existente — idempotência confirmada), e `curl localhost:3333/api/docs`
+  respondeu `200`. Container de teste e imagem removidos depois. `tsc --noEmit` do backend
+  limpo. Isso é o roteiro EXATO que a seção "Deploy em VPS" pede pro usuário rodar — validado
+  aqui antes de mandar pra VPS de verdade, não só documentado de cabeça.
