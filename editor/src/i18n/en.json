@@ -1,7 +1,7 @@
 {
-  "tabs": { "library": "Library", "settings": "Settings", "dbclient": "Database" },
+  "tabs": { "library": "Library", "settings": "Settings", "dbclient": "Database", "ssh": "SSH" },
   "common": {
-    "cancel": "Cancel", "delete": "Delete", "add": "Add", "ok": "OK", "backToLibrary": "‹ Library",
+    "cancel": "Cancel", "delete": "Delete", "add": "Add", "ok": "OK", "backToLibrary": "‹ Library", "back": "Back",
     "undo": "Undo", "redo": "Redo", "duplicate": "Duplicate", "edit": "Edit", "copy": "Copy", "copied": "Copied",
     "close": "Close", "share": "Share", "export": "Export", "ai": "AI", "color": "Color", "zoomIn": "Zoom in", "zoomOut": "Zoom out", "cancelSelection": "Cancel selection", "closePanel": "Close panel", "save": "Save", "showPassword": "Show password", "hidePassword": "Hide password"
   },
@@ -221,5 +221,52 @@
     "erdLoadErrorTitle": "Couldn't load the diagram",
     "erdRenderErrorTitle": "Couldn't render the diagram",
     "queryTitle": "Query", "queryErrorTitle": "Query failed", "queryResult": "Result"
+  },
+  "ssh": {
+    "title": "SSH", "menu": "More", "connect": "Connect", "loadError": "Couldn't load hosts.", "connectError": "Couldn't connect.",
+    "emptyHosts": "No hosts yet. Tap + to create the first one.",
+    "newHost": "New host", "editHost": "Edit host", "edit": "Edit", "deleteHostTitle": "Delete this host?",
+    "hostKeyTitle": "Trust this host's key?", "trustHostKey": "Trust and connect",
+    "testConnection": "Test connection", "testOk": "Connected successfully.", "testFailed": "Couldn't connect.",
+    "authKey": "Key", "authPassword": "Password", "credentialNone": "None",
+    "fieldLabel": "Name", "fieldLabelPlaceholder": "My server",
+    "fieldAddress": "Address", "fieldPort": "Port", "fieldUsername": "Username",
+    "fieldAuthMethod": "Authentication", "fieldCredential": "Credential",
+    "fieldGroup": "Group", "fieldGroupPlaceholder": "Production", "fieldTags": "Tags",
+    "fieldColor": "Color", "fieldKeepalive": "Keep connection alive",
+    "fieldStartupCommand": "Command on connect", "fieldStartupCommandPlaceholder": "tmux new -A -s main",
+    "startupCommandHint": "Runs as soon as the shell opens. Never put a secret here.",
+    "fieldName": "Name", "fieldPassword": "Password",
+    "credentials": {
+      "title": "Credentials", "empty": "No credentials yet.",
+      "generate": "Generate Ed25519 key", "import": "Import key or password", "edit": "Edit credential",
+      "deleteTitle": "Delete this credential?", "noFingerprint": "no fingerprint",
+      "privateKey": "Private key", "passphrase": "Passphrase (optional)", "publicKey": "Public key (optional)",
+      "keepCurrent": "Leave blank to keep the current one"
+    },
+    "knownHosts": {
+      "title": "Trusted host keys", "empty": "No trusted keys yet.",
+      "hint": "Touch and hold to forget a key — the next connection to that host will ask for trust again.",
+      "forgetTitle": "Forget this key?", "forget": "Forget"
+    },
+    "snippets": {
+      "title": "Snippets", "empty": "No snippets yet.", "new": "New snippet",
+      "namePlaceholder": "Disk space", "command": "Command", "tag": "Tag (optional)",
+      "requireConfirm": "Ask for confirmation before running", "confirmTitle": "Run this command?",
+      "run": "Run", "deleteTitle": "Delete this snippet?"
+    },
+    "sessions": {
+      "title": "Sessions", "empty": "No active sessions.",
+      "hint": "Tap to reattach. Touch and hold to close.", "unknownHost": "Host removed",
+      "status": { "connecting": "Connecting…", "open": "Connected", "detached": "Backgrounded", "closed": "Closed", "error": "Error" }
+    },
+    "terminal": {
+      "title": "Terminal", "connecting": "Connecting…", "connected": "● Connected", "closed": "Closed", "error": "Error",
+      "appearance": "Appearance", "disconnect": "Disconnect", "fontSize": "Font size"
+    },
+    "themes": {
+      "nordesteEscuro": "Nordeste Dark", "dracula": "Dracula", "solarizadoEscuro": "Solarized Dark",
+      "oneDark": "One Dark", "padraoSistema": "System default"
+    }
   }
 }

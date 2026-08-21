@@ -1,7 +1,7 @@
 {
-  "tabs": { "library": "Biblioteca", "settings": "Ajustes", "dbclient": "Base de datos" },
+  "tabs": { "library": "Biblioteca", "settings": "Ajustes", "dbclient": "Base de datos", "ssh": "SSH" },
   "common": {
-    "cancel": "Cancelar", "delete": "Eliminar", "add": "Agregar", "ok": "OK", "backToLibrary": "‹ Biblioteca",
+    "cancel": "Cancelar", "delete": "Eliminar", "add": "Agregar", "ok": "OK", "backToLibrary": "‹ Biblioteca", "back": "Atrás",
     "undo": "Deshacer", "redo": "Rehacer", "duplicate": "Duplicar", "edit": "Editar", "copy": "Copiar", "copied": "Copiado",
     "close": "Cerrar", "share": "Compartir", "export": "Exportar", "ai": "IA", "color": "Color", "zoomIn": "Acercar", "zoomOut": "Alejar", "cancelSelection": "Cancelar selección", "closePanel": "Cerrar panel", "save": "Guardar", "showPassword": "Mostrar contraseña", "hidePassword": "Ocultar contraseña"
   },
@@ -221,5 +221,52 @@
     "erdLoadErrorTitle": "No se pudo cargar el diagrama",
     "erdRenderErrorTitle": "No se pudo dibujar el diagrama",
     "queryTitle": "Consulta", "queryErrorTitle": "Falló la consulta", "queryResult": "Resultado"
+  },
+  "ssh": {
+    "title": "SSH", "menu": "Más", "connect": "Entrar", "loadError": "No se pudieron cargar los hosts.", "connectError": "No se pudo conectar.",
+    "emptyHosts": "Aún no hay hosts. Toca + para crear el primero.",
+    "newHost": "Nuevo host", "editHost": "Editar host", "edit": "Editar", "deleteHostTitle": "¿Borrar este host?",
+    "hostKeyTitle": "¿Confiar en la clave de este host?", "trustHostKey": "Confiar y conectar",
+    "testConnection": "Probar conexión", "testOk": "Conectado con éxito.", "testFailed": "No se pudo conectar.",
+    "authKey": "Clave", "authPassword": "Contraseña", "credentialNone": "Ninguna",
+    "fieldLabel": "Nombre", "fieldLabelPlaceholder": "Mi servidor",
+    "fieldAddress": "Dirección", "fieldPort": "Puerto", "fieldUsername": "Usuario",
+    "fieldAuthMethod": "Autenticación", "fieldCredential": "Credencial",
+    "fieldGroup": "Grupo", "fieldGroupPlaceholder": "Producción", "fieldTags": "Etiquetas",
+    "fieldColor": "Color", "fieldKeepalive": "Mantener conexión activa",
+    "fieldStartupCommand": "Comando al conectar", "fieldStartupCommandPlaceholder": "tmux new -A -s principal",
+    "startupCommandHint": "Se ejecuta apenas abre la shell. Nunca pongas un secreto aquí.",
+    "fieldName": "Nombre", "fieldPassword": "Contraseña",
+    "credentials": {
+      "title": "Credenciales", "empty": "Aún no hay credenciales.",
+      "generate": "Generar clave Ed25519", "import": "Importar clave o contraseña", "edit": "Editar credencial",
+      "deleteTitle": "¿Borrar esta credencial?", "noFingerprint": "sin huella digital",
+      "privateKey": "Clave privada", "passphrase": "Frase secreta (opcional)", "publicKey": "Clave pública (opcional)",
+      "keepCurrent": "Deja en blanco para mantener la actual"
+    },
+    "knownHosts": {
+      "title": "Claves de host confiadas", "empty": "Aún no hay claves confiadas.",
+      "hint": "Mantén presionado para olvidar una clave — la próxima conexión con ese host pedirá confianza de nuevo.",
+      "forgetTitle": "¿Olvidar esta clave?", "forget": "Olvidar"
+    },
+    "snippets": {
+      "title": "Snippets", "empty": "Aún no hay snippets.", "new": "Nuevo snippet",
+      "namePlaceholder": "Espacio en disco", "command": "Comando", "tag": "Etiqueta (opcional)",
+      "requireConfirm": "Pedir confirmación antes de ejecutar", "confirmTitle": "¿Ejecutar este comando?",
+      "run": "Ejecutar", "deleteTitle": "¿Borrar este snippet?"
+    },
+    "sessions": {
+      "title": "Sesiones", "empty": "Ninguna sesión activa.",
+      "hint": "Toca para reanexar. Mantén presionado para cerrar.", "unknownHost": "Host eliminado",
+      "status": { "connecting": "Conectando…", "open": "Conectada", "detached": "En segundo plano", "closed": "Cerrada", "error": "Error" }
+    },
+    "terminal": {
+      "title": "Terminal", "connecting": "Conectando…", "connected": "● Conectado", "closed": "Cerrado", "error": "Error",
+      "appearance": "Apariencia", "disconnect": "Desconectar", "fontSize": "Tamaño de fuente"
+    },
+    "themes": {
+      "nordesteEscuro": "Nordeste oscuro", "dracula": "Dracula", "solarizadoEscuro": "Solarizado oscuro",
+      "oneDark": "One Dark", "padraoSistema": "Predeterminado del sistema"
+    }
   }
 }

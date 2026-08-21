@@ -6,10 +6,11 @@ import { Icon } from '@/design/Icon';
 import { useTheme } from '@/design/useTheme';
 import { useI18n } from '@/i18n/I18nProvider';
 
-// Três abas: Biblioteca (a "home" do app), Banco de Dados (cliente DBeaver-like, novo — ver
-// docs/17-db-client.md) e Ajustes. Galeria, diagrama e documento continuam empilhados fora
-// daqui (docs/02-setup-e-estrutura.md) — o Stack ao redor deste grupo já cobre a barra sozinho
-// ao empilhar por cima, sem configuração extra.
+// Quatro abas: Biblioteca (a "home" do app), Banco de Dados (cliente DBeaver-like — ver
+// docs/17-db-client.md), SSH (cliente de terminal remoto — ver docs/20-ssh-mobile.md) e
+// Ajustes. Galeria, diagrama e documento continuam empilhados fora daqui
+// (docs/02-setup-e-estrutura.md) — o Stack ao redor deste grupo já cobre a barra sozinho ao
+// empilhar por cima, sem configuração extra.
 export default function TabsLayout() {
   const { colors, scheme } = useTheme();
   const { t } = useI18n();
@@ -37,6 +38,10 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="dbclient"
         options={{ title: t('tabs.dbclient'), tabBarIcon: ({ color, size }) => <Icon name="database" size={size} color={color} /> }}
+      />
+      <Tabs.Screen
+        name="ssh"
+        options={{ title: t('tabs.ssh'), tabBarIcon: ({ color, size }) => <Icon name="terminal" size={size} color={color} /> }}
       />
       <Tabs.Screen
         name="settings"

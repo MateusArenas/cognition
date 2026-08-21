@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<style>
+  html, body, #t { margin: 0; padding: 0; height: 100%; background: transparent; overflow: hidden; }
+  .xterm-viewport::-webkit-scrollbar { width: 0; }
+  /*__XTERM_CSS__*/
+</style>
+</head>
+<body>
+<div id="t"></div>
+<script>/*__XTERM_JS__*/</script>
+<script>/*__ADDON_FIT_JS__*/</script>
+<script>
+  var term = new Terminal({
+    fontFamily: 'Menlo, "SF Mono", monospace',
+    fontSize: 13,
+    lineHeight: 1.25,
+    cursorBlink: true,
+    scrollback: 5000,
+    allowProposedApi: true,
+    theme: { background: 'transparent' },
+  });
+  var fit = new FitAddon.FitAddon();
+  term.loadAddon(fit);
+  term.open(document.getElementById('t'));
+  fit.fit();
+
+  function post(msg) { window.ReactNativeWebView.postMessage(JSON.stringify(msg)); }
+  function b64encode(s) { return btoa(String.fromCharCode.apply(null, new TextEncoder().encode(s))); }
+  function b64decode(b64) { return Uint8Array.from(atob(b64), function (c) { return c.charCodeAt(0); }); }
+
+  term.onData(function (d) { post({ t: 'input', b64: b64encode(d) }); });
+  term.onResize(function (e) { post({ t: 'resize', cols: e.cols, rows: e.rows }); });
+  term.onBell(function () { post({ t: 'bell' }); });
+
+  // RN -> WebView: sempre injectJavaScript chamando window.__handle diretamente (nunca
+  // postMessage/addEventListener('message') — mesma convenção do bridge.ts do canvas Mermaid,
+  // evita a diferença histórica de evento entre Android e iOS).
+  window.__handle = function (msg) {
+    if (msg.t === 'write') term.write(b64decode(msg.b64));
+    else if (msg.t === 'clear') term.clear();
+    else if (msg.t === 'fit') fit.fit();
+    else if (msg.t === 'fontSize') { term.options.fontSize = msg.size; fit.fit(); }
+    else if (msg.t === 'theme') { term.options.theme = msg.theme; }
+    else if (msg.t === 'focus') term.focus();
+  };
+
+  new ResizeObserver(function () { fit.fit(); }).observe(document.body);
+  post({ t: 'ready', cols: term.cols, rows: term.rows });
+</script>
+</body>
+</html>

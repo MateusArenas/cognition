@@ -45,3 +45,6 @@ example
 
 # gerado por scripts/build-runtime.mjs (npm run runtime) — ver docs/06-canvas.md
 src/features/diagram/canvas/runtime.html
+
+# gerado por scripts/build-ssh-terminal-html.mjs (npm run ssh-terminal) — ver docs/20-ssh-mobile.md
+src/features/ssh/terminal/terminal.html

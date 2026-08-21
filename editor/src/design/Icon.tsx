@@ -65,6 +65,7 @@ import {
   EyeOff,
   ArrowUpDown,
   Sigma,
+  Terminal,
 } from 'lucide-react-native';
 import { useTheme } from './useTheme';
 
@@ -142,6 +143,7 @@ const ICONS = {
   eyeOff: EyeOff,
   sort: ArrowUpDown,
   function: Sigma,
+  terminal: Terminal,
 } as const;
 
 export type IconName = keyof typeof ICONS;

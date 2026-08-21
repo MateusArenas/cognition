@@ -71,6 +71,12 @@ function AppChrome() {
           <Stack.Screen name="db/connection" />
           <Stack.Screen name="db/[id]/index" />
           <Stack.Screen name="db/[id]/[table]" />
+          <Stack.Screen name="ssh/host" />
+          <Stack.Screen name="ssh/credentials" />
+          <Stack.Screen name="ssh/snippets" />
+          <Stack.Screen name="ssh/known-hosts" />
+          <Stack.Screen name="ssh/sessions" />
+          <Stack.Screen name="ssh/terminal/[sessionId]" />
         </Stack.Protected>
         <Stack.Protected guard={status !== 'authenticated'}>
           <Stack.Screen name="(auth)" />
