@@ -21,7 +21,9 @@ Além desses seis (que são todos variantes de `Doc`, vivem na Biblioteca), o ap
 **segunda tab**, separada dos documentos: um cliente de banco de dados estilo DBeaver/TablePlus
 — conecta em bancos de verdade, explora tabelas, edita linhas, desenha o ERD. Não é um tipo de
 arquivo, é um produto irmão dentro do mesmo app, com backend próprio (`backend/`, NestJS) — ver
-[17-db-client.md](17-db-client.md).
+[17-db-client.md](17-db-client.md). Uma **terceira tab**, mesmo estatuto, é um cliente de
+terminal SSH — conecta em servidores de verdade, o backend fala SSH via `ssh2`, o app é só
+teclado e tela — ver [20-ssh-mobile.md](20-ssh-mobile.md).
 
 ## As três promessas que definem o produto
 

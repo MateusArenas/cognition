@@ -1206,3 +1206,154 @@ redescobertas do zero:
   estados que importam (selecionada/intervalo/cabeçalho). `HeaderRow.tsx`/`GridRow.tsx` também
   trocaram `surface2` por `colors.bg` (continuam opacos, só casam com o fundo). Confirmado ao
   vivo. Detalhe em [docs/19-tabelas-csv.md](docs/19-tabelas-csv.md). `tsc`/`vitest` (345) verdes.
+- [x] **Etapa SSH — cliente de terminal remoto, 3ª tab** — pedido do usuário: "uma tab nova...
+  que é a parte de conectar via ssh em um servidor", usando `SSH-MOBILE.md` (spec técnica) e
+  `ssh_mobile_prototipo.html` (protótipo navegável) como guia — as duas descrevem um SaaS
+  multiusuário completo (organizações, cofres compartilhados, MFA, senha-mestra em 3 camadas,
+  SFTP, encaminhamento de porta, agentes de LAN, gravação de sessão/auditoria — 5 fases, ~14-19
+  semanas no roadmap deles). **Decisão confirmada com o usuário**: construir só o essencial
+  (hosts/credenciais/terminal) agora, documentar o resto como roadmap tickável — detalhe completo
+  em [docs/20-ssh-mobile.md](docs/20-ssh-mobile.md), inclusive a seção "Roadmap — funcionalidades
+  futuras" com cada item pendente.
+  - **Backend** (`backend/src/ssh/`): 5 modelos Prisma novos (`SshHost`/`SshCredential`/
+    `SshKnownHost`/`SshSession`/`SshSnippet`, FK flat `ownerId`, sem organização — mesmo padrão de
+    `Connection`), migration escrita à mão (`prisma migrate dev` é bloqueado neste ambiente pra
+    um agente de IA). `common/crypto.util.ts` (AES-256-GCM) subiu de `connections/` pra ser
+    reusado pelas duas features. `ssh-manager.service.ts` espelha `knex-pool.service.ts` (Map em
+    memória por sessão + replay buffer 256 KB + detach com carência de 10 min). Gateway
+    `@WebSocketGateway({namespace:'/ssh'})` com `ssh2` de verdade, TOFU completo (desconhecida→
+    confia→conhecida; chave que muda é recusada). `Subject` novo `'SshHost'` no CASL.
+  - **Bug real achado por um teste de verdade, não mock**: a primeira versão de
+    `ssh-key.util.ts` gerava a chave Ed25519 em PKCS8 PEM (`node:crypto` nativo) — um servidor
+    `ssh2.Server` real em processo (`ssh-manager.service.spec.ts`) travou com "Cannot parse
+    privateKey: Unsupported key format". `ssh2` só entende PEM tradicional (sem Ed25519) ou o
+    formato binário `openssh-key-v1` — reescrito à mão (struct do `PROTOCOL.key` do OpenSSH:
+    magic + cifra "none" + chave pública wire + bloco privado com checkint duplicado + padding).
+    Sem esse teste real, toda chave gerada pelo app seria rejeitada por qualquer servidor SSH de
+    verdade em produção.
+  - **Testes de backend, de ponta a ponta, sem Docker**: `test/ssh-test-server.ts` sobe um
+    `ssh2.Server` real em `127.0.0.1:<porta aleatória>` (mesmo espírito de
+    `test/sample-target-db.ts`) — usado tanto no unit (`ssh-manager.service.spec.ts`) quanto no
+    e2e (`test/ssh.e2e-spec.ts`, REST completo + gateway via `socket.io-client` real: TOFU, abrir
+    sessão, digitar e receber eco, fechar, reconectar sem TOFU de novo, token inválido recusado).
+    64 testes unitários + 64 e2e no backend, todos verdes (eram 51+50).
+  - **Frontend** (`editor/src/features/ssh/`): tab nova (`app/(tabs)/ssh.tsx`, ícone `terminal`),
+    telas de hosts/credenciais/snippets/chaves confiadas/sessões, terminal via WebView+xterm.js
+    (`scripts/build-ssh-terminal-html.mjs`/`npm run ssh-terminal`, mesma técnica de
+    `build-runtime.mjs` — xterm.js+addon-fit embutidos no HTML, funciona offline, sem CDN).
+    `KeyBar.tsx` (esc/ctrl/tab/setas com repetição/`^C^D^L^R`/snippets), `themes.ts` (5 paletas
+    portadas do protótipo). Serviço de socket.io **genérico** (`editor/src/services/socket.ts`,
+    pedido explícito do usuário pra reusar em features futuras, não só SSH) — `auth` como função
+    (reavaliada a cada reconexão), reusa o mesmo `refreshTokensFor()` do axios.
+  - **Corrida real evitada por design, antes de acontecer**: `openSession()`
+    (`socket/sshSocket.ts`) só resolve com a sessão DE VERDADE aberta — os listeners de
+    `hostkey:unknown`/`status` são registrados ANTES de emitir `session:open`, e o alerta de TOFU
+    é mostrado ainda em `ConnectionsScreen`, não na tela do terminal. Sem isso, navegar assim que
+    o ack chegasse arriscaria perder um evento que já tivesse disparado antes de `TerminalScreen`
+    montar e assinar os listeners.
+  - **Testes de frontend**: `base64.test.ts` (encoder à mão pra `btoa` não-garantido no Hermes,
+    usado pela KeyBar), `themes.test.ts` (as 21 chaves do `ITheme` do xterm.js, cores hex
+    válidas). 354 testes `vitest` verdes (eram 345). `tsc --noEmit` limpo (só o erro pré-existente
+    de `Canvas.tsx`, já documentado).
+  - Nada commitado nesta rodada — pedido explícito do usuário, ele testa e pede o commit depois.
+- [x] **Bug real achado pelo usuário testando ao vivo: criar host quebrava contra o Postgres de
+  verdade** — usuário tentou criar um host pelo app e bateu em `Invalid input value: malformed
+  array literal: "[]"`. Causa: `SshHost.tags` virou `Json` no `schema.prisma` (SQLite, usado nos
+  testes automatizados, não suporta lista escalar nativa), mas a migration do Postgres escrita à
+  mão ficou com `"tags" TEXT[]` (array nativo) — nunca tinha sido de fato aplicada contra um
+  Postgres real durante a implementação, só validada por leitura. 64+64 testes de backend contra
+  SQLite não pegam esse tipo de divergência de DDL — só apareceu contra Postgres de verdade.
+  Corrigido com uma migration nova (`20260821135000_ssh_host_tags_jsonb`, nunca se edita uma já
+  aplicada) via `prisma migrate deploy` (funciona neste ambiente; só `migrate dev`/`db push` são
+  bloqueados pra um agente de IA) contra o Postgres real do `docker-compose.yml`. Confirmado de
+  ponta a ponta: backend recompilado e reiniciado, `POST /ssh/hosts` via `curl` (HTTP 201, `tags`
+  voltando certo), e pelo próprio app no simulador — o host "VPS" que o usuário tentou criar
+  salvou (screenshot confirmando a lista com o host, tab bar Library/Database/SSH/Settings).
+  Detalhe completo em
+  [docs/20-ssh-mobile.md](docs/20-ssh-mobile.md#bug-real-achado-pelo-usuário-ao-vivo-tags-quebrava-criar-host-contra-o-postgres-de-verdade).
+- [x] **Ajuste de UX pedido pelo usuário: tocar num host abre folha de ações (Entrar/Editar/
+  Apagar)** — antes, tocar conectava direto e segurar apagava; sem jeito de editar um host já
+  criado. `ConnectionsScreen.tsx`: toque agora abre um `Sheet`+`GroupedList` com "Entrar" (mesmo
+  fluxo de `openSession()` de antes), "Editar" (navega pra `/ssh/host?id=`, tela que já existia
+  mas não tinha como chegar nela) e "Apagar" (ícone de lixeira vermelho, mesmo padrão de
+  `csv/Menus.tsx` — `left={<Icon name="trash" color="#D70015"/>}`, não texto vermelho). Chave
+  `ssh.connect` nova nos 3 catálogos. Confirmado ao vivo no simulador: tocar no host "VPS" abre a
+  folha com os 3 itens, "Editar" abre o formulário pré-preenchido com os dados reais do host,
+  Cancelar volta sem alterar nada. `tsc`/`vitest` (354) verdes.
+- [x] **Pedido do usuário: editar credencial também** — só existia gerar/importar/apagar,
+  sem jeito de corrigir nome ou trocar a senha/chave de uma credencial já salva. Backend novo:
+  `PATCH /ssh/credentials/:id` + `CredentialsService.update()` — `kind` nunca muda; segredo só é
+  recifrado se vier preenchido (em branco = mantém o atual, mesmo princípio de troca de senha);
+  colar uma chave privada nova reseta a passphrase antiga (não se aplica a outro arquivo) a menos
+  que uma nova venha junto. `credentials.service.spec.ts` novo (7 testes, cada combinação:
+  renomear sozinho preserva segredo, só passphrase preserva a chave, chave nova reseta
+  passphrase, chave+passphrase juntas aplicam as duas, chave pública recalcula fingerprint, senha
+  vazia não muda nada). `test/ssh.e2e-spec.ts` ganhou 2 testes que trocam a senha de verdade e
+  confirmam com `POST /ssh/hosts/:id/test` contra o servidor SSH real — senha errada falha,
+  senha certa depois volta a autenticar. Frontend: `CredentialsScreen.tsx` ganhou o mesmo padrão
+  de folha de ações do host (Editar/Apagar); "Editar" reusa a folha de Importar com o segredo em
+  branco (placeholder `ssh.credentials.keepCurrent` avisa) e sem o seletor de tipo (fixo).
+  Confirmado ao vivo no simulador: tocar credencial → folha → Editar → formulário com nome
+  pré-preenchido e placeholder certo no campo de senha → Save volta pra lista sem erro. 71
+  unitários + 66 e2e no backend, 354 `vitest` no editor, `tsc` limpo.
+- [x] **Investigação pedida pelo usuário: "quando começo a digitar [no terminal] o Expo fecha
+  sozinho e faz reload"** — conectei de verdade num host real do usuário (VPS), digitei via
+  KeyBar (tab/`|`/`~`), naveguei o menu, desconectei — sessão inteira de ponta a ponta sem
+  nenhum crash, nenhum erro no Metro, nenhum relatório de crash no simulador
+  (`~/Library/Logs/DiagnosticReports`). Não consegui reproduzir o teclado NATIVO do iOS abrindo
+  via automação do simulador (`cliclick`) pra testar exatamente o gatilho que o usuário descreveu
+  (digitar no teclado de verdade, não na KeyBar) — inconclusivo, não descarta o bug.
+  **Um bug real e relacionado apareceu no caminho**: `openSession()` (`socket/sshSocket.ts`) não
+  tinha timeout nenhum esperando `hostkey:unknown`/`status` depois do ack de `session:open` — um
+  host que trava no meio do handshake (nem abre nem dá erro) deixava o spinner de "conectando"
+  girando pra sempre, sem nenhum feedback. Corrigido: timer de 25s que rejeita com mensagem clara
+  e fecha a sessão no servidor (`session:close`) se nada chegar — pausado enquanto o usuário está
+  decidindo o alerta de TOFU (não conta como "travado"), rearmado depois do `hostkey:trust`.
+  4 testes novos (`sshSocket.test.ts`, fake timers) cobrindo resolve normal, timeout de verdade,
+  TOFU não conta pro timeout, e `status:error`. 358 testes `vitest` verdes (eram 354). Pedido ao
+  usuário: se acontecer de novo, checar se o terminal do `npx expo start` dele mostra algum erro
+  no momento exato — isso vai apontar a causa direto.
+- [x] **Segunda rodada, usuário confirmou que ainda reproduz** ("digitando 'clear', nem deixa
+  terminar de digitar") — dado novo e decisivo: a KeyBar não tem NENHUMA tecla de letra (só
+  pontuação/controle), então "digitar clear" só pode ser o teclado NATIVO do iOS, nunca a KeyBar
+  — toda a investigação anterior (testada só com a KeyBar) estava no código errado.
+  **Suspeito principal, removido**: `TerminalScreen.tsx` envolvia a `KeyBar` em
+  `KeyboardStickyView` (`react-native-keyboard-controller`, escuta o frame nativo do teclado via
+  `reanimated`) — mas quem ganha foco quando o teclado abre aqui é uma **WebView** (o textarea
+  escondido do xterm.js), não um `TextInput` nativo. O único outro uso de `KeyboardStickyView`
+  no app (`features/code/CodeKeyboardBar.tsx`) é sempre sobre `TextInput` nativo — a combinação
+  "KeyboardStickyView + foco vindo de dentro de uma WebView" é nova neste código e é uma categoria
+  conhecida de crash nativo em RN (o worklet do reanimated brigando com o próprio gerenciamento de
+  teclado da WebView), consistente com "fecha sozinho" sem nenhum erro no Metro (crash nativo, não
+  JS). Tirado: a `KeyBar` volta pra posição flex normal (sempre visível no fim da tela, não tenta
+  mais acompanhar o teclado). Reconectei no host real de novo, testei a folha de ações
+  (Conectar/Aparência/Desconectar) de ponta a ponta — sem crash. Não consegui, de novo, fazer o
+  teclado nativo do iOS abrir via automação do simulador pra confirmar a causa raiz 100% — segue
+  como correção orientada por evidência (categoria de bug conhecida + único ponto novo/arriscado
+  do código), não como causa confirmada por reprodução direta. Detalhe em
+  [docs/20-ssh-mobile.md](docs/20-ssh-mobile.md). `tsc`/`vitest` (358) seguem limpos.
+- [x] **Terceira rodada, usuário confirmou de novo que reproduz mesmo sem `KeyboardStickyView`**
+  ("fiz o mesmo cenário e bugou no reload") — a hipótese da rodada 2 estava descartada, causa raiz
+  ainda não encontrada. Fui direto no código-fonte do `react-native-webview` instalado (não por
+  reprodução ao vivo) em vez de continuar tentando reproduzir às cegas: `TerminalCanvas.tsx`
+  passava `hideKeyboardAccessoryView` e `keyboardDisplayRequiresUserAction={false}` pro `WebView`.
+  As duas são implementadas em `RNCWebViewImpl.m` via **method swizzling de um seletor PRIVADO do
+  WebKit** (`_elementDidFocus:userIsInteracting:blurPreviousNode:activityStateChanges:userObject:`,
+  a variante certa escolhida por faixa de versão de iOS, chamada através de um cast bruto de
+  function pointer) — esse seletor dispara toda vez que um elemento focável da WebView ganha foco,
+  exatamente quando o textarea escondido do xterm.js recebe o toque pra abrir o teclado. Se a
+  assinatura real do seletor no iOS do simulador (17.5) não bate com o cast hardcoded, é undefined
+  behavior — derruba o processo da WebView sem rastro no Metro, batendo com "fecha e recarrega
+  sozinho, sem erro de JS". Ao contrário da hipótese anterior, dispara em qualquer foco (não só
+  programático), explicando por que era digitação normal que crashava. Removidas as duas props;
+  `onContentProcessDidTerminate` adicionado no `WebView` como rede de segurança (recarrega só a
+  WebView, não o app inteiro, se o processo nativo morrer de novo por essa ou outra causa).
+  Reconectei no host real de novo pós-fix, toquei o terminal pra focar (apareceu a barra "Done" —
+  confirma que o foco não está mais passando pelo swizzle que a esconderia) e mandei `keystroke`
+  real via AppleScript (`cliclick t:` nunca ecoou nada nessa WebView em nenhuma tentativa, mesmo
+  com o teclado de hardware do simulador desligado) — sem crash, sem reload. Segue **não
+  confirmado por reprodução do crash em si** (mesma limitação de automação das rodadas 1-2), mas é
+  a causa de maior confiança até agora — padrão de crash documentado do próprio pacote (API
+  privada por seletor), e é o único ponto do código que reage especificamente a foco/teclado numa
+  WebView. Detalhe em [docs/20-ssh-mobile.md](docs/20-ssh-mobile.md). `tsc`/`vitest` seguem
+  limpos.

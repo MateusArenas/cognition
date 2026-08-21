@@ -28,7 +28,10 @@ importação/exportação em `,` ou `;`. Uma segunda tab, separada dos documento
 banco de dados**
 (estilo DBeaver/TablePlus) — conecta em bancos de verdade (Postgres/MySQL/SQLite/SQL Server),
 explora tabelas, edita linhas e desenha o diagrama entidade-relacionamento, tudo pelo celular.
-Ver [docs/17-db-client.md](docs/17-db-client.md). **O app inteiro fica atrás de login** (JWT
+Ver [docs/17-db-client.md](docs/17-db-client.md). Uma terceira tab é um **cliente de terminal
+SSH** — conecta em servidores de verdade (o backend fala SSH via `ssh2`, o app só é teclado e
+tela), confiança de chave de host (TOFU), múltiplas sessões, snippets de comando. Ver
+[docs/20-ssh-mobile.md](docs/20-ssh-mobile.md). **O app inteiro fica atrás de login** (JWT
 accessToken/refreshToken, multi-conta) antes de mostrar qualquer tab — ver
 [docs/18-autenticacao.md](docs/18-autenticacao.md).
 
@@ -79,6 +82,7 @@ Para saber **o que já foi construído e o que falta**, o ponto de retomada é o
 | [17-db-client.md](docs/17-db-client.md) | Cliente de banco de dados: app + backend NestJS/Knex/Prisma/CASL | Etapa DB1 ✅ |
 | [18-autenticacao.md](docs/18-autenticacao.md) | Login/registro/refresh/recuperação de senha, JWT accessToken+refreshToken, multi-conta, app inteiro atrás do gate | Etapa Auth ✅ |
 | [19-tabelas-csv.md](docs/19-tabelas-csv.md) | Editor de CSV (6º tipo de documento): grade virtualizada, fórmulas, importar/exportar `,`/`;` | Etapa Tabelas ✅ |
+| [20-ssh-mobile.md](docs/20-ssh-mobile.md) | Cliente de terminal SSH: app (WebView+xterm.js) + backend NestJS/`ssh2`/socket.io, TOFU, roadmap de features futuras | Etapa SSH ✅ |
 
 ## Como este projeto foi construído
 
