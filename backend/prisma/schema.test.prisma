@@ -14,15 +14,39 @@ datasource db {
 }
 
 model User {
-  id           String       @id @default(uuid())
-  email        String       @unique
-  name         String
-  passwordHash String
-  active       Boolean      @default(true)
-  roles        UserRole[]
-  connections  Connection[]
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  id                  String               @id @default(uuid())
+  email               String               @unique
+  username            String?              @unique
+  name                String
+  passwordHash        String
+  active              Boolean              @default(true)
+  roles               UserRole[]
+  connections         Connection[]
+  sessions            Session[]
+  passwordResetTokens PasswordResetToken[]
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+}
+
+model Session {
+  id               String    @id @default(uuid())
+  userId           String
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshTokenHash String    @unique
+  userAgent        String?
+  createdAt        DateTime  @default(now())
+  expiresAt        DateTime
+  revokedAt        DateTime?
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  createdAt DateTime  @default(now())
+  expiresAt DateTime
+  usedAt    DateTime?
 }
 
 model Role {

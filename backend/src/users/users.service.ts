@@ -18,6 +18,12 @@ export class UsersService {
     return this.prisma.user.findUnique({ where: { email }, include: ROLES_INCLUDE });
   }
 
+  // Login aceita e-mail OU username — usado só por AuthService.login, nunca pelo resto do app
+  // (as outras telas continuam identificando usuário por id/email).
+  findByIdentifierWithRoles(identifier: string) {
+    return this.prisma.user.findFirst({ where: { OR: [{ email: identifier }, { username: identifier }] }, include: ROLES_INCLUDE });
+  }
+
   findByIdWithRoles(id: string) {
     return this.prisma.user.findUnique({ where: { id }, include: ROLES_INCLUDE });
   }

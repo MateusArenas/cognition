@@ -16,11 +16,31 @@ const SCHEMA_SQL = `
   CREATE TABLE "User" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "email" TEXT NOT NULL UNIQUE,
+    "username" TEXT UNIQUE,
     "name" TEXT NOT NULL,
     "passwordHash" TEXT NOT NULL,
     "active" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL
+  );
+  CREATE TABLE "Session" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "userId" TEXT NOT NULL,
+    "refreshTokenHash" TEXT NOT NULL UNIQUE,
+    "userAgent" TEXT,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "expiresAt" DATETIME NOT NULL,
+    "revokedAt" DATETIME,
+    FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE
+  );
+  CREATE TABLE "PasswordResetToken" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "userId" TEXT NOT NULL,
+    "tokenHash" TEXT NOT NULL UNIQUE,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "expiresAt" DATETIME NOT NULL,
+    "usedAt" DATETIME,
+    FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE
   );
   CREATE TABLE "Role" (
     "id" TEXT NOT NULL PRIMARY KEY,

@@ -22,7 +22,7 @@ describe('DB Mobile — fluxo completo (e2e)', () => {
     await seedAdminUser(boot.prisma);
     target = createSampleTargetDb();
 
-    const login = await request(app.getHttpServer()).post('/api/v1/auth/login').send({ email: 'admin@exemplo.com', password: ADMIN_PASSWORD });
+    const login = await request(app.getHttpServer()).post('/api/v1/auth/login').send({ identifier: 'admin@exemplo.com', password: ADMIN_PASSWORD });
     expect(login.status).toBe(200);
     token = login.body.accessToken;
   });
@@ -35,7 +35,7 @@ describe('DB Mobile — fluxo completo (e2e)', () => {
   const auth = () => ({ Authorization: `Bearer ${token}` });
 
   it('rejeita login com senha errada', async () => {
-    const res = await request(app.getHttpServer()).post('/api/v1/auth/login').send({ email: 'admin@exemplo.com', password: 'errada' });
+    const res = await request(app.getHttpServer()).post('/api/v1/auth/login').send({ identifier: 'admin@exemplo.com', password: 'errada' });
     expect(res.status).toBe(401);
     expect(res.body.code).toBe('INVALID_CREDENTIALS');
   });

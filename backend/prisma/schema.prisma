@@ -19,15 +19,51 @@ datasource db {
 }
 
 model User {
-  id           String     @id @default(uuid())
-  email        String     @unique
-  name         String
-  passwordHash String
-  active       Boolean    @default(true)
-  roles        UserRole[]
-  connections  Connection[]
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  id                  String               @id @default(uuid())
+  email               String               @unique
+  // Nasce nulo pra usuários já existentes/criados por um admin via POST /users (sem
+  // auto-cadastro); POST /auth/register sempre seta. Login aceita e-mail OU username.
+  username            String?              @unique
+  name                String
+  passwordHash        String
+  active              Boolean              @default(true)
+  roles               UserRole[]
+  connections         Connection[]
+  sessions            Session[]
+  passwordResetTokens PasswordResetToken[]
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+}
+
+// Um refresh token de verdade == uma linha == um dispositivo/conta logada. Nunca a senha em
+// claro, nunca o refresh token em claro tocam disco — só o hash (sha256), comparado no
+// POST /auth/refresh. Revogação granular (logout de UM dispositivo sem afetar os outros) e
+// detecção de reuso (token antigo, já rotacionado, sendo reapresentado == sinal de roubo)
+// exigem uma linha por sessão — um campo único em User quebraria multi-conta/multi-dispositivo
+// (um segundo login apagaria o refresh token do primeiro).
+model Session {
+  id               String    @id @default(uuid())
+  userId           String
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshTokenHash String    @unique
+  userAgent        String?
+  createdAt        DateTime  @default(now())
+  // Teto fixo desde o login, NÃO estendido a cada refresh — limita o estrago de um refresh
+  // token roubado a essa janela, com ou sem uso contínuo.
+  expiresAt        DateTime
+  revokedAt        DateTime?
+}
+
+// Mesmo padrão de hash do Session, pelo mesmo motivo: o token bruto só existe no e-mail
+// enviado ao usuário, nunca em disco.
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  createdAt DateTime  @default(now())
+  expiresAt DateTime
+  usedAt    DateTime?
 }
 
 model Role {

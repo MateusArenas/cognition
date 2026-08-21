@@ -17,7 +17,7 @@ describe('Permissões (CASL) — e2e', () => {
     await seedAdminUser(boot.prisma);
     await seedViewerUser(boot.prisma);
 
-    const login = await request(app.getHttpServer()).post('/api/v1/auth/login').send({ email: 'viewer@exemplo.com', password: VIEWER_PASSWORD });
+    const login = await request(app.getHttpServer()).post('/api/v1/auth/login').send({ identifier: 'viewer@exemplo.com', password: VIEWER_PASSWORD });
     viewerToken = login.body.accessToken;
   });
 
