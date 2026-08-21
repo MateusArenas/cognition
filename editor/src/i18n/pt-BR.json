@@ -59,7 +59,7 @@
     "deleteTitle": "Excluir documento?",
     "deleted": "Excluído",
     "imported": "Importado: %{name}",
-    "types": { "flow": "Fluxograma", "er": "Modelo relacional", "raw": "Diagrama", "md": "Documento", "rabisco": "Rabisco" }
+    "types": { "flow": "Fluxograma", "er": "Modelo relacional", "raw": "Diagrama", "md": "Documento", "rabisco": "Rabisco", "csv": "Tabela" }
   },
   "gallery": {
     "title": "Novo",
@@ -75,7 +75,32 @@
     "sketch": "Rabisco",
     "freeDrawTag": "DESENHO LIVRE",
     "blankSketchName": "Novo rabisco",
-    "editableTag": "EDITÁVEL"
+    "editableTag": "EDITÁVEL",
+    "tablesGroup": "TABELAS",
+    "blankTableName": "Nova tabela",
+    "spreadsheetTag": "PLANILHA",
+    "importTable": "Importar CSV…"
+  },
+  "csv": {
+    "subtitle": "%{rows} linhas · %{cols} colunas", "more": "Mais", "tapCell": "Toque numa célula",
+    "row": "Linha", "column": "Coluna", "sort": "Ordenar",
+    "cellMenuTitle": "Célula", "edit": "Editar", "fillDown": "Preencher para baixo", "clearContent": "Limpar conteúdo",
+    "rowMenuTitle": "Linha %{n}", "insertRowAbove": "Inserir linha acima", "insertRowBelow": "Inserir linha abaixo",
+    "duplicateRow": "Duplicar linha", "clearRow": "Limpar linha", "deleteRow": "Apagar linha",
+    "colMenuTitle": "Coluna %{n}", "insertColLeft": "Inserir coluna à esquerda", "insertColRight": "Inserir coluna à direita",
+    "autoFitCol": "Ajustar ao conteúdo", "defaultWidthCol": "Largura padrão",
+    "sortAsc": "Ordenar crescente", "sortDesc": "Ordenar decrescente", "clearCol": "Limpar coluna", "deleteCol": "Apagar coluna",
+    "moreMenuTitle": "Tabela", "importCsv": "Importar CSV…", "exportCsv": "Exportar CSV…",
+    "wrapText": "Quebrar texto nas células", "headerRowToggle": "1ª linha é cabeçalho", "autoFitAllCols": "Ajustar todas as colunas",
+    "renameTable": "Renomear tabela", "clearAll": "Limpar tudo",
+    "statSum": "Soma", "statAvg": "Média", "statMin": "Mín", "statMax": "Máx", "statCount": "Cont",
+    "statCells": "Células", "statFilled": "Preenchidas",
+    "importFromFile": "Do arquivo", "importFromFileHint": "Escolha um .csv do iCloud Drive, Arquivos ou Downloads.",
+    "importPasteText": "Colar texto", "importPasteTextHint": "Cole o conteúdo separado por vírgula ou ponto e vírgula — o separador é detectado sozinho.",
+    "pickFile": "Escolher arquivo", "importAction": "Importar",
+    "importEmptyError": "Cole algum conteúdo ou escolha um arquivo", "importReadError": "Não foi possível ler esse arquivo",
+    "exportDelimiter": "Separador", "delimiterComma": "Vírgula", "delimiterSemicolon": "Ponto e vírgula",
+    "exportFormulasHint": "Fórmulas são exportadas já calculadas.", "exportPreview": "Prévia", "saveFile": "Salvar arquivo"
   },
   "diagram": {
     "tabDiagram": "Diagrama", "tabElements": "Elementos", "tabCode": "Código",

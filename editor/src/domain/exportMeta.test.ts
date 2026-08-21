@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { exportExtension, exportMime, slugFilename } from './exportMeta';
-import { blankMd } from './mermaid/factory';
+import { blankCsv, blankMd } from './mermaid/factory';
 import { templateFlow } from './mermaid/templates';
 
 describe('exportMeta', () => {
@@ -9,6 +9,11 @@ describe('exportMeta', () => {
     expect(exportMime(blankMd('t', ''))).toBe('text/markdown');
     expect(exportExtension(templateFlow())).toBe('.mmd');
     expect(exportMime(templateFlow())).toBe('text/plain');
+  });
+
+  it('.csv/text-csv para tabelas', () => {
+    expect(exportExtension(blankCsv('t'))).toBe('.csv');
+    expect(exportMime(blankCsv('t'))).toBe('text/csv');
   });
 
   it('slugFilename tira acento, espaço e maiúscula', () => {

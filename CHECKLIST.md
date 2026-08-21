@@ -1129,3 +1129,55 @@ redescobertas do zero:
   .githooks` uma vez por clone. `editor: test:rn` (jest-expo/RTL) fica de fora de propósito, ver
   [docs/02-setup-e-estrutura.md](docs/02-setup-e-estrutura.md). Testado rodando o script à mão:
   51 unitários + 50 e2e no backend, 226 testes `vitest` no editor, tudo verde.
+- [x] **Etapa Tabelas — editor de CSV, 6º tipo de documento (`csv`, junto de `flow`/`er`/`raw`/
+  `md`/`rabisco`)** — pedido do usuário: "quero um editor de csv... que dá pra importar editar
+  ou começar do zero... aceite dois tipos de formatação... vírgula e ponto e vírgula", usando
+  `tabelas.html` (protótipo funcional) e `plano-editor-csv-expo.md` (plano técnico, escrito pra
+  um app standalone) como guia de comportamento, não de arquitetura — mesmo desvio deliberado já
+  registrado quando o Rabisco foi adicionado (`docs/16-rabisco.md`): `store/useDoc.ts` (apply/
+  applyLive/commitLive/undo/redo) e `services/storage.ts` (SQLite genérico) já funcionam pra
+  `CsvDoc` sem mudar uma linha, só a camada de domínio (parser CSV, motor de fórmulas, mutações)
+  e a grade em si são construídos do zero. Detalhe completo em
+  [docs/19-tabelas-csv.md](docs/19-tabelas-csv.md).
+  - **Decisão confirmada com o usuário via `AskUserQuestion`**: uma tabela por documento (não um
+    "caderno" com abas como o protótipo) — mais simples, mapeia 1:1 com o que um `.csv` de
+    verdade é.
+  - **Domínio** (`domain/csv/`): `csv.ts` (parse/serialize RFC 4180 à mão, `detectDelim`,
+    `sheetToText` com fórmulas já calculadas + BOM quando `;`), `formula.ts` (parser recursivo
+    descendente sem `eval`, `SOMA`/`MÉDIA`/`MÍN`/`MÁX`/`CONT`/`ARRED`/`ABS`/`INT`/`RAIZ`/`MULT`/
+    `SE`, nomes PT+EN, separador de argumento `,` OU `;`, `evaluateSheet` com cache+detecção de
+    ciclo, erros como string), `mutations.ts` (puras, nunca deixam a tabela com 0 linhas/
+    colunas), `geometry.ts` (offsets/busca binária/hit-test). `blankCsv`/`csvDocFromText` em
+    `domain/mermaid/factory.ts` (mesma casa dos outros `blank*`); braço `csv` novo em
+    `domain/exportMeta.ts`/`domain/searchText.ts`.
+  - **Grade** (`features/csv/`): `Animated.ScrollView` horizontal + `FlashList` vertical
+    (`@shopify/flash-list` 2.x, dependência nova, `npx expo install` — `estimatedItemSize` não
+    existe mais nessa major, descoberto só ao rodar `tsc`) + header/gutter congelados via
+    `translateX` que anula o scroll horizontal só neles (filho flex normal, só a PINTURA se
+    desloca — `zIndex`+`elevation`, Android precisa dos dois). Redimensionar coluna via
+    `Gesture.Pan`, preview local + commit só no fim do gesto (mesmo princípio do Rabisco).
+    **Desvio deliberado do protótipo**: edição acontece na barra de fórmulas (sempre visível,
+    ligada à célula-âncora via `useLiveField` já genérico) em vez de um `TextInput` flutuante
+    sobre a célula — evita ter que acompanhar scroll duplo (horizontal+vertical virtualizado) de
+    uma posição calculada, mesmo padrão que Sheets/Excel mobile já usam. Seleção simplificada
+    pra célula única/linha inteira/coluna inteira (sem arraste de alça pra retângulo arbitrário
+    do protótipo — alça pequena e frágil num celular real). `KeyboardBar` (operadores + atalhos
+    de função): `InputAccessoryView` no iOS, `View` absoluta reagindo ao teclado no Android.
+    Menus (célula/linha/coluna/"mais") via `Sheet`+`GroupedList`+`Row` (padrão da casa, sem
+    `ActionSheet` dedicado no design system). `ImportSheet`/`ExportSheet`: arquivo ou colar
+    texto, detecção de separador sozinha, fallback ISO-8859-1 (decodificador base64 escrito à
+    mão, `atob` não é garantido no Hermes), export com `Segmented` `,`/`;` + prévia ao vivo.
+    `GalleryScreen.tsx` ganha grupo "Tabelas" (Em branco + Importar CSV…); `app/doc/[id].tsx`
+    ganha o braço `csv`.
+  - **Testes**: cobertura completa do domínio — `csv.test.ts`/`formula.test.ts`/
+    `geometry.test.ts`/`mutations.test.ts` novos + extensão de `exportMeta.test.ts`/
+    `searchText.test.ts`/`domain/mermaid/factory.test.ts`. 345 testes `vitest` verdes (era 226).
+    `tsc --noEmit` limpo (só o erro pré-existente de `Canvas.tsx`, já documentado).
+  - **Confirmado ao vivo no simulador** (iPhone 15 Pro Max, screenshots em cada passo): criar
+    tabela em branco, tocar célula selecionando e atualizando a barra de fórmulas, long-press
+    abrindo o menu de célula com os itens certos, "Editar" focando a barra de fórmulas com o
+    `KeyboardBar` do iOS aparecendo (todos os operadores/funções), **rolar a grade horizontal
+    com o gutter permanecendo perfeitamente parado** (o mecanismo mais arriscado da feature,
+    nunca usado antes neste código, funcionou de primeira), "Mais" abrindo o menu da tabela com
+    os switches refletindo o estado real do documento, "Exportar CSV…" mostrando o seletor de
+    separador e a prévia calculada.

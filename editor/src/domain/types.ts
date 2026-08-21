@@ -1,7 +1,7 @@
 // Tipos do domínio. Ver docs/04-dominio.md e ESPECIFICACAO-APP-RN-EXPO.md §6.1.
 // domain/ é TypeScript puro: nada aqui importa de features/, design/ ou store/.
 
-export type DocKind = 'flow' | 'er' | 'raw' | 'md' | 'rabisco';
+export type DocKind = 'flow' | 'er' | 'raw' | 'md' | 'rabisco' | 'csv';
 
 export type ShapeKey =
   | 'rect' | 'round' | 'stadium' | 'subroutine' | 'cylinder' | 'circle'
@@ -81,7 +81,19 @@ export interface RabiscoDoc extends Base {
   tipo: 'rabisco'; elements: RabiscoElement[];
 }
 
-export type Doc = FlowDoc | ErDoc | RawDoc | MdDoc | RabiscoDoc;
+// Tabelas (docs/19-tabelas-csv.md) — uma tabela por documento (um .csv de verdade só tem uma).
+// Célula guarda a string crua, exatamente como digitada — mesma regra de ouro do domínio, ver
+// domain/csv/formula.ts (o valor calculado é sempre derivado em render, nunca escrito de volta).
+export interface CsvDoc extends Base {
+  tipo: 'csv';
+  cells: string[][]; // [linha][coluna], sempre retangular
+  headerRow: boolean;
+  wrap: boolean;
+  colWidths: number[];
+  delimiter: ',' | ';';
+}
+
+export type Doc = FlowDoc | ErDoc | RawDoc | MdDoc | RabiscoDoc | CsvDoc;
 
 export type Selection =
   | { kind: 'node'; id: string }

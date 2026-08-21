@@ -4,9 +4,9 @@
 > Protótipo funcional: [editor-mermaid.html](../editor-mermaid.html) — comportamento ambíguo
 > se resolve olhando ele.
 
-Um editor de diagramas Mermaid, documentos Markdown e rabiscos, feito para o celular.
+Um editor de diagramas Mermaid, documentos Markdown, rabiscos e tabelas CSV, feito para o celular.
 
-## Os cinco tipos de arquivo
+## Os seis tipos de arquivo
 
 | Tipo | O que é | Como se edita |
 |---|---|---|
@@ -15,8 +15,9 @@ Um editor de diagramas Mermaid, documentos Markdown e rabiscos, feito para o cel
 | `raw` | Os outros 23 tipos do Mermaid | Toque no elemento → edita o trecho de código correspondente |
 | `md` | Documento Markdown | Editor estilo Notas, com diagramas Mermaid embutidos e editáveis |
 | `rabisco` | Desenho livre (.svg) | Canvas nativo (Skia) — caneta, formas, texto, seleção, IA — ver [16-rabisco.md](16-rabisco.md) |
+| `csv` | Planilha CSV | Grade tipo Numbers — toque na célula, barra de fórmulas, `,`/`;` — ver [19-tabelas-csv.md](19-tabelas-csv.md) |
 
-Além desses cinco (que são todos variantes de `Doc`, vivem na Biblioteca), o app tem uma
+Além desses seis (que são todos variantes de `Doc`, vivem na Biblioteca), o app tem uma
 **segunda tab**, separada dos documentos: um cliente de banco de dados estilo DBeaver/TablePlus
 — conecta em bancos de verdade, explora tabelas, edita linhas, desenha o ERD. Não é um tipo de
 arquivo, é um produto irmão dentro do mesmo app, com backend próprio (`backend/`, NestJS) — ver

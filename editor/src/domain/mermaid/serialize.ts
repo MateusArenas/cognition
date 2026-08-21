@@ -28,6 +28,10 @@ export function serialize(d: Doc): string {
       // renderizado direto em Skia, ver docs/16-rabisco.md), então isso nunca alimenta um
       // `mermaid.render()` de verdade. Só existe pra função continuar total sobre `Doc`.
       return '%% rabisco — sem representação em texto Mermaid';
+    case 'csv':
+      // Idem: Tabelas não passa pelo canvas WebView nem tem texto Mermaid — ver
+      // docs/19-tabelas-csv.md. `services/export.ts` usa `toCSV()` pra exportar de verdade.
+      return '%% tabela CSV — sem representação em texto Mermaid';
   }
 }
 

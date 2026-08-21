@@ -59,7 +59,7 @@
     "deleteTitle": "Delete document?",
     "deleted": "Deleted",
     "imported": "Imported: %{name}",
-    "types": { "flow": "Flowchart", "er": "Relational model", "raw": "Diagram", "md": "Document", "rabisco": "Sketch" }
+    "types": { "flow": "Flowchart", "er": "Relational model", "raw": "Diagram", "md": "Document", "rabisco": "Sketch", "csv": "Table" }
   },
   "gallery": {
     "title": "New",
@@ -75,7 +75,32 @@
     "sketch": "Sketch",
     "freeDrawTag": "FREE DRAWING",
     "blankSketchName": "New sketch",
-    "editableTag": "EDITABLE"
+    "editableTag": "EDITABLE",
+    "tablesGroup": "TABLES",
+    "blankTableName": "New table",
+    "spreadsheetTag": "SPREADSHEET",
+    "importTable": "Import CSV…"
+  },
+  "csv": {
+    "subtitle": "%{rows} rows · %{cols} columns", "more": "More", "tapCell": "Tap a cell",
+    "row": "Row", "column": "Column", "sort": "Sort",
+    "cellMenuTitle": "Cell", "edit": "Edit", "fillDown": "Fill down", "clearContent": "Clear content",
+    "rowMenuTitle": "Row %{n}", "insertRowAbove": "Insert row above", "insertRowBelow": "Insert row below",
+    "duplicateRow": "Duplicate row", "clearRow": "Clear row", "deleteRow": "Delete row",
+    "colMenuTitle": "Column %{n}", "insertColLeft": "Insert column left", "insertColRight": "Insert column right",
+    "autoFitCol": "Fit to content", "defaultWidthCol": "Default width",
+    "sortAsc": "Sort ascending", "sortDesc": "Sort descending", "clearCol": "Clear column", "deleteCol": "Delete column",
+    "moreMenuTitle": "Table", "importCsv": "Import CSV…", "exportCsv": "Export CSV…",
+    "wrapText": "Wrap text in cells", "headerRowToggle": "First row is header", "autoFitAllCols": "Fit all columns",
+    "renameTable": "Rename table", "clearAll": "Clear all",
+    "statSum": "Sum", "statAvg": "Avg", "statMin": "Min", "statMax": "Max", "statCount": "Count",
+    "statCells": "Cells", "statFilled": "Filled",
+    "importFromFile": "From file", "importFromFileHint": "Choose a .csv from iCloud Drive, Files, or Downloads.",
+    "importPasteText": "Paste text", "importPasteTextHint": "Paste content separated by comma or semicolon — the delimiter is detected automatically.",
+    "pickFile": "Choose file", "importAction": "Import",
+    "importEmptyError": "Paste some content or choose a file", "importReadError": "Couldn't read that file",
+    "exportDelimiter": "Delimiter", "delimiterComma": "Comma", "delimiterSemicolon": "Semicolon",
+    "exportFormulasHint": "Formulas are exported already calculated.", "exportPreview": "Preview", "saveFile": "Save file"
   },
   "diagram": {
     "tabDiagram": "Diagram", "tabElements": "Elements", "tabCode": "Code",

@@ -9,19 +9,28 @@
 import { ImageFormat, Skia } from '@shopify/react-native-skia';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Print from 'expo-print';
+import { sheetToText } from '@/domain/csv/csv';
 import { exportExtension, exportMime, slugFilename } from '@/domain/exportMeta';
 import { mdToHtml } from '@/domain/markdown/toHtml';
 import { renderMarkdown } from '@/domain/markdown/render';
 import { serialize } from '@/domain/mermaid/serialize';
 import { docToSvg } from '@/domain/rabisco/svg';
-import type { Doc, MdDoc, RabiscoDoc } from '@/domain/types';
+import type { CsvDoc, Doc, MdDoc, RabiscoDoc } from '@/domain/types';
 import { shareFile } from './share';
 
 export async function exportarTexto(doc: Doc): Promise<void> {
   const uri = FileSystem.cacheDirectory + slugFilename(doc.nome) + exportExtension(doc);
-  const conteudo = doc.tipo === 'md' ? doc.md : doc.tipo === 'rabisco' ? docToSvg(doc) : serialize(doc);
+  const conteudo = doc.tipo === 'md' ? doc.md : doc.tipo === 'rabisco' ? docToSvg(doc) : doc.tipo === 'csv' ? sheetToText(doc, doc.delimiter) : serialize(doc);
   await FileSystem.writeAsStringAsync(uri, conteudo);
   await shareFile(uri, exportMime(doc));
+}
+
+// Exportar CSV com separador escolhido explicitamente (ExportSheet, features/csv/) — pode
+// divergir do `doc.delimiter` "preferido" guardado no documento (o usuário decide na hora).
+export async function exportarCsv(doc: CsvDoc, delim: CsvDoc['delimiter']): Promise<void> {
+  const uri = FileSystem.cacheDirectory + slugFilename(doc.nome) + '.csv';
+  await FileSystem.writeAsStringAsync(uri, sheetToText(doc, delim));
+  await shareFile(uri, 'text/csv');
 }
 
 // Mesmo caminho de exportarTexto, mas pra um texto solto sem Doc por trás — o ERD do cliente

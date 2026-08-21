@@ -18,11 +18,14 @@ e no `CHECKLIST.md` quando ela alterar o que foi entregue.
 
 ## O produto, em uma frase
 
-Um editor de diagramas Mermaid, documentos Markdown e rabiscos (desenho livre) para celular
-(Expo/React Native): toca num elemento do desenho — nó, aresta, tabela, coluna, traço — e edita
-ali mesmo, sem abrir painel para o que se faz o tempo todo. Documento e diagrama são a mesma
-coisa: um bloco ` ```mermaid ` num `.md` abre no canvas com todas as ferramentas e volta
-atualizado. Uma segunda tab, separada dos documentos, é um **cliente de banco de dados**
+Um editor de diagramas Mermaid, documentos Markdown, rabiscos (desenho livre) e tabelas CSV
+para celular (Expo/React Native): toca num elemento do desenho — nó, aresta, tabela, coluna,
+traço, célula — e edita ali mesmo, sem abrir painel para o que se faz o tempo todo. Documento e
+diagrama são a mesma coisa: um bloco ` ```mermaid ` num `.md` abre no canvas com todas as
+ferramentas e volta atualizado. A tabela CSV (ver
+[docs/19-tabelas-csv.md](docs/19-tabelas-csv.md)) é uma grade tipo Numbers, com fórmulas e
+importação/exportação em `,` ou `;`. Uma segunda tab, separada dos documentos, é um **cliente de
+banco de dados**
 (estilo DBeaver/TablePlus) — conecta em bancos de verdade (Postgres/MySQL/SQLite/SQL Server),
 explora tabelas, edita linhas e desenha o diagrama entidade-relacionamento, tudo pelo celular.
 Ver [docs/17-db-client.md](docs/17-db-client.md). **O app inteiro fica atrás de login** (JWT
@@ -56,7 +59,7 @@ Para saber **o que já foi construído e o que falta**, o ponto de retomada é o
 
 | Arquivo | Cobre | Status |
 |---|---|---|
-| [00-visao-geral.md](docs/00-visao-geral.md) | O produto, os 5 tipos de arquivo, as 3 promessas | referência |
+| [00-visao-geral.md](docs/00-visao-geral.md) | O produto, os 6 tipos de arquivo, as 3 promessas | referência |
 | [01-decisao-arquitetura.md](docs/01-decisao-arquitetura.md) | WebView como canvas vs. 100% nativo, e por quê | referência |
 | [02-setup-e-estrutura.md](docs/02-setup-e-estrutura.md) | Comandos, configs, pastas, por que escalam | Etapa 0 ✅ |
 | [03-design-system.md](docs/03-design-system.md) | Tokens, os 9 componentes base, regras "parece nativo" | Etapa 2 ✅ |
@@ -75,6 +78,7 @@ Para saber **o que já foi construído e o que falta**, o ponto de retomada é o
 | [16-rabisco.md](docs/16-rabisco.md) | Canvas Skia nativo, roadmap R1-R5 do desenho livre | Etapas R1-R2 ✅ |
 | [17-db-client.md](docs/17-db-client.md) | Cliente de banco de dados: app + backend NestJS/Knex/Prisma/CASL | Etapa DB1 ✅ |
 | [18-autenticacao.md](docs/18-autenticacao.md) | Login/registro/refresh/recuperação de senha, JWT accessToken+refreshToken, multi-conta, app inteiro atrás do gate | Etapa Auth ✅ |
+| [19-tabelas-csv.md](docs/19-tabelas-csv.md) | Editor de CSV (6º tipo de documento): grade virtualizada, fórmulas, importar/exportar `,`/`;` | Etapa Tabelas ✅ |
 
 ## Como este projeto foi construído
 

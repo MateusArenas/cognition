@@ -16,6 +16,8 @@ export function extractSearchText(doc: Doc): string {
       return [doc.nome, doc.md].join(' ');
     case 'rabisco':
       return [doc.nome, ...doc.elements.filter((e) => e.text).map((e) => e.text)].join(' ');
+    case 'csv':
+      return [doc.nome, ...doc.cells.flat()].join(' ');
   }
 }
 

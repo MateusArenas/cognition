@@ -3,8 +3,9 @@ import { useLocalSearchParams } from 'expo-router';
 import { useDoc } from '@/store/useDoc';
 import { useAutosave } from '@/store/useAutosave';
 import { templateER, templateFlow, templateMd } from '@/domain/mermaid/templates';
-import { blankMd, blankRabisco } from '@/domain/mermaid/factory';
+import { blankCsv, blankMd, blankRabisco } from '@/domain/mermaid/factory';
 import { loadDoc } from '@/services/storage';
+import { CsvScreen } from '@/features/csv/CsvScreen';
 import { DiagramScreen } from '@/features/diagram/DiagramScreen';
 import { DocumentScreen } from '@/features/document/DocumentScreen';
 import { RabiscoScreen } from '@/features/rabisco/RabiscoScreen';
@@ -27,6 +28,7 @@ export default function DocScreen() {
       else if (id === 'md-novo') openDoc(blankMd('Novo documento', '# Novo documento\n\nComece a escrever…'));
       else if (id === 'md-demo') openDoc(templateMd());
       else if (id === 'rabisco-novo') openDoc(blankRabisco('Novo rabisco'));
+      else if (id === 'csv-novo') openDoc(blankCsv('Nova tabela'));
       else if (id !== 'aberto') {
         const salvo = await loadDoc(id);
         if (!cancelado && salvo) openDoc(salvo);
@@ -43,5 +45,6 @@ export default function DocScreen() {
   if (!pronto) return null;
   if (doc.tipo === 'md') return <DocumentScreen />;
   if (doc.tipo === 'rabisco') return <RabiscoScreen />;
+  if (doc.tipo === 'csv') return <CsvScreen />;
   return <DiagramScreen />;
 }

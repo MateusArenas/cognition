@@ -1,4 +1,5 @@
-import type { ErDoc, FlowDoc, MdDoc, RabiscoDoc, RawDoc } from '../types';
+import { detectDelim, parseCSV } from '../csv/csv';
+import type { CsvDoc, ErDoc, FlowDoc, MdDoc, RabiscoDoc, RawDoc } from '../types';
 import { newDocId } from '../id';
 
 function base() {
@@ -54,5 +55,41 @@ export function blankRabisco(nome?: string): RabiscoDoc {
     tipo: 'rabisco',
     nome: nome || 'Novo rabisco',
     elements: [],
+  };
+}
+
+const CSV_ROWS = 30;
+const CSV_COLS = 8;
+const CSV_DEFAULT_COL_W = 104;
+
+export function blankCsv(nome?: string): CsvDoc {
+  return {
+    ...base(),
+    tipo: 'csv',
+    nome: nome || 'Nova tabela',
+    cells: Array.from({ length: CSV_ROWS }, () => Array(CSV_COLS).fill('')),
+    headerRow: true,
+    wrap: false,
+    colWidths: Array(CSV_COLS).fill(CSV_DEFAULT_COL_W),
+    delimiter: ',',
+  };
+}
+
+// Constrói uma tabela a partir de texto CSV já lido (arquivo importado ou colado) — separador
+// detectado sozinho (detectDelim), a menos que seja passado explicitamente. O encoding
+// (UTF-8 vs. ISO-8859-1) é responsabilidade de quem lê o arquivo, não daqui — domínio é puro,
+// não sabe nada de expo-file-system (ver services/import.ts).
+export function csvDocFromText(text: string, nome: string, headerRow: boolean, delimiter?: CsvDoc['delimiter']): CsvDoc {
+  const delim = delimiter || detectDelim(text);
+  const cells = parseCSV(text, delim);
+  return {
+    ...base(),
+    tipo: 'csv',
+    nome: nome || 'Nova tabela',
+    cells,
+    headerRow,
+    wrap: false,
+    colWidths: Array(cells[0].length).fill(CSV_DEFAULT_COL_W),
+    delimiter: delim,
   };
 }

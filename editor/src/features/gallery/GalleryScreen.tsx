@@ -9,9 +9,10 @@ import { useI18n } from '@/i18n/I18nProvider';
 import { useDoc } from '@/store/useDoc';
 import { GRUPOS, TIPOS, type TipoDiagrama } from '@/domain/mermaid/catalog';
 import { parseMermaid } from '@/domain/mermaid/parse';
-import { blankMd, blankRabisco } from '@/domain/mermaid/factory';
+import { blankCsv, blankMd, blankRabisco, csvDocFromText } from '@/domain/mermaid/factory';
 import { templateER, templateFlow, templateMd } from '@/domain/mermaid/templates';
 import type { Doc } from '@/domain/types';
+import { ImportSheet, type ImportSheetHandle } from '@/features/csv/ImportSheet';
 import { TypeInfoSheet } from './TypeInfoSheet';
 
 const INFO_DOCUMENTO = {
@@ -31,6 +32,7 @@ export function GalleryScreen() {
   const { t: tr } = useI18n();
   const openDoc = useDoc((s) => s.openDoc);
   const infoRef = useRef<BottomSheetModal>(null);
+  const importRef = useRef<ImportSheetHandle>(null);
   const [infoTipo, setInfoTipo] = useState<(TipoDiagrama | typeof INFO_DOCUMENTO) | null>(null);
 
   function abrirDoc(doc: Doc) {
@@ -88,6 +90,23 @@ export function GalleryScreen() {
           </View>
         </View>
 
+        <View style={{ marginBottom: space.lg }}>
+          <Text style={[styles.grupo, { color: colors.labelSecondary }]}>{tr('gallery.tablesGroup')}</Text>
+          <View style={styles.grid}>
+            <View style={[styles.card, { backgroundColor: colors.surface, borderRadius: radius.card }]}>
+              <Pressable style={styles.cardMain} onPress={() => abrirDoc(blankCsv(tr('gallery.blankTableName')))}>
+                <Text style={[styles.nome, { color: colors.label }]} numberOfLines={1}>{tr('gallery.blank')}</Text>
+                <Text style={[styles.tagVisual, { color: colors.blue }]}>{tr('gallery.spreadsheetTag')}</Text>
+              </Pressable>
+            </View>
+            <View style={[styles.card, { backgroundColor: colors.surface, borderRadius: radius.card }]}>
+              <Pressable style={styles.cardMain} onPress={() => importRef.current?.present()}>
+                <Text style={[styles.nome, { color: colors.label }]} numberOfLines={1}>{tr('gallery.importTable')}</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+
         {GRUPOS.map((grupo) => (
           <View key={grupo} style={{ marginBottom: space.lg }}>
             <Text style={[styles.grupo, { color: colors.labelSecondary }]}>{grupo.toUpperCase()}</Text>
@@ -108,6 +127,10 @@ export function GalleryScreen() {
         ))}
       </ScrollView>
       <TypeInfoSheet ref={infoRef} tipo={infoTipo} />
+      <ImportSheet
+        ref={importRef}
+        onImport={(text, fileName, headerRow) => abrirDoc(csvDocFromText(text, fileName || tr('gallery.blankTableName'), headerRow))}
+      />
     </View>
   );
 }

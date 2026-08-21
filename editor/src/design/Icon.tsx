@@ -63,6 +63,8 @@ import {
   Play,
   Eye,
   EyeOff,
+  ArrowUpDown,
+  Sigma,
 } from 'lucide-react-native';
 import { useTheme } from './useTheme';
 
@@ -138,6 +140,8 @@ const ICONS = {
   play: Play,
   eye: Eye,
   eyeOff: EyeOff,
+  sort: ArrowUpDown,
+  function: Sigma,
 } as const;
 
 export type IconName = keyof typeof ICONS;

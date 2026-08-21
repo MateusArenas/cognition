@@ -59,7 +59,7 @@
     "deleteTitle": "¿Eliminar documento?",
     "deleted": "Eliminado",
     "imported": "Importado: %{name}",
-    "types": { "flow": "Diagrama de flujo", "er": "Modelo relacional", "raw": "Diagrama", "md": "Documento", "rabisco": "Boceto" }
+    "types": { "flow": "Diagrama de flujo", "er": "Modelo relacional", "raw": "Diagrama", "md": "Documento", "rabisco": "Boceto", "csv": "Tabla" }
   },
   "gallery": {
     "title": "Nuevo",
@@ -75,7 +75,32 @@
     "sketch": "Boceto",
     "freeDrawTag": "DIBUJO LIBRE",
     "blankSketchName": "Nuevo boceto",
-    "editableTag": "EDITABLE"
+    "editableTag": "EDITABLE",
+    "tablesGroup": "TABLAS",
+    "blankTableName": "Nueva tabla",
+    "spreadsheetTag": "HOJA DE CÁLCULO",
+    "importTable": "Importar CSV…"
+  },
+  "csv": {
+    "subtitle": "%{rows} filas · %{cols} columnas", "more": "Más", "tapCell": "Toca una celda",
+    "row": "Fila", "column": "Columna", "sort": "Ordenar",
+    "cellMenuTitle": "Celda", "edit": "Editar", "fillDown": "Rellenar hacia abajo", "clearContent": "Borrar contenido",
+    "rowMenuTitle": "Fila %{n}", "insertRowAbove": "Insertar fila arriba", "insertRowBelow": "Insertar fila abajo",
+    "duplicateRow": "Duplicar fila", "clearRow": "Borrar fila", "deleteRow": "Eliminar fila",
+    "colMenuTitle": "Columna %{n}", "insertColLeft": "Insertar columna a la izquierda", "insertColRight": "Insertar columna a la derecha",
+    "autoFitCol": "Ajustar al contenido", "defaultWidthCol": "Ancho predeterminado",
+    "sortAsc": "Ordenar ascendente", "sortDesc": "Ordenar descendente", "clearCol": "Borrar columna", "deleteCol": "Eliminar columna",
+    "moreMenuTitle": "Tabla", "importCsv": "Importar CSV…", "exportCsv": "Exportar CSV…",
+    "wrapText": "Ajustar texto en celdas", "headerRowToggle": "La 1ª fila es encabezado", "autoFitAllCols": "Ajustar todas las columnas",
+    "renameTable": "Renombrar tabla", "clearAll": "Borrar todo",
+    "statSum": "Suma", "statAvg": "Media", "statMin": "Mín", "statMax": "Máx", "statCount": "Cont",
+    "statCells": "Celdas", "statFilled": "Llenas",
+    "importFromFile": "Desde archivo", "importFromFileHint": "Elige un .csv de iCloud Drive, Archivos o Descargas.",
+    "importPasteText": "Pegar texto", "importPasteTextHint": "Pega el contenido separado por coma o punto y coma — el separador se detecta solo.",
+    "pickFile": "Elegir archivo", "importAction": "Importar",
+    "importEmptyError": "Pega algún contenido o elige un archivo", "importReadError": "No se pudo leer ese archivo",
+    "exportDelimiter": "Separador", "delimiterComma": "Coma", "delimiterSemicolon": "Punto y coma",
+    "exportFormulasHint": "Las fórmulas se exportan ya calculadas.", "exportPreview": "Vista previa", "saveFile": "Guardar archivo"
   },
   "diagram": {
     "tabDiagram": "Diagrama", "tabElements": "Elementos", "tabCode": "Código",
