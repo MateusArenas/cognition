@@ -24,6 +24,11 @@ model User {
   connections         Connection[]
   sessions            Session[]
   passwordResetTokens PasswordResetToken[]
+  sshHosts            SshHost[]
+  sshCredentials      SshCredential[]
+  sshKnownHosts       SshKnownHost[]
+  sshSessions         SshSession[]
+  sshSnippets         SshSnippet[]
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
 }
@@ -90,4 +95,81 @@ model Connection {
   owner     User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model SshHost {
+  id              String    @id @default(uuid())
+  ownerId         String
+  owner           User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  label           String
+  address         String
+  port            Int       @default(22)
+  username        String
+  authMethod      String
+  credentialId    String?
+  credential      SshCredential? @relation(fields: [credentialId], references: [id], onDelete: SetNull)
+  groupName       String?
+  tags            Json      @default("[]")
+  color           String    @default("#8E8E93")
+  keepalive       Boolean   @default(true)
+  startupCommand  String?
+  lastConnectedAt DateTime?
+  sessions        SshSession[]
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model SshCredential {
+  id                String    @id @default(uuid())
+  ownerId           String
+  owner             User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  name              String
+  kind              String
+  keyType           String?
+  publicKey         String?
+  fingerprintSha256 String?
+  hasPassphrase     Boolean   @default(false)
+  secretCiphertext  String
+  hosts             SshHost[]
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
+
+model SshKnownHost {
+  id                String   @id @default(uuid())
+  ownerId           String
+  owner             User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  address           String
+  port              Int
+  keyType           String
+  fingerprintSha256 String
+  trustedAt         DateTime @default(now())
+
+  @@unique([ownerId, address, port, keyType])
+}
+
+model SshSession {
+  id           String    @id @default(uuid())
+  ownerId      String
+  owner        User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  hostId       String?
+  host         SshHost?  @relation(fields: [hostId], references: [id], onDelete: SetNull)
+  status       String
+  cols         Int       @default(80)
+  rows         Int       @default(24)
+  errorMessage String?
+  openedAt     DateTime  @default(now())
+  closedAt     DateTime?
+}
+
+model SshSnippet {
+  id             String   @id @default(uuid())
+  ownerId        String
+  owner          User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  name           String
+  command        String
+  tag            String?
+  requireConfirm Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }

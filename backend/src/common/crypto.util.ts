@@ -3,6 +3,10 @@ import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'crypt
 // AES-256-GCM. Chave = sha256(APP_SECRET) — nunca a senha em claro, nem a chave, tocam disco
 // fora deste módulo. Formato de saída: 'enc:<iv>.<tag>.<ciphertext>' (tudo base64) — o prefixo
 // 'enc:' é o que diferencia "já cifrado" de "valor novo ainda em claro" em decrypt().
+//
+// Vive em common/ (não dentro de connections/, onde nasceu) porque é usado por mais de um
+// módulo — connections/ cifra a senha do banco-alvo, ssh/ cifra chave privada/passphrase/senha
+// do host (docs/20-ssh-mobile.md). Mesma chave derivada de APP_SECRET nos dois casos.
 function deriveKey(): Buffer {
   const secret = process.env.APP_SECRET;
   if (!secret) throw new Error('APP_SECRET não configurada — veja backend/.env.example.');

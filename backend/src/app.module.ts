@@ -6,9 +6,10 @@ import { ErdModule } from './erd/erd.module';
 import { MutationsModule } from './mutations/mutations.module';
 import { PermissionsModule } from './permissions/permissions.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { SshModule } from './ssh/ssh.module';
 import { UsersModule } from './users/users.module';
 
 @Module({
-  imports: [PrismaModule, AuthModule, UsersModule, PermissionsModule, ConnectionsModule, CatalogModule, ErdModule, MutationsModule],
+  imports: [PrismaModule, AuthModule, UsersModule, PermissionsModule, ConnectionsModule, CatalogModule, ErdModule, MutationsModule, SshModule],
 })
 export class AppModule {}

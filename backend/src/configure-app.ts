@@ -1,4 +1,5 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { IoAdapter } from '@nestjs/platform-socket.io';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { DatabaseExceptionFilter } from './common/filters/database-exception.filter';
 
@@ -9,6 +10,9 @@ export function configureApp(app: INestApplication): void {
   app.setGlobalPrefix('api/v1');
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   app.useGlobalFilters(new DatabaseExceptionFilter());
+  // Genérico do Nest — nenhum gateway específico aqui, qualquer @WebSocketGateway() (o /ssh de
+  // docs/20-ssh-mobile.md, e qualquer outro no futuro) já sobe em cima disso de graça.
+  app.useWebSocketAdapter(new IoAdapter(app));
 }
 
 export function setupSwagger(app: INestApplication): void {

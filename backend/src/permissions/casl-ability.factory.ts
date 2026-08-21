@@ -5,7 +5,7 @@ import type { UserWithRoles } from '../users/users.service';
 // Ações e sujeitos fechados de propósito — cada rota nova que precisar de uma checagem granular
 // entra aqui, não como string solta espalhada pelos controllers.
 export type Action = 'manage' | 'create' | 'read' | 'update' | 'delete';
-export type Subject = 'Connection' | 'User' | 'Role' | 'all';
+export type Subject = 'Connection' | 'SshHost' | 'User' | 'Role' | 'all';
 export type AppAbility = MongoAbility<[Action, Subject]>;
 
 // Monta a Ability de UM usuário a partir das Permission das Role(s) dele (Prisma). Chamada a

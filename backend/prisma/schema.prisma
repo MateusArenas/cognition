@@ -31,6 +31,11 @@ model User {
   connections         Connection[]
   sessions            Session[]
   passwordResetTokens PasswordResetToken[]
+  sshHosts            SshHost[]
+  sshCredentials      SshCredential[]
+  sshKnownHosts       SshKnownHost[]
+  sshSessions         SshSession[]
+  sshSnippets         SshSnippet[]
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
 }
@@ -114,4 +119,102 @@ model Connection {
   owner     User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------- SSH (docs/20-ssh-mobile.md)
+//
+// Mesmo padrão de dono único de Connection (ownerId flat, sem organização/vault — o app não tem
+// esse conceito, ver docs/18-autenticacao.md). Prefixo `Ssh` pra não colidir com o `Session` de
+// auth (refresh token) já existente acima.
+
+// Host remoto salvo. `authMethod`/`kind`/`status` são String livre (não enum do Prisma) — mesma
+// escolha que o resto do schema já faz pra campos-categoria (ver Connection.client), evita
+// migration toda vez que um valor novo aparecer.
+model SshHost {
+  id              String    @id @default(uuid())
+  ownerId         String
+  owner           User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  label           String
+  address         String
+  port            Int       @default(22)
+  username        String
+  authMethod      String // 'key' | 'password'
+  credentialId    String?
+  credential      SshCredential? @relation(fields: [credentialId], references: [id], onDelete: SetNull)
+  groupName       String?
+  // Json em vez de String[] de propósito — mesmo motivo do Permission.fields acima: SQLite
+  // (schema.test.prisma) não suporta lista escalar nativa no Prisma.
+  tags            Json      @default("[]")
+  color           String    @default("#8E8E93")
+  keepalive       Boolean   @default(true)
+  startupCommand  String?
+  lastConnectedAt DateTime?
+  sessions        SshSession[]
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+// Chave SSH ou senha, cifrada com o mesmo AES-256-GCM de Connection (backend/src/common/crypto.util.ts
+// depois do hoist — ver docs/20-ssh-mobile.md). Separada de SshHost pra poder ser reusada em mais
+// de um host (mesma chave, vários servidores).
+model SshCredential {
+  id                String    @id @default(uuid())
+  ownerId           String
+  owner             User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  name              String
+  kind              String // 'key' | 'password'
+  keyType           String? // 'ed25519' | 'rsa'
+  publicKey         String?
+  fingerprintSha256 String?
+  hasPassphrase     Boolean   @default(false)
+  secretCiphertext  String // enc:… — chave privada, passphrase OU senha, nunca em claro
+  hosts             SshHost[]
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
+
+// TOFU (trust-on-first-use): impressão digital SHA256 da chave do host, aceita uma vez pelo
+// usuário. Uma chave que muda depois é bloqueada — sinal clássico de MITM.
+model SshKnownHost {
+  id                String   @id @default(uuid())
+  ownerId           String
+  owner             User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  address           String
+  port              Int
+  keyType           String
+  fingerprintSha256 String
+  trustedAt         DateTime @default(now())
+
+  @@unique([ownerId, address, port, keyType])
+}
+
+// Uma linha por sessão de terminal (aba). Vive em paralelo ao Map em memória do
+// SshManagerService — esta linha é o que a lista "Sessões" do app lê; o processo ssh2 vivo é o
+// que fala com o host de verdade.
+model SshSession {
+  id           String    @id @default(uuid())
+  ownerId      String
+  owner        User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  hostId       String?
+  host         SshHost?  @relation(fields: [hostId], references: [id], onDelete: SetNull)
+  status       String // 'connecting' | 'open' | 'detached' | 'closed' | 'error'
+  cols         Int       @default(80)
+  rows         Int       @default(24)
+  errorMessage String?
+  openedAt     DateTime  @default(now())
+  closedAt     DateTime?
+}
+
+// Comando pronto, injetado no terminal (nunca roda sozinho sem toque — requireConfirm existe
+// pra isso).
+model SshSnippet {
+  id             String   @id @default(uuid())
+  ownerId        String
+  owner          User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  name           String
+  command        String
+  tag            String?
+  requireConfirm Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }

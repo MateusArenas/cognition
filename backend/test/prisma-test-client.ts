@@ -78,6 +78,75 @@ const SCHEMA_SQL = `
     "updatedAt" DATETIME NOT NULL,
     FOREIGN KEY ("ownerId") REFERENCES "User"("id") ON DELETE CASCADE
   );
+  CREATE TABLE "SshCredential" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "ownerId" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "kind" TEXT NOT NULL,
+    "keyType" TEXT,
+    "publicKey" TEXT,
+    "fingerprintSha256" TEXT,
+    "hasPassphrase" BOOLEAN NOT NULL DEFAULT false,
+    "secretCiphertext" TEXT NOT NULL,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL,
+    FOREIGN KEY ("ownerId") REFERENCES "User"("id") ON DELETE CASCADE
+  );
+  CREATE TABLE "SshHost" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "ownerId" TEXT NOT NULL,
+    "label" TEXT NOT NULL,
+    "address" TEXT NOT NULL,
+    "port" INTEGER NOT NULL DEFAULT 22,
+    "username" TEXT NOT NULL,
+    "authMethod" TEXT NOT NULL,
+    "credentialId" TEXT,
+    "groupName" TEXT,
+    "tags" TEXT NOT NULL DEFAULT '[]',
+    "color" TEXT NOT NULL DEFAULT '#8E8E93',
+    "keepalive" BOOLEAN NOT NULL DEFAULT true,
+    "startupCommand" TEXT,
+    "lastConnectedAt" DATETIME,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL,
+    FOREIGN KEY ("ownerId") REFERENCES "User"("id") ON DELETE CASCADE,
+    FOREIGN KEY ("credentialId") REFERENCES "SshCredential"("id") ON DELETE SET NULL
+  );
+  CREATE TABLE "SshKnownHost" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "ownerId" TEXT NOT NULL,
+    "address" TEXT NOT NULL,
+    "port" INTEGER NOT NULL,
+    "keyType" TEXT NOT NULL,
+    "fingerprintSha256" TEXT NOT NULL,
+    "trustedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY ("ownerId") REFERENCES "User"("id") ON DELETE CASCADE,
+    UNIQUE ("ownerId", "address", "port", "keyType")
+  );
+  CREATE TABLE "SshSession" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "ownerId" TEXT NOT NULL,
+    "hostId" TEXT,
+    "status" TEXT NOT NULL,
+    "cols" INTEGER NOT NULL DEFAULT 80,
+    "rows" INTEGER NOT NULL DEFAULT 24,
+    "errorMessage" TEXT,
+    "openedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "closedAt" DATETIME,
+    FOREIGN KEY ("ownerId") REFERENCES "User"("id") ON DELETE CASCADE,
+    FOREIGN KEY ("hostId") REFERENCES "SshHost"("id") ON DELETE SET NULL
+  );
+  CREATE TABLE "SshSnippet" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "ownerId" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "command" TEXT NOT NULL,
+    "tag" TEXT,
+    "requireConfirm" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL,
+    FOREIGN KEY ("ownerId") REFERENCES "User"("id") ON DELETE CASCADE
+  );
 `;
 
 // Constrói um PrismaClient de teste contra um arquivo SQLite temporário, com o schema acima já

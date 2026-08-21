@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import type { Connection, Prisma } from '../generated/prisma';
 import { PrismaService } from '../prisma/prisma.service';
-import { decrypt, encrypt, PASSWORD_MASK } from './crypto.util';
+import { decrypt, encrypt, PASSWORD_MASK } from '../common/crypto.util';
 import { ConnectionResponseDto, CreateConnectionDto, UpdateConnectionDto } from './dto/connection.dto';
 import { KnexPoolService, StoredConnectionConfig } from './knex-pool.service';
 
