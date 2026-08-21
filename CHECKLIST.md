@@ -1123,3 +1123,9 @@ redescobertas do zero:
 - **`EXPO_PUBLIC_API_ORIGIN` para o assistente de IA.** Em dev, `services/ai.ts` tenta
   adivinhar a origem da rota `/api/diagrama` a partir do host do Metro — funciona no caminho
   comum, mas veja `docs/11-assistente-ia.md` antes de um deploy de verdade.
+- **Hook de pre-push, pedido do usuário**: `.githooks/pre-push` (versionado) roda backend
+  (unitário + e2e) e editor (vitest) antes de qualquer `git push`, aborta se algo falhar. Não
+  liga sozinho (`.git/hooks/` não é versionado) — precisa de `git config core.hooksPath
+  .githooks` uma vez por clone. `editor: test:rn` (jest-expo/RTL) fica de fora de propósito, ver
+  [docs/02-setup-e-estrutura.md](docs/02-setup-e-estrutura.md). Testado rodando o script à mão:
+  51 unitários + 50 e2e no backend, 226 testes `vitest` no editor, tudo verde.

@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# Pre-push: roda a suíte de testes inteira (backend + editor) antes de deixar o push sair.
+# Push com testes quebrados nunca deveria acontecer — aborta com exit != 0 se qualquer suíte
+# falhar. Ativado via `git config core.hooksPath .githooks` (uma vez só por clone, ver
+# docs/02-setup-e-estrutura.md). Pra pular em caso de emergência: `git push --no-verify`.
+set -euo pipefail
+
+root="$(git rev-parse --show-toplevel)"
+cd "$root"
+
+run() {
+  local label="$1"; shift
+  echo "▶ $label"
+  if ! "$@"; then
+    echo "✗ $label falhou — push abortado. (\`git push --no-verify\` pula este hook, use com cuidado.)"
+    exit 1
+  fi
+  echo "✓ $label ok"
+}
+
+run "backend: testes unitários" npm run test --prefix backend
+run "backend: testes e2e (precisa do Postgres do docker-compose rodando)" npm run test:e2e --prefix backend
+run "editor: testes (vitest)" npm run test --prefix editor
+# `editor: npm run test:rn` (jest-expo/RTL) fica de fora de propósito — tem uma suíte
+# (ActionBar.test.tsx) já quebrada por um motivo pré-existente e não-relacionado, documentado
+# no CHECKLIST.md/memória do agente. Incluir aqui bloquearia TODO push por um bug já conhecido
+# em vez de pegar regressão nova. Rode `npm run test:rn --prefix editor` manualmente quando
+# mexer perto de componentes com teste RTL.
+
+echo "✓ tudo verde — prosseguindo com o push."

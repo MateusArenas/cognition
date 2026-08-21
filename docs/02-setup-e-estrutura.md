@@ -53,6 +53,23 @@ o `editor/package-lock.json` antigo foi removido por ficar órfão/desatualizado
 `npm install -w editor` (ou `-w backend`) instala só as deps daquele workspace; `npm install`
 sem `-w` na raiz instala os dois.
 
+## Hook de pre-push (roda a suíte inteira antes de deixar passar)
+
+`.githooks/pre-push` (versionado, na raiz) roda backend (unitário + e2e) e editor (vitest)
+antes de qualquer `git push` — se qualquer suíte falhar, o push é abortado. `.git/hooks/` não
+é versionado, então isso não liga sozinho num clone novo; ative uma vez por clone com:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+O e2e do backend precisa do Postgres do `docker-compose.yml` rodando (`docker compose up -d`)
+com a `DATABASE_URL` do `.env` apontando pra ele. `editor: npm run test:rn` (jest-expo/RTL)
+fica de fora do hook de propósito — tem uma suíte pré-existente quebrada
+(`ActionBar.test.tsx`, motivo não-relacionado, ver [CHECKLIST.md](../CHECKLIST.md)) que
+bloquearia todo push; rode esse comando manualmente ao mexer em componente com teste RTL.
+Pra pular o hook numa emergência: `git push --no-verify` (evite — é o motivo do hook existir).
+
 ## Estrutura de pastas
 
 Organização por feature, com o domínio isolado no centro. **A regra que mantém o projeto
