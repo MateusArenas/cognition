@@ -141,10 +141,7 @@
     "sharePdfFile": "PDF file", "sharePdfFileDesc": "The drawing ready to print"
   },
   "dbclient": {
-    "title": "Database", "subtitle": "Connect to, explore, and edit databases",
-    "loginError": "Couldn't sign in. Check the backend address and your credentials.",
-    "fieldBackendUrl": "Backend address", "fieldEmail": "Email", "fieldPassword": "Password",
-    "loginAction": "Sign in", "logout": "Sign out",
+    "title": "Database", "fieldPassword": "Password",
     "loadError": "Couldn't load connections.",
     "emptyConnections": "No connections yet. Tap + to create the first one.",
     "newConnection": "New connection", "editConnection": "Edit",

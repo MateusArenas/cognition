@@ -4,7 +4,6 @@ function enc(v: string): string {
 }
 
 export const R = {
-  login: () => `/auth/login`,
   drivers: () => `/drivers`,
   connections: () => `/connections`,
   connectionTest: () => `/connections/test`,

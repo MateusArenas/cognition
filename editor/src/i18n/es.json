@@ -141,10 +141,7 @@
     "sharePdfFile": "Archivo PDF", "sharePdfFileDesc": "El dibujo listo para imprimir"
   },
   "dbclient": {
-    "title": "Base de datos", "subtitle": "Conecta, explora y edita bases de datos",
-    "loginError": "No se pudo iniciar sesión. Revisa la dirección del backend y las credenciales.",
-    "fieldBackendUrl": "Dirección del backend", "fieldEmail": "Correo", "fieldPassword": "Contraseña",
-    "loginAction": "Entrar", "logout": "Salir",
+    "title": "Base de datos", "fieldPassword": "Contraseña",
     "loadError": "No se pudieron cargar las conexiones.",
     "emptyConnections": "Todavía no hay conexiones. Toca + para crear la primera.",
     "newConnection": "Nueva conexión", "editConnection": "Editar",

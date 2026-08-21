@@ -1,11 +1,10 @@
-import { http } from './http';
+import { http } from '@/api/http';
 import { R } from './routes';
 import type {
   ConnectionConfig,
   DbConnection,
   DriverInfo,
   FilterInput,
-  LoginResult,
   MutationChange,
   MutationsResult,
   RowsResult,
@@ -14,11 +13,8 @@ import type {
 } from '../types';
 
 // Uma função por rota, tipada — DB-MOBILE.md §2.3. Se o backend mudar de rota, o diff é aqui.
-export async function login(email: string, password: string): Promise<LoginResult> {
-  const { data } = await http.post<LoginResult>(R.login(), { email, password });
-  return data;
-}
-
+// login() mora agora em features/auth/api.ts — autenticação virou transversal ao app inteiro,
+// não mais algo só do cliente de banco (ver docs/18-autenticacao.md).
 export async function drivers(): Promise<DriverInfo[]> {
   const { data } = await http.get<DriverInfo[]>(R.drivers());
   return data;

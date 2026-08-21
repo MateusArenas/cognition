@@ -9,8 +9,7 @@ import { NavBar } from '@/design/components/NavBar';
 import { Row } from '@/design/components/Row';
 import { useTheme } from '@/design/useTheme';
 import { useI18n } from '@/i18n/I18nProvider';
-import { useSettings } from '@/store/useSettings';
-import { isApiError } from '../api/http';
+import { isApiError } from '@/api/http';
 import { deleteConnection, listConnections } from '../api/services';
 import type { DbConnection } from '../types';
 import { driverByClient } from '../drivers';
@@ -21,7 +20,6 @@ export function ConnectionsScreen() {
   const { colors, space, radius } = useTheme();
   const { t } = useI18n();
   const tabBarHeight = useBottomTabBarHeight();
-  const setDbAuthToken = useSettings((s) => s.setDbAuthToken);
   const [connections, setConnections] = useState<DbConnection[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -57,10 +55,7 @@ export function ConnectionsScreen() {
 
   return (
     <View style={[styles.root, { backgroundColor: colors.bg }]}>
-      <NavBar
-        title={t('dbclient.title')}
-        right={{ label: t('dbclient.logout'), onPress: () => setDbAuthToken(null) }}
-      />
+      <NavBar title={t('dbclient.title')} />
       <ScrollView
         contentContainerStyle={{ padding: space.lg, paddingBottom: space.lg + tabBarHeight }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}

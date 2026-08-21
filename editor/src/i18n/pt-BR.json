@@ -141,10 +141,7 @@
     "sharePdfFile": "Arquivo PDF", "sharePdfFileDesc": "O rabisco pronto pra imprimir"
   },
   "dbclient": {
-    "title": "Banco de Dados", "subtitle": "Conecte, explore e edite bancos de dados",
-    "loginError": "Não foi possível entrar. Confira o endereço do backend e as credenciais.",
-    "fieldBackendUrl": "Endereço do backend", "fieldEmail": "E-mail", "fieldPassword": "Senha",
-    "loginAction": "Entrar", "logout": "Sair",
+    "title": "Banco de Dados", "fieldPassword": "Senha",
     "loadError": "Não foi possível carregar as conexões.",
     "emptyConnections": "Nenhuma conexão ainda. Toque em + para criar a primeira.",
     "newConnection": "Nova conexão", "editConnection": "Editar",

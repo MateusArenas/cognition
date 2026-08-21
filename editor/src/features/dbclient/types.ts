@@ -115,16 +115,6 @@ export interface MutationsResult {
   results: { kind: MutationKind; affected: number; returned?: Record<string, unknown> }[];
 }
 
-export interface ApiErrorBody {
-  message: string;
-  code?: string;
-  position?: number;
-  hint?: string;
-  index?: number;
-  affected?: number;
-}
-
-export interface LoginResult {
-  accessToken: string;
-  user: { id: string; email: string; name: string; roles: string[] };
-}
+// ApiErrorBody mora em @/api/http.ts (a instância axios que produz esse formato); LoginResult
+// mora em features/auth/types.ts — autenticação virou transversal ao app inteiro, não mais
+// algo só do cliente de banco (ver docs/18-autenticacao.md).

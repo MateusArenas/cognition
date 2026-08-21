@@ -64,13 +64,18 @@ cognition/
 ```
 backend/
   prisma/
-    schema.prisma          User, Role, Permission (CASL), Connection — provider postgresql
+    schema.prisma          User, Session, PasswordResetToken, Role, Permission (CASL),
+                            Connection — provider postgresql
     schema.test.prisma      MESMOS modelos, provider sqlite — só para os testes automatizados
                             (ver "Testes" abaixo)
   src/
     main.ts                 prefixo /api/v1, CORS, 0.0.0.0, Swagger em /api/docs
     prisma/                 PrismaService (adaptador @prisma/adapter-pg)
-    auth/                   POST /auth/login (JWT)
+    auth/                   login/registro/refresh/me/logout/esqueci-redefinir senha (JWT
+                            accessToken+refreshToken) — autenticação virou transversal ao app
+                            inteiro, não mais algo só do cliente de banco; detalhe completo em
+                            docs/18-autenticacao.md
+    mail/                   MailService (SMTP com fallback de log — docs/18-autenticacao.md)
     users/                  CRUD de usuário, papéis atribuídos
     permissions/             CaslAbilityFactory + PermissionsGuard + @CheckAbility() + CRUD de Role/Permission
     connections/            CRUD de conexão salva (senha cifrada AES-256-GCM), KnexPoolService
@@ -111,7 +116,9 @@ dbclient/
                            better-sqlite3 nesta entrega — oracle fica de fora até o driver
                            `oracledb` ser instalado no backend)
   screens/
-    LoginScreen · ConnectionsScreen · ConnectionFormScreen · DatabaseScreen · TableScreen
+    ConnectionsScreen · ConnectionFormScreen · DatabaseScreen · TableScreen — sem tela de login
+                            aqui dentro: a aba abre direto na lista de conexões, porque o app
+                            inteiro já está atrás do gate de autenticação (docs/18-autenticacao.md)
     DataGrid                grade COMPARTILHADA (Dados de TableScreen e resultado de QueryTab):
                             número de linha tocável (folha copiar/duplicar/excluir/editar
                             registro inteiro — cabeçalho mostra o `tag` tabela+chave da linha,
@@ -348,14 +355,16 @@ docker compose up -d
 
 # 2. Backend
 cd backend
-cp .env.example .env   # ajuste DATABASE_URL/JWT_SECRET/APP_SECRET se preciso
+cp .env.example .env   # ajuste DATABASE_URL/JWT_SECRET/JWT_REFRESH_SECRET/APP_SECRET se preciso
+                        # (SMTP é opcional — sem ele, "esqueci minha senha" só loga o token)
 npm install
 npx prisma migrate dev  # cria as tabelas no Postgres real
 SEED_ADMIN_EMAIL=voce@exemplo.com SEED_ADMIN_PASSWORD=escolha-uma-senha npm run db:seed
 npm run start:dev       # http://localhost:3333/api/v1, Swagger em /api/docs
 
-# 3. App — tela de login do cliente de banco pede o endereço do backend
-#    (use o IP da máquina na LAN, não localhost, se testar num celular físico)
+# 3. App — a tela de Login (fora das tabs, docs/18-autenticacao.md) já aponta pro backend.
+#    Endereço é fixo (`API_BASE_URL` em editor/src/api/http.ts, não mais configurável na tela) —
+#    troque essa constante pro IP da máquina na LAN (não localhost) se testar num celular físico.
 cd ../editor && npm run ios   # ou android/start
 ```
 

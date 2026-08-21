@@ -1030,6 +1030,11 @@ antes de reaplicá-la.
     Login renderizando certinha, "Wasit" · "Entre para continuar" · campo de URL do backend
     pré-preenchido · contas salvas · links de criar conta/esqueci senha) depois dos três fixes,
     sem warning nenhum no log do Metro.
+  - **Ajuste seguinte, pedido do usuário**: campo de endereço do backend saiu da tela de Login —
+    `API_BASE_URL` virou constante fixa em `editor/src/api/http.ts` (`http`/`refreshHttp` já
+    nascem com `baseURL` fixado, nada mais lido do estado a cada requisição). `useSettings.ts`
+    perdeu `dbApiBaseUrl`/`setDbApiBaseUrl` inteiramente — só guarda idioma/tema agora. `tsc
+    --noEmit` limpo, 226 testes `vitest` verdes.
 
 ---
 
